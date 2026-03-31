@@ -1,0 +1,36 @@
+[33mbf49b48[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m fix: disable cache for index.html
+[33mbb0f3df[m Actualización de componentes y tipos para Render2
+[33m177f866[m Actualización de componentes y tipos para Render
+[33mc545674[m Implement profile persistence and UI overhaul
+[33m4ca0015[m Implement persistent profile and UI overhaul
+[33m82b6be7[m Implement profile persistence and UI overhaul
+[33md0e944a[m Perfilar y rediseñar UI
+[33mc3f44fa[m Work in progress
+[33m419272b[m Eliminar Supabase y llamar OpenAI desde frontend
+[33m016fc22[m Refactor remove Supabase
+[33m7af53a5[m Work in progress
+[33m3f0057f[m Add PhaseInterestSelection UI
+[33mbf2b750[m Add internal interest phase UI
+[33m0d1d539[m Add PhaseInterestSelection UI
+[33m5fefcbb[m Add phase interest selector
+[33m616ad04[m Move to internal OpenAI edge function
+[33maf057bd[m Secure AI on edge function
+[33ma6aa2e6[m Changes
+[33md32b268[m Conectó a Lovable Cloud
+[33m1ae4313[m Changes
+[33m8054546[m Work in progress
+[33m87266e8[m TEOplay scaffolding built
+[33m0e63d5e[m TEOplay: scaffolding complete
+[33mbff9a10[m Implement TEOplay UI scaffolding
+[33m58aa283[m TEOplay scaffolding built
+[33mbe1fd2b[m TEOplay scaffolding added
+[33m912d869[m Add TEOplay core scaffolding
+[33m8b79cde[m TEOplay core scaffolding
+[33me9da736[m Add Claude-based session generator scaffolding
+[33m709f21d[m Integrate Claude session generator
+[33m0bfb7e7[m Update lockfile and deps
+[33m3f78e0c[m Update dependencies and lockfile
+[33md7c4d80[m Update lockfile with deps
+[33m460727b[m Update lockfile dependencies
+[33ma73a3a2[m Work in progress
+[33m1bc8809[m template: vite_react_shadcn_ts_2026-03-20
