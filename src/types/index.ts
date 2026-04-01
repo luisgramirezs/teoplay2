@@ -259,3 +259,5 @@ export const EMOCIONES = [
 ];
 
 export const PERFIL_STORAGE_KEY = 'teoplay_perfil';
+export const PERFILES_STORAGE_KEY = 'teoplay_perfiles';
+export const PERFIL_ACTIVO_KEY = 'teoplay_perfil_activo';
