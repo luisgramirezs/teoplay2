@@ -185,7 +185,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete, apiKey 
       for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
         const content = await page.getTextContent();
-        texto += content.items.map((item: any) => ('str' in item ? item.str : '')).join(' ') + '\n';
+        texto += content.items.map((item: unknown) => (typeof item === 'object' && item !== null && 'str' in item ? (item as { str: string }).str : '')).join(' ') + '\n';
       }
       setTextoInforme(texto.slice(0, 8000));
     } catch {
