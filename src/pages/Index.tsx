@@ -62,10 +62,16 @@ const Index: React.FC = () => {
     return (
         <>
             {screen === 'onboarding' && (
-                <OnboardingWizard onComplete={handleOnboardingComplete} apiKey={apiKey} />
+                <OnboardingWizard
+                    onComplete={handleOnboardingComplete}
+                    apiKey={import.meta.env.VITE_OPENAI_API_KEY || ''}
+                />
             )}
             {screen === 'config' && (
-                <ConfigScreen onGenerate={handleGenerate} />
+                <ConfigScreen
+                    onGenerate={handleGenerate}
+                    onAgregarNino={() => setScreen('onboarding')}
+                />
             )}
             {screen === 'session' && perfil && (
                 <ChildSession perfil={perfil} onComplete={handleSessionComplete} onBack={handleBack} />

@@ -1,417 +1,363 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, User, BookOpen, ChevronDown, Pencil, X, CheckCircle } from 'lucide-react';
+import { Sparkles, User, BookOpen, ChevronDown, Pencil, X, CheckCircle, PlusCircle, ChevronRight } from 'lucide-react';
 import {
-  PerfilNino, PerfilPersistente, Condicion, Asignatura, Idioma,
-  CONDICIONES, ASIGNATURAS, GRADOS, PERFIL_STORAGE_KEY,
+    PerfilNino, PerfilPersistente, Condicion, Asignatura, Idioma,
+    CONDICIONES, ASIGNATURAS, GRADOS, PERFIL_STORAGE_KEY,
+    PERFILES_STORAGE_KEY, PERFIL_ACTIVO_KEY,
 } from '@/types';
+import { PerfilCompleto } from '@/components/OnboardingWizard';
 
 interface ConfigScreenProps {
-  onGenerate: (perfil: PerfilNino) => void;
+    onGenerate: (perfil: PerfilNino) => void;
+    onAgregarNino: () => void;
 }
 
-const DEFAULT_PERFIL: PerfilPersistente = {
-  nombre: '',
-  edad: 8,
-  grado: '2° Básico',
-  condicion: 'general',
-};
+// ── Storage helpers ──────────────────────────────────────────────────────────
 
-function loadPerfil(): PerfilPersistente | null {
-  try {
-    const raw = localStorage.getItem(PERFIL_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
+function cargarPerfiles(): PerfilCompleto[] {
+    try {
+        const raw = localStorage.getItem(PERFILES_STORAGE_KEY);
+        return raw ? JSON.parse(raw) : [];
+    } catch { return []; }
 }
 
-function savePerfil(p: PerfilPersistente) {
-  localStorage.setItem(PERFIL_STORAGE_KEY, JSON.stringify(p));
+function guardarPerfiles(perfiles: PerfilCompleto[]) {
+    localStorage.setItem(PERFILES_STORAGE_KEY, JSON.stringify(perfiles));
 }
 
-// ── Sub-form: profile fields ─────────────────────────────────────────────────
-const ProfileForm: React.FC<{
-  value: PerfilPersistente;
-  onChange: (p: PerfilPersistente) => void;
-  compact?: boolean;
-}> = ({ value, onChange, compact }) => {
-  const inputClass = 'w-full px-4 py-3 bg-white border-2 border-border rounded-xl text-sm font-semibold text-foreground focus:outline-none focus:border-primary transition-colors';
-  const labelClass = 'block text-sm font-bold text-foreground/80 mb-2';
-
-  return (
-    <div className={`grid grid-cols-1 ${compact ? 'gap-4' : 'md:grid-cols-2 gap-5'}`}>
-      {/* Name */}
-      <div>
-        <label className={labelClass}>Nombre del niño <span className="text-muted-foreground font-normal">(opcional)</span></label>
-        <input
-          type="text"
-          className={inputClass}
-          placeholder="Ej: Sofía, Mateo…"
-          value={value.nombre}
-          onChange={e => onChange({ ...value, nombre: e.target.value })}
-        />
-      </div>
-
-      {/* Age */}
-      <div>
-        <label className={labelClass}>Edad: <span className="text-primary font-black">{value.edad} años</span></label>
-        <input
-          type="range" min={5} max={15} value={value.edad}
-          onChange={e => onChange({ ...value, edad: Number(e.target.value) })}
-          className="w-full h-2 bg-muted rounded-full appearance-none cursor-pointer accent-primary mt-3"
-        />
-        <div className="flex justify-between text-xs text-muted-foreground mt-1">
-          <span>5</span><span>10</span><span>15</span>
-        </div>
-      </div>
-
-      {/* Grade */}
-      <div>
-        <label className={labelClass}>Grado escolar</label>
-        <div className="relative">
-          <select
-            className={`${inputClass} appearance-none pr-10`}
-            value={value.grado}
-            onChange={e => onChange({ ...value, grado: e.target.value })}
-          >
-            {GRADOS.map(g => <option key={g} value={g}>{g}</option>)}
-          </select>
-          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-        </div>
-      </div>
-
-      {/* Condition */}
-      <div className={compact ? '' : 'md:col-span-2'}>
-        <label className={labelClass}>Condición principal</label>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {(Object.entries(CONDICIONES) as [Condicion, typeof CONDICIONES[Condicion]][]).map(([key, val]) => (
-            <button
-              key={key} type="button"
-              onClick={() => onChange({ ...value, condicion: key })}
-              className={`p-3 rounded-xl border-2 text-left transition-all ${
-                value.condicion === key
-                  ? 'border-primary bg-primary/10'
-                  : 'border-border bg-white hover:border-primary/40'
-              }`}
-            >
-              <div className={`font-bold text-sm ${value.condicion === key ? 'text-primary' : 'text-foreground'}`}>
-                {val.label}
-              </div>
-              <div className="text-xs text-muted-foreground mt-0.5 leading-tight">{val.descripcion}</div>
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-};
+function cargarPerfilActivo(perfiles: PerfilCompleto[]): PerfilCompleto | null {
+    try {
+        const id = localStorage.getItem(PERFIL_ACTIVO_KEY);
+        return perfiles.find(p => p.id === id) || perfiles[0] || null;
+    } catch { return perfiles[0] || null; }
+}
 
 // ── Edit Profile Modal ───────────────────────────────────────────────────────
 const EditProfileModal: React.FC<{
-  perfil: PerfilPersistente;
-  onSave: (p: PerfilPersistente) => void;
-  onClose: () => void;
+    perfil: PerfilCompleto;
+    onSave: (p: PerfilCompleto) => void;
+    onClose: () => void;
 }> = ({ perfil, onSave, onClose }) => {
-  const [draft, setDraft] = useState(perfil);
+    const [draft, setDraft] = useState<PerfilPersistente>({
+        nombre: perfil.nombre,
+        edad: perfil.edad,
+        grado: perfil.grado,
+        condicion: perfil.condicion,
+    });
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border sticky top-0 bg-white rounded-t-2xl">
-          <div className="flex items-center gap-2">
-            <User className="w-5 h-5 text-primary" />
-            <h2 className="font-black text-foreground text-lg">Editar perfil del niño</h2>
-          </div>
-          <button onClick={onClose} className="p-2 rounded-xl hover:bg-muted transition-colors cursor-pointer">
-            <X className="w-5 h-5 text-muted-foreground" />
-          </button>
+    const inputClass = 'w-full px-4 py-3 bg-white border-2 border-border rounded-xl text-sm font-semibold text-foreground focus:outline-none focus:border-primary transition-colors';
+    const labelClass = 'block text-sm font-bold text-foreground/80 mb-2';
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-border sticky top-0 bg-white rounded-t-2xl">
+                    <div className="flex items-center gap-2">
+                        <User className="w-5 h-5 text-primary" />
+                        <h2 className="font-black text-foreground text-lg">Editar perfil</h2>
+                    </div>
+                    <button onClick={onClose} className="p-2 rounded-xl hover:bg-muted transition-colors cursor-pointer">
+                        <X className="w-5 h-5 text-muted-foreground" />
+                    </button>
+                </div>
+                <div className="p-6 space-y-4">
+                    <div>
+                        <label className={labelClass}>Nombre</label>
+                        <input type="text" className={inputClass} value={draft.nombre}
+                            onChange={e => setDraft(d => ({ ...d, nombre: e.target.value }))} />
+                    </div>
+                    <div>
+                        <label className={labelClass}>Edad: <span className="text-primary font-black">{draft.edad} años</span></label>
+                        <input type="range" min={5} max={15} value={draft.edad}
+                            onChange={e => setDraft(d => ({ ...d, edad: Number(e.target.value) }))}
+                            className="w-full h-2 bg-muted rounded-full appearance-none cursor-pointer accent-primary mt-2" />
+                    </div>
+                    <div>
+                        <label className={labelClass}>Grado escolar</label>
+                        <select className={inputClass} value={draft.grado}
+                            onChange={e => setDraft(d => ({ ...d, grado: e.target.value }))}>
+                            {GRADOS.map(g => <option key={g} value={g}>{g}</option>)}
+                        </select>
+                    </div>
+                    <div>
+                        <label className={labelClass}>Condición principal</label>
+                        <div className="grid grid-cols-2 gap-2">
+                            {(Object.entries(CONDICIONES) as [Condicion, typeof CONDICIONES[Condicion]][]).map(([key, val]) => (
+                                <button key={key} type="button"
+                                    onClick={() => setDraft(d => ({ ...d, condicion: key }))}
+                                    className={`p-3 rounded-xl border-2 text-left transition-all ${draft.condicion === key ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/40'
+                                        }`}>
+                                    <div className={`font-bold text-sm ${draft.condicion === key ? 'text-primary' : 'text-foreground'}`}>{val.label}</div>
+                                    <div className="text-xs text-muted-foreground mt-0.5">{val.descripcion}</div>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+                <div className="px-6 pb-6 flex gap-3">
+                    <button onClick={onClose}
+                        className="flex-1 py-3 rounded-xl border-2 border-border font-bold text-muted-foreground hover:bg-muted transition-colors cursor-pointer">
+                        Cancelar
+                    </button>
+                    <button
+                        onClick={() => { onSave({ ...perfil, ...draft }); onClose(); }}
+                        className="flex-1 py-3 rounded-xl bg-primary text-white font-black transition-colors hover:bg-primary/90 flex items-center justify-center gap-2 cursor-pointer">
+                        <CheckCircle className="w-4 h-4" /> Guardar
+                    </button>
+                </div>
+            </div>
         </div>
-        <div className="p-6">
-          <ProfileForm value={draft} onChange={setDraft} />
-        </div>
-        <div className="px-6 pb-6 flex gap-3">
-          <button
-            onClick={onClose}
-            className="flex-1 py-3 rounded-xl border-2 border-border font-bold text-muted-foreground hover:bg-muted transition-colors cursor-pointer"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={() => { savePerfil(draft); onSave(draft); onClose(); }}
-            className="flex-1 py-3 rounded-xl bg-primary text-white font-black transition-colors hover:bg-primary/90 flex items-center justify-center gap-2 cursor-pointer"
-          >
-            <CheckCircle className="w-4 h-4" /> Guardar perfil
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+    );
 };
 
 // ── Main ConfigScreen ────────────────────────────────────────────────────────
-const ConfigScreen: React.FC<ConfigScreenProps> = ({ onGenerate }) => {
-  const [perfil, setPerfil] = useState<PerfilPersistente>(() => loadPerfil() ?? DEFAULT_PERFIL);
-  const [showFirstTimeForm, setShowFirstTimeForm] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
+const ConfigScreen: React.FC<ConfigScreenProps> = ({ onGenerate, onAgregarNino }) => {
+    const [perfiles, setPerfiles] = useState<PerfilCompleto[]>(() => cargarPerfiles());
+    const [perfilActivo, setPerfilActivo] = useState<PerfilCompleto | null>(() => cargarPerfilActivo(cargarPerfiles()));
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [asignatura, setAsignatura] = useState<Asignatura>('matematicas');
+    const [tema, setTema] = useState('');
+    const [idioma, setIdioma] = useState<Idioma>('es');
+    const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const [asignatura, setAsignatura] = useState<Asignatura>('matematicas');
-  const [tema, setTema] = useState('');
-  const [idioma, setIdioma] = useState<Idioma>('es');
-  const [errors, setErrors] = useState<Record<string, string>>({});
+    const handleSeleccionarPerfil = (id: string) => {
+        const p = perfiles.find(p => p.id === id) || null;
+        setPerfilActivo(p);
+        localStorage.setItem(PERFIL_ACTIVO_KEY, id);
+    };
 
-  // Save whenever perfil changes
-  useEffect(() => {
-    if (!showFirstTimeForm) savePerfil(perfil);
-  }, [perfil, showFirstTimeForm]);
+    const handleGuardarEdicion = (perfilEditado: PerfilCompleto) => {
+        const nuevos = perfiles.map(p => p.id === perfilEditado.id ? perfilEditado : p);
+        guardarPerfiles(nuevos);
+        setPerfiles(nuevos);
+        setPerfilActivo(perfilEditado);
+    };
 
-  const validate = () => {
-    const errs: Record<string, string> = {};
-    if (!tema.trim()) errs.tema = 'Por favor ingresa el tema a trabajar.';
-    setErrors(errs);
-    return Object.keys(errs).length === 0;
-  };
+    const validate = () => {
+        const errs: Record<string, string> = {};
+        if (!tema.trim()) errs.tema = 'Por favor ingresa el tema a trabajar.';
+        setErrors(errs);
+        return Object.keys(errs).length === 0;
+    };
 
-  const handleFirstTimeSave = () => {
-    savePerfil(perfil);
-    setShowFirstTimeForm(false);
-  };
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!validate() || !perfilActivo) return;
+        onGenerate({
+            nombre: perfilActivo.nombre,
+            edad: perfilActivo.edad,
+            grado: perfilActivo.grado,
+            condicion: perfilActivo.condicion,
+            interes: 'dinosaurios',
+            asignatura,
+            tema,
+            idioma,
+            perfilNeuroeducativo: perfilActivo.perfilNeuroeducativo,
+        } as PerfilNino);
+    };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validate()) return;
-    onGenerate({
-      ...perfil,
-      interes: 'dinosaurios', // placeholder, overwritten by child
-      asignatura,
-      tema,
-      idioma,
-    });
-  };
+    const inputClass = 'w-full px-4 py-3 bg-white border-2 border-border rounded-xl text-sm font-semibold text-foreground focus:outline-none focus:border-primary transition-colors';
+    const labelClass = 'block text-sm font-bold text-foreground/80 mb-2';
+    const errorClass = 'text-xs text-destructive mt-1 font-semibold';
 
-  const inputClass = 'w-full px-4 py-3 bg-white border-2 border-border rounded-xl text-sm font-semibold text-foreground focus:outline-none focus:border-primary transition-colors';
-  const labelClass = 'block text-sm font-bold text-foreground/80 mb-2';
-  const errorClass = 'text-xs text-destructive mt-1 font-semibold';
+    if (!perfilActivo) return null;
 
-  // ── FIRST TIME: show profile form ────────────────────────────────────────
-  if (showFirstTimeForm) {
     return (
-      <div className="min-h-screen bg-background font-child">
-        {/* Header */}
-        <header className="bg-white border-b border-border px-6 py-4 sticky top-0 z-10 shadow-sm">
+        <div className="min-h-screen bg-background font-child">
 
-
-          <div className="max-w-2xl mx-auto flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-md">
-              <Sparkles className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl font-black text-foreground tracking-tight">TEOplay</h1>
-              <p className="text-xs text-muted-foreground font-semibold">Aprendizaje inclusivo personalizado</p>
-            </div>
-          </div>
-        </header>
-
-        <main className="max-w-2xl mx-auto px-4 py-8">
-          <div className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
-            <div className="px-6 py-5 bg-gradient-to-r from-primary/8 to-accent/8 border-b border-border">
-              <div className="flex items-center gap-3 mb-1">
-                <User className="w-6 h-6 text-primary" />
-                <h2 className="font-black text-foreground text-xl">Perfil del niño</h2>
-              </div>
-              <p className="text-muted-foreground text-sm font-semibold">
-                Este perfil se guardará para futuras lecciones. Podrás editarlo cuando quieras.
-              </p>
-            </div>
-            <div className="p-6">
-              <ProfileForm value={perfil} onChange={setPerfil} />
-            </div>
-            <div className="px-6 pb-6">
-              <button
-                onClick={handleFirstTimeSave}
-                className="w-full flex items-center justify-center gap-3 bg-primary hover:bg-primary/90 text-white font-black text-lg py-4 rounded-2xl shadow-lg hover:shadow-xl transition-all cursor-pointer"
-              >
-                <CheckCircle className="w-5 h-5" />
-                Guardar perfil y continuar →
-              </button>
-            </div>
-          </div>
-        </main>
-      </div>
-    );
-  }
-
-  // ── MAIN: lesson config with profile summary ──────────────────────────────
-  return (
-    <div className="min-h-screen bg-background font-child">
-          {/* Hero / Landing Header */}
-          <section className="bg-white border-b border-border">
-              <div className="max-w-4xl mx-auto px-4 pt-4 pb-3">
-
-                  <div className="flex flex-col items-start">
-
-                      {/* Logo */}
-                      <img
-                          src="/logo.png"
-                          alt="TEOplay"
-                          className="h-[180px] sm:h-[180px] md:h-[180px] object-contain block"
-                      />
-
-                      {/* Texto */}
-                      
-                      <h1 className="font-[Fredoka] text-3xl text-orange-600 font-black">
-                          Aprendizaje inclusivo personalizado
-                      </h1>
-
-                  </div>
-
-              </div>
-          </section>
-
-
-
-
-
-      {/* Info banner */}
-      <div className="bg-primary/5 border-b border-primary/10 px-6 py-3">
-        <div className="max-w-4xl mx-auto flex items-center gap-3 text-sm text-primary/80">
-                  <span className="text-lg">💡</span>
-                  <span className="font-[Fredoka]">
-            Configura el perfil del niño en caso de no haberlo hecho y selecciona la asignatura e indica el tema
-          </span>
-        </div>
-      </div>
-
-      <main className="max-w-4xl mx-auto px-4 py-8">
-        <form onSubmit={handleSubmit} className="space-y-6">
-
-          {/* Profile Summary Card */}
-          <section className="bg-white rounded-2xl border-2 border-primary/20 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 flex items-center justify-between">
-
-
-
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-xl">
-                  {perfil.nombre ? perfil.nombre.charAt(0).toUpperCase() : '👤'}
+            {/* Header */}
+            <section className="bg-white border-b border-border">
+                <div className="max-w-4xl mx-auto px-4 pt-4 pb-3">
+                    <div className="flex flex-col items-start">
+                        <img src="/logo.png" alt="TEOplay" className="h-[180px] object-contain block" />
+                        <h1 className="font-[Fredoka] text-3xl text-orange-600 font-black">
+                            Aprendizaje inclusivo personalizado
+                        </h1>
+                    </div>
                 </div>
-                <div>
-                  <p className="font-black text-foreground text-base">
-                    {perfil.nombre || 'Sin nombre'} · {perfil.edad} años
-                  </p>
-                  <p className="text-sm text-muted-foreground font-semibold">
-                    {perfil.grado} · {CONDICIONES[perfil.condicion].label}
-                  </p>
+            </section>
+
+            {/* Info banner */}
+            <div className="bg-primary/5 border-b border-primary/10 px-6 py-3">
+                <div className="max-w-4xl mx-auto flex items-center gap-3 text-sm text-primary/80">
+                    <span className="text-lg">💡</span>
+                    <span className="font-[Fredoka]">
+                        El niño elegirá su interés motivacional al comenzar la sesión. La IA adaptará todo el contenido automáticamente.
+                    </span>
                 </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowEditModal(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-border text-sm font-black text-muted-foreground hover:border-primary hover:text-primary transition-all cursor-pointer"
-              >
-                <Pencil className="w-4 h-4" />
-                Editar perfil
-              </button>
             </div>
-          </section>
 
-          {/* Section: Learning Module */}
-          <section className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
-            <div className="px-6 py-4 bg-gradient-to-r from-accent/8 to-primary/5 border-b border-border flex items-center gap-3">
-              <BookOpen className="w-5 h-5 text-accent" />
-              <h2 className="font-black text-foreground text-base">Nueva lección</h2>
-            </div>
-            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
+            <main className="max-w-4xl mx-auto px-4 py-8">
+                <form onSubmit={handleSubmit} className="space-y-6">
 
-              {/* Subject */}
-              <div>
-                <label className={labelClass}>Asignatura</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {(Object.entries(ASIGNATURAS) as [Asignatura, typeof ASIGNATURAS[Asignatura]][]).map(([key, val]) => (
-                    <button
-                      key={key} type="button"
-                      onClick={() => setAsignatura(key)}
-                      className={`flex items-center gap-2 py-2.5 px-3 rounded-xl border-2 text-left transition-all text-sm ${
-                        asignatura === key
-                          ? 'border-accent bg-accent/10 text-accent font-black'
-                          : 'border-border bg-white text-muted-foreground hover:border-accent/40 font-bold'
-                      }`}
-                    >
-                      <span>{val.emoji}</span> {val.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+                    {/* Selector de niño */}
+                    <section className="bg-white rounded-2xl border-2 border-primary/20 shadow-sm overflow-hidden">
+                        <div className="px-6 py-4">
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="font-black text-foreground text-base flex items-center gap-2">
+                                    <User className="w-5 h-5 text-primary" />
+                                    Niño/a activo
+                                </h2>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={onAgregarNino}
+                                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl border-2 border-dashed border-primary/40 text-xs font-black text-primary hover:bg-primary/5 transition-all cursor-pointer"
+                                    >
+                                        <PlusCircle className="w-4 h-4" />
+                                        Agregar niño
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowEditModal(true)}
+                                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl border-2 border-border text-xs font-black text-muted-foreground hover:border-primary hover:text-primary transition-all cursor-pointer"
+                                    >
+                                        <Pencil className="w-4 h-4" />
+                                        Editar
+                                    </button>
+                                </div>
+                            </div>
 
-              {/* Topic */}
-              <div className="flex flex-col">
-                <label className={labelClass}>Tema específico *</label>
-                <textarea
-                  className={`${inputClass} resize-none flex-1 min-h-[120px]`}
-                  placeholder="Ej: Las fracciones simples&#10;El presente perfecto en inglés&#10;El ciclo del agua"
-                  value={tema}
-                  onChange={e => setTema(e.target.value)}
-                  rows={4}
+                            {/* Lista de perfiles si hay más de uno */}
+                            {perfiles.length > 1 && (
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
+                                    {perfiles.map(p => (
+                                        <button
+                                            key={p.id}
+                                            type="button"
+                                            onClick={() => handleSeleccionarPerfil(p.id)}
+                                            className={`flex items-center gap-2 p-3 rounded-xl border-2 text-left transition-all ${perfilActivo.id === p.id
+                                                    ? 'border-primary bg-primary/5'
+                                                    : 'border-border hover:border-primary/40'
+                                                }`}
+                                        >
+                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-black flex-shrink-0 ${perfilActivo.id === p.id ? 'bg-primary text-white' : 'bg-muted text-foreground'
+                                                }`}>
+                                                {p.nombre ? p.nombre.charAt(0).toUpperCase() : '?'}
+                                            </div>
+                                            <div className="overflow-hidden">
+                                                <p className={`font-black text-xs truncate ${perfilActivo.id === p.id ? 'text-primary' : 'text-foreground'}`}>
+                                                    {p.nombre || 'Sin nombre'}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground truncate">{CONDICIONES[p.condicion]?.label}</p>
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Perfil activo */}
+                            <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-xl">
+                                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-lg font-black text-primary flex-shrink-0">
+                                    {perfilActivo.nombre ? perfilActivo.nombre.charAt(0).toUpperCase() : '👤'}
+                                </div>
+                                <div className="flex-1">
+                                    <p className="font-black text-foreground text-sm">
+                                        {perfilActivo.nombre || 'Sin nombre'} · {perfilActivo.edad} años
+                                    </p>
+                                    <p className="text-xs text-muted-foreground font-semibold">
+                                        {perfilActivo.grado} · {CONDICIONES[perfilActivo.condicion]?.label}
+                                    </p>
+                                </div>
+                                {perfilActivo.perfilNeuroeducativo && (
+                                    <span className="text-xs font-black text-teo-green bg-teo-green/10 px-2 py-1 rounded-lg">
+                                        ✓ Perfil IA
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Nueva lección */}
+                    <section className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
+                        <div className="px-6 py-4 bg-gradient-to-r from-accent/8 to-primary/5 border-b border-border flex items-center gap-3">
+                            <BookOpen className="w-5 h-5 text-accent" />
+                            <h2 className="font-black text-foreground text-base">Nueva lección</h2>
+                        </div>
+                        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-5">
+
+                            {/* Asignatura */}
+                            <div>
+                                <label className={labelClass}>Asignatura</label>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {(Object.entries(ASIGNATURAS) as [Asignatura, typeof ASIGNATURAS[Asignatura]][]).map(([key, val]) => (
+                                        <button key={key} type="button"
+                                            onClick={() => setAsignatura(key)}
+                                            className={`flex items-center gap-2 py-2.5 px-3 rounded-xl border-2 text-left transition-all text-sm ${asignatura === key
+                                                    ? 'border-accent bg-accent/10 text-accent font-black'
+                                                    : 'border-border bg-white text-muted-foreground hover:border-accent/40 font-bold'
+                                                }`}>
+                                            <span>{val.emoji}</span> {val.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Tema */}
+                            <div className="flex flex-col">
+                                <label className={labelClass}>Tema específico *</label>
+                                <textarea
+                                    className={`${inputClass} resize-none flex-1 min-h-[120px]`}
+                                    placeholder="Ej: Las fracciones simples&#10;El presente perfecto en inglés&#10;El ciclo del agua"
+                                    value={tema}
+                                    onChange={e => setTema(e.target.value)}
+                                    rows={4}
+                                />
+                                {errors.tema && <p className={errorClass}>{errors.tema}</p>}
+                            </div>
+
+                            {/* Idioma */}
+                            <div className="md:col-span-2">
+                                <label className={labelClass}>Idioma de la sesión</label>
+                                <div className="grid grid-cols-2 gap-3 max-w-xs">
+                                    {(['es', 'en'] as Idioma[]).map(l => (
+                                        <button key={l} type="button"
+                                            onClick={() => setIdioma(l)}
+                                            className={`py-3 rounded-xl border-2 font-black text-sm transition-all ${idioma === l
+                                                    ? 'border-primary bg-primary/10 text-primary'
+                                                    : 'border-border bg-white text-muted-foreground hover:border-primary/40'
+                                                }`}>
+                                            {l === 'es' ? '🇨🇱 Español' : '🇺🇸 English'}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Callout niño */}
+                    <div className="flex items-start gap-4 p-5 bg-gradient-to-r from-teo-yellow/10 to-teo-orange/10 rounded-2xl border border-teo-yellow/30">
+                        <span className="text-3xl">🧒</span>
+                        <div>
+                            <p className="font-black text-foreground text-sm">El niño participa desde el inicio</p>
+                            <p className="text-muted-foreground text-sm mt-1 leading-relaxed font-semibold">
+                                Al comenzar, el niño <strong>expresará cómo se siente</strong> y luego <strong>elegirá su interés favorito</strong>.
+                                La IA usará ese interés para personalizar toda la experiencia.
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Submit */}
+                    <div className="flex justify-center pb-6">
+                        <button type="submit"
+                            className="group flex items-center gap-3 bg-primary hover:bg-primary/90 text-white font-black text-lg px-10 py-4 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-0.5 min-h-[56px] cursor-pointer">
+                            <Sparkles className="w-5 h-5 group-hover:animate-sparkle" />
+                            ✨ Iniciar sesión de aprendizaje
+                        </button>
+                    </div>
+                </form>
+            </main>
+
+            {/* Edit modal */}
+            {showEditModal && (
+                <EditProfileModal
+                    perfil={perfilActivo}
+                    onSave={handleGuardarEdicion}
+                    onClose={() => setShowEditModal(false)}
                 />
-                {errors.tema && <p className={errorClass}>{errors.tema}</p>}
-              </div>
-
-              {/* Language */}
-              <div className="md:col-span-2">
-                <label className={labelClass}>Idioma de la sesión</label>
-                <div className="grid grid-cols-2 gap-3 max-w-xs">
-                  {(['es', 'en'] as Idioma[]).map(l => (
-                    <button
-                      key={l} type="button"
-                      onClick={() => setIdioma(l)}
-                      className={`py-3 rounded-xl border-2 font-black text-sm transition-all ${
-                        idioma === l
-                          ? 'border-primary bg-primary/10 text-primary'
-                          : 'border-border bg-white text-muted-foreground hover:border-primary/40'
-                      }`}
-                    >
-                      {l === 'es' ? '🇨🇱 Español' : '🇺🇸 English'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Child's role callout */}
-          <div className="flex items-start gap-4 p-5 bg-gradient-to-r from-teo-yellow/10 to-teo-orange/10 rounded-2xl border border-teo-yellow/30">
-            <span className="text-3xl">🧒</span>
-            <div>
-              <p className="font-black text-foreground text-sm">El niño participa desde el inicio</p>
-              <p className="text-muted-foreground text-sm mt-1 leading-relaxed font-semibold">
-                Al comenzar, el niño <strong>expresará cómo se siente</strong> y luego <strong>elegirá su interés favorito</strong>.
-                La IA usará ese interés para personalizar toda la experiencia.
-              </p>
-            </div>
-          </div>
-
-          {/* Submit */}
-          <div className="flex justify-center pb-6">
-            <button
-              type="submit"
-              className="group flex items-center gap-3 bg-primary hover:bg-primary/90 text-white font-black text-lg px-10 py-4 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-0.5 min-h-[56px] cursor-pointer"
-            >
-              <Sparkles className="w-5 h-5 group-hover:animate-sparkle" />
-              ✨ Iniciar sesión de aprendizaje
-            </button>
-          </div>
-        </form>
-      </main>
-
-      {/* Edit modal */}
-      {showEditModal && (
-        <EditProfileModal
-          perfil={perfil}
-          onSave={setPerfil}
-          onClose={() => setShowEditModal(false)}
-        />
-      )}
-    </div>
-  );
+            )}
+        </div>
+    );
 };
 
 export default ConfigScreen;

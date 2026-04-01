@@ -7,7 +7,8 @@ export type Condicion =
   | 'dislexia'
   | 'discalculia'
   | 'disgrafia'
-  | 'general';
+  | 'general'
+  | 'ninguna';
 
 export type Interes =
   | 'dinosaurios'
@@ -46,6 +47,7 @@ export interface PerfilNino {
   asignatura: Asignatura;
   tema: string;
   idioma: Idioma;
+  perfilNeuroeducativo?: import('@/components/OnboardingWizard').PerfilNeuroeducativo;
 }
 
 /** Solo los campos que persisten entre sesiones */
@@ -220,6 +222,7 @@ export const CONDICIONES: Record<Condicion, { label: string; descripcion: string
   discalculia: { label: 'Discalculia', descripcion: 'Dificultad con los números', color: 'bg-orange-50 border-orange-200' },
   disgrafia: { label: 'Disgrafía', descripcion: 'Dificultad en la escritura', color: 'bg-green-50 border-green-200' },
   general: { label: 'Dificultad general', descripcion: 'Dificultad de aprendizaje general', color: 'bg-gray-50 border-gray-200' },
+  ninguna: { label: 'Ninguna', descripcion: 'No reporta condición', color: 'bg-black-50 border-black-200' },
 };
 
 export const INTERESES: Record<Interes, { label: string; emoji: string; color: string }> = {

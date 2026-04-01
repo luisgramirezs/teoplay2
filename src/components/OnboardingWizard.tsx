@@ -266,11 +266,13 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete, apiKey 
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-lg">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-            <Sparkles className="w-8 h-8 text-primary" />
-          </div>
-          <h1 className="text-2xl font-black text-foreground mb-2">Bienvenido a TEOplay</h1>
-          <p className="text-muted-foreground font-semibold">La tecnología de asistencia educativa para tu niño/a</p>
+         
+          <div className="flex justify-center">
+            <img src="/logo.png" alt="TEOplay" className="h-[180px] object-contain" />
+         </div>
+          <p className="font-[Fredoka] text-lg text-foregorund font-black">Tecnología de asistencia educativa</p>
+          
+          <h1 className="text-2xl font-black text-orange-600 mb-2">Bienvenido</h1>
         </div>
         <ProgressBar />
         <div className="bg-white rounded-2xl border border-border shadow-sm p-6">
@@ -302,7 +304,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete, apiKey 
           <button
             onClick={() => setPaso(2)}
             disabled={!puedeAvanzar()}
-            className="w-full mt-6 flex items-center justify-center gap-2 bg-primary text-white font-black py-4 rounded-2xl disabled:opacity-40 cursor-pointer"
+            className="w-full mt-6 flex items-center justify-center gap-2 bg-emerald-500 text-white font-black py-4 rounded-2xl disabled:opacity-80 cursor-pointer"
           >
             Continuar <ChevronRight className="w-5 h-5" />
           </button>
@@ -389,7 +391,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete, apiKey 
             </button>
             <button
               onClick={() => setPaso(3)}
-              className="flex-1 flex items-center justify-center gap-2 bg-primary text-white font-black py-3 rounded-2xl cursor-pointer"
+              className="flex-1 flex items-center justify-center gap-2 bg-emerald-500 text-white font-black py-3 rounded-2xl cursor-pointer"
             >
               Continuar <ChevronRight className="w-5 h-5" />
             </button>
@@ -438,7 +440,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete, apiKey 
             <button
               onClick={() => setPaso(4)}
               disabled={!puedeAvanzar()}
-              className="flex-1 flex items-center justify-center gap-2 bg-primary text-white font-black py-3 rounded-2xl disabled:opacity-40 cursor-pointer"
+              className="flex-1 flex items-center justify-center gap-2 bg-emerald-500 text-white font-black py-3 rounded-2xl disabled:opacity-40 cursor-pointer"
             >
               Continuar <ChevronRight className="w-5 h-5" />
             </button>
@@ -569,7 +571,8 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete, apiKey 
                 <span>⭐</span> Fortalezas identificadas
               </h3>
               <div className="space-y-2">
-                {perfilGenerado.fortalezas.map((f, i) => (
+                
+                {(perfilGenerado.fortalezas || []).map((f, i) => (
                   <div key={i} className="flex items-start gap-2 p-3 bg-teo-green/5 border border-teo-green/20 rounded-xl">
                     <CheckCircle className="w-4 h-4 text-teo-green flex-shrink-0 mt-0.5" />
                     <p className="text-sm font-semibold text-foreground">{f}</p>
@@ -584,7 +587,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete, apiKey 
                 <span>🎯</span> Retos como oportunidades
               </h3>
               <div className="space-y-2">
-                {perfilGenerado.retos.map((r, i) => (
+                {(perfilGenerado.retos || []).map((r, i) => (
                   <div key={i} className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl">
                     <span className="text-amber-500 flex-shrink-0 mt-0.5">→</span>
                     <p className="text-sm font-semibold text-foreground">{r}</p>
@@ -599,7 +602,8 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete, apiKey 
                 <span>🧠</span> Estrategias para TEOplay
               </h3>
               <div className="space-y-2">
-                {perfilGenerado.estrategias.map((e, i) => (
+            
+                {(perfilGenerado.estrategias || []).map((e, i) => (
                   <div key={i} className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-xl">
                     <span className="text-blue-500 font-black text-xs flex-shrink-0 mt-1">{i + 1}</span>
                     <p className="text-sm font-semibold text-foreground">{e}</p>
