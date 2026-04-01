@@ -276,7 +276,7 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onGenerate }) => {
         <div className="max-w-4xl mx-auto flex items-center gap-3 text-sm text-primary/80">
                   <span className="text-lg">💡</span>
                   <span className="font-[Fredoka]">
-            Configura el perfil del niño en caso de no haberlo hevho y selecciona la asignatura e indica el tema
+            Configura el perfil del niño en caso de no haberlo hecho y selecciona la asignatura e indica el tema
           </span>
         </div>
       </div>
