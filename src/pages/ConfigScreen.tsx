@@ -151,7 +151,7 @@ const EditProfileModal: React.FC<{
 // ── Main ConfigScreen ────────────────────────────────────────────────────────
 const ConfigScreen: React.FC<ConfigScreenProps> = ({ onGenerate }) => {
   const [perfil, setPerfil] = useState<PerfilPersistente>(() => loadPerfil() ?? DEFAULT_PERFIL);
-  const [showFirstTimeForm, setShowFirstTimeForm] = useState(() => !loadPerfil());
+  const [showFirstTimeForm, setShowFirstTimeForm] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
 
   const [asignatura, setAsignatura] = useState<Asignatura>('matematicas');
@@ -259,7 +259,7 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onGenerate }) => {
                       {/* Texto */}
                       
                       <h1 className="font-[Fredoka] text-3xl text-orange-600 font-black">
-                          Aprendizaje inclusivo personalizado123
+                          Aprendizaje inclusivo personalizado
                       </h1>
 
                   </div>
@@ -276,7 +276,7 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onGenerate }) => {
         <div className="max-w-4xl mx-auto flex items-center gap-3 text-sm text-primary/80">
                   <span className="text-lg">💡</span>
                   <span className="font-[Fredoka]">
-            El niño elegirá su interés motivacional al comenzar la sesión. La IA adaptará todo el contenido automáticamente.
+            Configura el perfil del niño en caso de no haberlo hevho y selecciona la asignatura e indica el tema
           </span>
         </div>
       </div>
