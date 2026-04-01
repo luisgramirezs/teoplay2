@@ -259,7 +259,7 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onGenerate }) => {
                       {/* Texto */}
                       
                       <h1 className="font-[Fredoka] text-3xl text-orange-600 font-black">
-                          Aprendizaje inclusivo personalizado
+                          Aprendizaje inclusivo personalizado123
                       </h1>
 
                   </div>
