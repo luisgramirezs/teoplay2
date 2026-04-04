@@ -185,7 +185,7 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onGenerate, onAgregarNino }
                 <div className="max-w-4xl mx-auto flex items-center gap-3 text-sm text-primary/80">
                     <span className="text-lg">💡</span>
                     <span className="font-[Fredoka]">
-                        Selecciona el niño(a), la asignatura e indica el tema a felxibilizar para generar la lección.
+                        Selecciona el niño(a), la asignatura e indica el tema a flexibilizar para generar la lección.
                     </span>
                 </div>
             </div>
