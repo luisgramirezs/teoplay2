@@ -227,9 +227,14 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete, apiKey 
 
   // ── Finalizar onboarding ─────────────────────────────────────────────────────
   const handleFinalizar = () => {
+
+
     const perfilCompleto: PerfilCompleto = {
       ...datosPerfil,
-      id: Date.now().toString(),
+      id: crypto.randomUUID(), // ID niño
+
+
+
       tipoUsuario: tipoUsuario!,
       respuestas,
       perfilNeuroeducativo: perfilGenerado || undefined,
@@ -304,7 +309,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete, apiKey 
           <button
             onClick={() => setPaso(2)}
             disabled={!puedeAvanzar()}
-            className="w-full mt-6 flex items-center justify-center gap-2 bg-emerald-500 text-white font-black py-4 rounded-2xl disabled:opacity-80 cursor-pointer"
+            className="w-full mt-6 flex items-center justify-center gap-2 bg-emerald-600 text-white font-black py-4 rounded-2xl disabled:opacity-80 cursor-pointer"
           >
             Continuar <ChevronRight className="w-5 h-5" />
           </button>

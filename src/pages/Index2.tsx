@@ -13,69 +13,7 @@ import { getDashboardMetrics } from '@/lib/dashboardMetrics';
 
 // ── Splash Screen ─────────────────────────────────────────────────────────────
 
-function playBootSound() {
-    try {
-        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-
-        const master = ctx.createGain();
-        master.gain.setValueAtTime(0, ctx.currentTime);
-        master.gain.linearRampToValueAtTime(0.18, ctx.currentTime + 0.05);
-        master.gain.linearRampToValueAtTime(0, ctx.currentTime + 2.2);
-        master.connect(ctx.destination);
-
-        // Tono base — sweep ascendente suave
-        const osc1 = ctx.createOscillator();
-        const gain1 = ctx.createGain();
-        osc1.type = 'sine';
-        osc1.frequency.setValueAtTime(180, ctx.currentTime);
-        osc1.frequency.exponentialRampToValueAtTime(520, ctx.currentTime + 1.0);
-        osc1.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 1.8);
-        gain1.gain.setValueAtTime(1, ctx.currentTime);
-        gain1.gain.linearRampToValueAtTime(0, ctx.currentTime + 2.2);
-        osc1.connect(gain1);
-        gain1.connect(master);
-
-        // Armónico superior — da el "brillo" tecnológico
-        const osc2 = ctx.createOscillator();
-        const gain2 = ctx.createGain();
-        osc2.type = 'sine';
-        osc2.frequency.setValueAtTime(360, ctx.currentTime);
-        osc2.frequency.exponentialRampToValueAtTime(1040, ctx.currentTime + 1.0);
-        osc2.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 1.8);
-        gain2.gain.setValueAtTime(0.35, ctx.currentTime);
-        gain2.gain.linearRampToValueAtTime(0, ctx.currentTime + 2.0);
-        osc2.connect(gain2);
-        gain2.connect(master);
-
-        // Shimmer final — destello de alta frecuencia al posarse
-        const osc3 = ctx.createOscillator();
-        const gain3 = ctx.createGain();
-        osc3.type = 'sine';
-        osc3.frequency.setValueAtTime(2200, ctx.currentTime + 0.9);
-        osc3.frequency.exponentialRampToValueAtTime(1600, ctx.currentTime + 2.0);
-        gain3.gain.setValueAtTime(0, ctx.currentTime);
-        gain3.gain.setValueAtTime(0, ctx.currentTime + 0.9);
-        gain3.gain.linearRampToValueAtTime(0.12, ctx.currentTime + 1.1);
-        gain3.gain.linearRampToValueAtTime(0, ctx.currentTime + 2.1);
-        osc3.connect(gain3);
-        gain3.connect(master);
-
-        osc1.start(ctx.currentTime);
-        osc2.start(ctx.currentTime);
-        osc3.start(ctx.currentTime + 0.9);
-        osc1.stop(ctx.currentTime + 2.3);
-        osc2.stop(ctx.currentTime + 2.1);
-        osc3.stop(ctx.currentTime + 2.2);
-    } catch {
-        // Si el navegador bloquea el audio, simplemente no suena
-    }
-}
-
-const SplashScreen: React.FC = () => {
-    useEffect(() => {
-        playBootSound();
-    }, []);
-    return (
+const SplashScreen: React.FC = () => (
     <div
         className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background"
         style={{ animation: 'splashFadeOut 0.5s ease-in-out 2.6s forwards' }}
@@ -116,8 +54,7 @@ const SplashScreen: React.FC = () => {
             Tecnología de asistencia educativa
         </p>
     </div>
-    );
-};
+);
 
 
 function cargarPerfiles(): PerfilCompleto[] {

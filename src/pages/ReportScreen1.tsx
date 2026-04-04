@@ -3,6 +3,7 @@ import { SessionData } from '@/types';
 import { EMOCIONES, INTERESES, CONDICIONES, ASIGNATURAS } from '@/types';
 import { Clock, Target, RefreshCw, Heart, RotateCcw, FileText, TrendingUp, TrendingDown, Minus, ArrowLeft } from 'lucide-react';
 import { exportReportPDF } from '@/lib/pdfExport';
+import { getDashboardMetrics } from '@/lib/dashboardMetrics';
 
 
 interface ReportScreenProps {
@@ -21,6 +22,7 @@ const ReportScreen: React.FC<ReportScreenProps> = ({ data, onReset, onBack }) =>
     ? Math.round((data.tiempoFin - data.tiempoInicio) / 60000)
     : 0;
   
+ 
 
 
   const pct = data.porcentajeAciertos ?? 0;

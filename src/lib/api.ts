@@ -434,7 +434,27 @@ export async function generarSesion(perfil: PerfilNino): Promise<SesionGenerada>
       imagenPromise,
   ]);
 
-  return { ...sesion, imagenUrl: imagenUrl ?? undefined };
+    const resultado = { ...sesion, imagenUrl: imagenUrl ?? undefined };
+
+    // 🔥 GUARDAR EN LOCALSTORAGE
+    guardarSesionLocal({
+        nombre: perfil.nombre,
+        edad: perfil.edad,
+        grado: perfil.grado,
+        condicion: perfil.condicion,
+        asignatura: perfil.asignatura,
+        tema: perfil.tema,
+        interes: perfil.interes,
+
+        // métricas básicas (luego las mejoramos)
+        aciertos: 0,
+        errores: 0,
+        duracion: 0,
+        emocionDelta: 0,
+    });
+
+    return resultado;
+
 }
 
 export async function pedirExplicacionAlternativa(
@@ -468,3 +488,34 @@ export async function pedirExplicacionAlternativa(
   const data = await res.json();
   return data.choices?.[0]?.message?.content?.trim() || '';
 }
+
+/** Función de guardado local de lecciones localstorage */
+function guardarSesionLocal(session: any) {
+    console.log("🔥 GUARDANDO SESION", session);
+    try {
+        const existing = localStorage.getItem("sessions");
+        const sessions = existing ? JSON.parse(existing) : [];
+
+        sessions.push({
+            ...session,
+            id: Date.now(),
+            fecha: new Date().toISOString(),
+        });
+
+        localStorage.setItem("sessions", JSON.stringify(sessions));
+    } catch (error) {
+        console.error("Error guardando sesión:", error);
+    }
+}
+
+// 👉 Leer sesiones desde localStorage
+export function obtenerSesiones() {
+    try {
+        const data = localStorage.getItem("sessions");
+        return data ? JSON.parse(data) : [];
+    } catch (error) {
+        console.error("Error obteniendo sesiones:", error);
+        return [];
+    }
+}
+

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, User, BookOpen, ChevronDown, Pencil, X, CheckCircle, PlusCircle, ChevronRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Sparkles, User, BookOpen, ChevronDown, Pencil, X, CheckCircle, PlusCircle, ChevronRight, BarChart2 } from 'lucide-react';
 import {
     PerfilNino, PerfilPersistente, Condicion, Asignatura, Idioma,
     CONDICIONES, ASIGNATURAS, GRADOS, PERFIL_STORAGE_KEY,
@@ -112,6 +113,7 @@ const EditProfileModal: React.FC<{
 
 // ── Main ConfigScreen ────────────────────────────────────────────────────────
 const ConfigScreen: React.FC<ConfigScreenProps> = ({ onGenerate, onAgregarNino }) => {
+    const navigate = useNavigate();
     const [perfiles, setPerfiles] = useState<PerfilCompleto[]>(() => cargarPerfiles());
     const [perfilActivo, setPerfilActivo] = useState<PerfilCompleto | null>(() => cargarPerfilActivo(cargarPerfiles()));
     const [showEditModal, setShowEditModal] = useState(false);
@@ -144,6 +146,7 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onGenerate, onAgregarNino }
         e.preventDefault();
         if (!validate() || !perfilActivo) return;
         onGenerate({
+            id: perfilActivo.id,
             nombre: perfilActivo.nombre,
             edad: perfilActivo.edad,
             grado: perfilActivo.grado,
@@ -171,7 +174,7 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onGenerate, onAgregarNino }
                     <div className="flex flex-col items-start">
                         <img src="/logo.png" alt="TEOplay" className="h-[180px] object-contain block" />
                         <h1 className="font-[Fredoka] text-3xl text-orange-600 font-black">
-                            Aprendizaje inclusivo personalizado
+                            Aprendizaje inclusivo personalizado.
                         </h1>
                     </div>
                 </div>
@@ -182,7 +185,7 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onGenerate, onAgregarNino }
                 <div className="max-w-4xl mx-auto flex items-center gap-3 text-sm text-primary/80">
                     <span className="text-lg">💡</span>
                     <span className="font-[Fredoka]">
-                        El niño elegirá su interés motivacional al comenzar la sesión. La IA adaptará todo el contenido automáticamente.
+                        Selecciona el niño(a), la asignatura e indica el tema a felxibilizar para generar la lección.
                     </span>
                 </div>
             </div>
@@ -206,6 +209,14 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onGenerate, onAgregarNino }
                                     >
                                         <PlusCircle className="w-4 h-4" />
                                         Agregar niño
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => navigate('/dashboard')}
+                                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl border-2 border-border text-xs font-black text-muted-foreground hover:border-primary hover:text-primary transition-all cursor-pointer"
+                                    >
+                                        <BarChart2 className="w-4 h-4" />
+                                        Tablero
                                     </button>
                                     <button
                                         type="button"
