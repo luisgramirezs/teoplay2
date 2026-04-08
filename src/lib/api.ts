@@ -52,7 +52,7 @@ const interesLabels: Record<string, string> = {
 const asignaturaLabels: Record<string, string> = {
   matematicas: 'Matemáticas', lenguaje: 'Lenguaje', ingles: 'Inglés',
   ciencias: 'Ciencias Naturales', historia: 'Historia',
-  arte: 'Arte', ed_fisica: 'Educación Física', sociales:''
+  arte: 'Arte', ed_fisica: 'Educación Física', sociales:'Sociales'
 };
 
 function getApiKey(): string {
@@ -69,7 +69,39 @@ function buildPrompt(perfil: PerfilNino): string {
     const asignatura = asignaturaLabels[perfil.asignatura] || perfil.asignatura;
     const numJuegos = perfil.edad <= 7 ? 2 : perfil.edad <= 10 ? 3 : 4;
 
-    return `Genera una sesión de aprendizaje completa para:
+    // Bloque de perfil neuroeducativo — se inyecta solo si existe
+    const pn = perfil.perfilNeuroeducativo;
+    const bloquePerfilNeuroeducativo = pn ? `
+════════════════════════════════════════
+PERFIL NEUROEDUCATIVO INDIVIDUALIZADO — CONTEXTO PRIORITARIO
+Este perfil fue elaborado por un especialista en neuropsicología para ${nombre} específicamente.
+DEBES leerlo antes de generar cualquier contenido y usarlo como guía principal de toda la sesión.
+No es un perfil genérico de condición — es el perfil real de este niño/a.
+
+RESUMEN DEL NIÑO/A:
+${pn.resumen}
+
+FORTALEZAS IDENTIFICADAS (apóyate en ellas para diseñar la explicación y los juegos):
+${(pn.fortalezas || []).map((f: string, i: number) => `  ${i + 1}. ${f}`).join('\n')}
+
+RETOS REALES (tenlos en cuenta para graduar la dificultad y el vocabulario):
+${(pn.retos || []).map((r: string, i: number) => `  ${i + 1}. ${r}`).join('\n')}
+
+ESTRATEGIAS PEDAGÓGICAS RECOMENDADAS (aplícalas en la explicación, ejemplos y juegos):
+${(pn.estrategias || []).map((e: string, i: number) => `  ${i + 1}. ${e}`).join('\n')}
+
+INSTRUCCIÓN CRÍTICA: Toda la sesión debe reflejar estas estrategias. No las ignores.
+Si una fortaleza es la memoria visual → prioriza ejemplos visuales y analogías concretas.
+Si un reto es la atención sostenida → usa frases cortas, instrucciones en pasos breves.
+Si una estrategia menciona apoyo visual → enriquece las analogías con imágenes mentales vívidas.
+════════════════════════════════════════
+` : `
+NOTA: Este niño no tiene perfil neuroeducativo individualizado aún.
+Adapta la sesión exclusivamente según la condición: ${condicion}.
+`;
+
+    return `${bloquePerfilNeuroeducativo}
+Genera una sesión de aprendizaje completa para:
     - Nombre: ${nombre}
     - Edad: ${perfil.edad} años | Grado: ${perfil.grado}
     - Condición: ${condicion}

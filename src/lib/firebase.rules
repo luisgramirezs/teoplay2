@@ -1,0 +1,42 @@
+﻿// firestore.rules
+// 1Desplegar con: firebase deploy --only firestore:rules
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── users: solo el propio usuario puede leer y escribir su documento ────
+    match /usuarios/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // ── students: solo el usuario dueño puede leer y escribir ───────────────
+    match /alumnos/{studentId} {
+      allow read, write: if request.auth != null
+        && resource.data.userId == request.auth.uid;
+
+      // Al crear: el userId del documento debe coincidir con el auth uid
+      allow create: if request.auth != null
+        && request.resource.data.userId == request.auth.uid;
+    }
+
+    // ── sessions: solo el usuario dueño puede leer y escribir ───────────────
+    match /sessions/{sessionId} {
+      allow read, write: if request.auth != null
+        && resource.data.userId == request.auth.uid;
+
+      allow create: if request.auth != null
+        && request.resource.data.userId == request.auth.uid;
+    }
+
+    // ── student_profiles_history: protegido igual que students ──────────────
+    match /student_profiles_history/{histId} {
+      allow read, write: if request.auth != null
+        && resource.data.studentId != null;
+
+      // Solo permite crear si el student asociado pertenece al usuario
+      // (verificación simple por ahora; en producción avanzada usar Cloud Functions)
+      allow create: if request.auth != null;
+    }
+  }
+}

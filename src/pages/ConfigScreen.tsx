@@ -1,36 +1,21 @@
-import React, { useState, useEffect } from 'react';
+// src/pages/ConfigScreen.tsx
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, User, BookOpen, ChevronDown, Pencil, X, CheckCircle, PlusCircle, ChevronRight, BarChart2 } from 'lucide-react';
+import { Sparkles, User, BookOpen, Pencil, X, CheckCircle, PlusCircle, BarChart2 } from 'lucide-react';
 import {
     PerfilNino, PerfilPersistente, Condicion, Asignatura, Idioma,
-    CONDICIONES, ASIGNATURAS, GRADOS, PERFIL_STORAGE_KEY,
-    PERFILES_STORAGE_KEY, PERFIL_ACTIVO_KEY,
+    CONDICIONES, ASIGNATURAS, GRADOS, PERFIL_ACTIVO_KEY,
 } from '@/types';
 import { PerfilCompleto } from '@/components/OnboardingWizard';
+import { actualizarPerfilNeuroeducativo } from '@/lib/studentsService';
 
 interface ConfigScreenProps {
     onGenerate: (perfil: PerfilNino) => void;
     onAgregarNino: () => void;
-}
-
-// ── Storage helpers ──────────────────────────────────────────────────────────
-
-function cargarPerfiles(): PerfilCompleto[] {
-    try {
-        const raw = localStorage.getItem(PERFILES_STORAGE_KEY);
-        return raw ? JSON.parse(raw) : [];
-    } catch { return []; }
-}
-
-function guardarPerfiles(perfiles: PerfilCompleto[]) {
-    localStorage.setItem(PERFILES_STORAGE_KEY, JSON.stringify(perfiles));
-}
-
-function cargarPerfilActivo(perfiles: PerfilCompleto[]): PerfilCompleto | null {
-    try {
-        const id = localStorage.getItem(PERFIL_ACTIVO_KEY);
-        return perfiles.find(p => p.id === id) || perfiles[0] || null;
-    } catch { return perfiles[0] || null; }
+    // ── Nuevas props: perfiles vienen de Firestore vía Index ──────────────────
+    perfiles: PerfilCompleto[];
+    onPerfilesChange: (perfiles: PerfilCompleto[]) => void;
+    userId: string;
 }
 
 // ── Edit Profile Modal ───────────────────────────────────────────────────────
@@ -86,8 +71,7 @@ const EditProfileModal: React.FC<{
                             {(Object.entries(CONDICIONES) as [Condicion, typeof CONDICIONES[Condicion]][]).map(([key, val]) => (
                                 <button key={key} type="button"
                                     onClick={() => setDraft(d => ({ ...d, condicion: key }))}
-                                    className={`p-3 rounded-xl border-2 text-left transition-all ${draft.condicion === key ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/40'
-                                        }`}>
+                                    className={`p-3 rounded-xl border-2 text-left transition-all ${draft.condicion === key ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/40'}`}>
                                     <div className={`font-bold text-sm ${draft.condicion === key ? 'text-primary' : 'text-foreground'}`}>{val.label}</div>
                                     <div className="text-xs text-muted-foreground mt-0.5">{val.descripcion}</div>
                                 </button>
@@ -112,27 +96,62 @@ const EditProfileModal: React.FC<{
 };
 
 // ── Main ConfigScreen ────────────────────────────────────────────────────────
-const ConfigScreen: React.FC<ConfigScreenProps> = ({ onGenerate, onAgregarNino }) => {
+const ConfigScreen: React.FC<ConfigScreenProps> = ({
+    onGenerate,
+    onAgregarNino,
+    perfiles,
+    onPerfilesChange,
+    userId,
+}) => {
     const navigate = useNavigate();
-    const [perfiles, setPerfiles] = useState<PerfilCompleto[]>(() => cargarPerfiles());
-    const [perfilActivo, setPerfilActivo] = useState<PerfilCompleto | null>(() => cargarPerfilActivo(cargarPerfiles()));
+
+    // Perfil activo: primero intentamos el guardado en localStorage, si no el primero de la lista
+    const [perfilActivo, setPerfilActivo] = useState<PerfilCompleto | null>(() => {
+        const id = localStorage.getItem(PERFIL_ACTIVO_KEY);
+        return perfiles.find(p => p.id === id) || perfiles[0] || null;
+    });
+
     const [showEditModal, setShowEditModal] = useState(false);
     const [asignatura, setAsignatura] = useState<Asignatura>('matematicas');
     const [tema, setTema] = useState('');
     const [idioma, setIdioma] = useState<Idioma>('es');
     const [errors, setErrors] = useState<Record<string, string>>({});
 
+    // Sincronizar perfilActivo cuando llegan nuevos perfiles desde Firestore
+    React.useEffect(() => {
+        if (!perfilActivo && perfiles.length > 0) {
+            setPerfilActivo(perfiles[0]);
+        }
+        // Si el perfil activo ya existe en la lista actualizada, refrescarlo
+        if (perfilActivo) {
+            const actualizado = perfiles.find(p => p.id === perfilActivo.id);
+            if (actualizado) setPerfilActivo(actualizado);
+        }
+    }, [perfiles]);
+
     const handleSeleccionarPerfil = (id: string) => {
         const p = perfiles.find(p => p.id === id) || null;
         setPerfilActivo(p);
-        localStorage.setItem(PERFIL_ACTIVO_KEY, id);
+        if (id) localStorage.setItem(PERFIL_ACTIVO_KEY, id);
     };
 
-    const handleGuardarEdicion = (perfilEditado: PerfilCompleto) => {
+    const handleGuardarEdicion = async (perfilEditado: PerfilCompleto) => {
         const nuevos = perfiles.map(p => p.id === perfilEditado.id ? perfilEditado : p);
-        guardarPerfiles(nuevos);
-        setPerfiles(nuevos);
+        onPerfilesChange(nuevos);
         setPerfilActivo(perfilEditado);
+
+        // Si tiene perfil neuroeducativo, actualizar también en Firestore
+        if (perfilEditado.perfilNeuroeducativo) {
+            try {
+                await actualizarPerfilNeuroeducativo(
+                    perfilEditado.id,
+                    perfilEditado.perfilNeuroeducativo,
+                    Date.now()
+                );
+            } catch (e) {
+                console.error('Error actualizando perfil en Firestore:', e);
+            }
+        }
     };
 
     const validate = () => {
@@ -238,12 +257,11 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onGenerate, onAgregarNino }
                                             type="button"
                                             onClick={() => handleSeleccionarPerfil(p.id)}
                                             className={`flex items-center gap-2 p-3 rounded-xl border-2 text-left transition-all ${perfilActivo.id === p.id
-                                                    ? 'border-primary bg-primary/5'
-                                                    : 'border-border hover:border-primary/40'
+                                                ? 'border-primary bg-primary/5'
+                                                : 'border-border hover:border-primary/40'
                                                 }`}
                                         >
-                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-black flex-shrink-0 ${perfilActivo.id === p.id ? 'bg-primary text-white' : 'bg-muted text-foreground'
-                                                }`}>
+                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-black flex-shrink-0 ${perfilActivo.id === p.id ? 'bg-primary text-white' : 'bg-muted text-foreground'}`}>
                                                 {p.nombre ? p.nombre.charAt(0).toUpperCase() : '?'}
                                             </div>
                                             <div className="overflow-hidden">
@@ -295,8 +313,8 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onGenerate, onAgregarNino }
                                         <button key={key} type="button"
                                             onClick={() => setAsignatura(key)}
                                             className={`flex items-center gap-2 py-2.5 px-3 rounded-xl border-2 text-left transition-all text-sm ${asignatura === key
-                                                    ? 'border-accent bg-accent/10 text-accent font-black'
-                                                    : 'border-border bg-white text-muted-foreground hover:border-accent/40 font-bold'
+                                                ? 'border-accent bg-accent/10 text-accent font-black'
+                                                : 'border-border bg-white text-muted-foreground hover:border-accent/40 font-bold'
                                                 }`}>
                                             <span>{val.emoji}</span> {val.label}
                                         </button>
@@ -325,8 +343,8 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onGenerate, onAgregarNino }
                                         <button key={l} type="button"
                                             onClick={() => setIdioma(l)}
                                             className={`py-3 rounded-xl border-2 font-black text-sm transition-all ${idioma === l
-                                                    ? 'border-primary bg-primary/10 text-primary'
-                                                    : 'border-border bg-white text-muted-foreground hover:border-primary/40'
+                                                ? 'border-primary bg-primary/10 text-primary'
+                                                : 'border-border bg-white text-muted-foreground hover:border-primary/40'
                                                 }`}>
                                             {l === 'es' ? '🇨🇱 Español' : '🇺🇸 English'}
                                         </button>
@@ -360,7 +378,7 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({ onGenerate, onAgregarNino }
             </main>
 
             {/* Edit modal */}
-            {showEditModal && (
+            {showEditModal && perfilActivo && (
                 <EditProfileModal
                     perfil={perfilActivo}
                     onSave={handleGuardarEdicion}

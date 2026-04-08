@@ -25,8 +25,8 @@ export const getDashboardSessions = (): any[] => {
   }
 };
 
-export const getSessionsByChildId = (childId: string): any[] => {
-  return getDashboardSessions().filter((s: any) => s.childId === childId);
+export const getSessionsByStudentId = (StudentId: string): any[] => {
+    return getDashboardSessions().filter((s: any) => s.StudentId === StudentId);
 };
 
 // ── Perfiles ──────────────────────────────────────────────────────────────────

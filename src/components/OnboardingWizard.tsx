@@ -36,27 +36,6 @@ export interface PerfilCompleto extends PerfilPersistente {
 
 // ─── Constantes ──────────────────────────────────────────────────────────────
 
-const TIPOS_USUARIO = [
-  {
-    id: 'padre' as TipoUsuario,
-    label: 'Padre / Madre',
-    descripcion: 'Quiero apoyar el aprendizaje de mi hijo/a',
-    emoji: '👨‍👩‍👧',
-  },
-  {
-    id: 'docente' as TipoUsuario,
-    label: 'Docente',
-    descripcion: 'Trabajo con estudiantes con necesidades diversas',
-    emoji: '👩‍🏫',
-  },
-  {
-    id: 'terapeuta' as TipoUsuario,
-    label: 'Terapeuta',
-    descripcion: 'Brindo apoyo terapéutico a niños',
-    emoji: '🧑‍⚕️',
-  },
-];
-
 const PREGUNTAS = [
   {
     id: 'habilidades' as keyof RespuestasOnboarding,
@@ -147,13 +126,19 @@ Responde SOLO con este JSON (sin texto fuera, sin markdown):
 interface OnboardingWizardProps {
   onComplete: (perfil: PerfilCompleto) => void;
   apiKey: string;
+  // El rol del usuario viene del auth — se inyecta desde Index
+  tipoUsuarioAuth: TipoUsuario;
 }
 
-const TOTAL_PASOS = 5;
+// Ahora son 4 pasos (eliminamos el paso 1 de selección de rol)
+const TOTAL_PASOS = 4;
 
-const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete, apiKey }) => {
+const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
+  onComplete,
+  apiKey,
+  tipoUsuarioAuth,
+}) => {
   const [paso, setPaso] = useState(1);
-  const [tipoUsuario, setTipoUsuario] = useState<TipoUsuario | null>(null);
   const [datosPerfil, setDatosPerfil] = useState<PerfilPersistente>({
     nombre: '', edad: 8, grado: '2° Básico', condicion: 'general',
   });
@@ -175,7 +160,6 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete, apiKey 
     const file = e.target.files?.[0];
     if (!file) return;
     setArchivoNombre(file.name);
-
     try {
       const { getDocument, GlobalWorkerOptions } = await import('pdfjs-dist');
       GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
@@ -185,11 +169,13 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete, apiKey 
       for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
         const content = await page.getTextContent();
-        texto += content.items.map((item: unknown) => (typeof item === 'object' && item !== null && 'str' in item ? (item as { str: string }).str : '')).join(' ') + '\n';
+        texto += content.items.map((item: unknown) =>
+          (typeof item === 'object' && item !== null && 'str' in item
+            ? (item as { str: string }).str : '')
+        ).join(' ') + '\n';
       }
       setTextoInforme(texto.slice(0, 8000));
     } catch {
-      // Si falla la lectura del PDF, continuamos sin él
       setTextoInforme(null);
     }
   };
@@ -212,12 +198,11 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete, apiKey 
           messages: [{ role: 'user', content: prompt }],
         }),
       });
-
       const data = await res.json();
       const raw = data.choices?.[0]?.message?.content || '{}';
       const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
       setPerfilGenerado(parsed);
-      setPaso(5);
+      setPaso(4); // paso 4 = resultado (antes era paso 5)
     } catch {
       setError('Hubo un problema generando el perfil. Intenta de nuevo.');
     } finally {
@@ -227,15 +212,10 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete, apiKey 
 
   // ── Finalizar onboarding ─────────────────────────────────────────────────────
   const handleFinalizar = () => {
-
-
     const perfilCompleto: PerfilCompleto = {
       ...datosPerfil,
-      id: crypto.randomUUID(), // ID niño
-
-
-
-      tipoUsuario: tipoUsuario!,
+      id: crypto.randomUUID(),
+      tipoUsuario: tipoUsuarioAuth, // ← viene del auth, no del wizard
       respuestas,
       perfilNeuroeducativo: perfilGenerado || undefined,
       fechaCreacion: Date.now(),
@@ -245,9 +225,12 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete, apiKey 
 
   // ── Validaciones por paso ───────────────────────────────────────────────────
   const puedeAvanzar = () => {
-    if (paso === 1) return tipoUsuario !== null;
-    if (paso === 2) return datosPerfil.nombre.trim() !== '' || true; // nombre opcional
-    if (paso === 3) return respuestas.habilidades.trim() !== '' && respuestas.retos.trim() !== '' && respuestas.comportamiento.trim() !== '';
+    if (paso === 1) return true; // datos básicos siempre puede avanzar
+    if (paso === 2) return (
+      respuestas.habilidades.trim() !== '' &&
+      respuestas.retos.trim() !== '' &&
+      respuestas.comportamiento.trim() !== ''
+    );
     return true;
   };
 
@@ -266,60 +249,8 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete, apiKey 
     </div>
   );
 
-  // ── PASO 1: Tipo de usuario ─────────────────────────────────────────────────
+  // ── PASO 1: Datos básicos del niño (antes era paso 2) ───────────────────────
   if (paso === 1) return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="w-full max-w-lg">
-        <div className="text-center mb-8">
-         
-          <div className="flex justify-center">
-            <img src="/logo.png" alt="TEOplay" className="h-[180px] object-contain" />
-         </div>
-          <p className="font-[Fredoka] text-lg text-foregorund font-black">Tecnología de asistencia educativa</p>
-          
-          <h1 className="text-2xl font-black text-orange-600 mb-2">Bienvenido</h1>
-        </div>
-        <ProgressBar />
-        <div className="bg-white rounded-2xl border border-border shadow-sm p-6">
-          <h2 className="font-black text-foreground text-lg mb-1">¿Quién eres?</h2>
-          <p className="text-muted-foreground text-sm font-semibold mb-5">Esto nos ayuda a personalizar tu experiencia</p>
-          <div className="space-y-3">
-            {TIPOS_USUARIO.map(tipo => (
-              <button
-                key={tipo.id}
-                type="button"
-                onClick={() => setTipoUsuario(tipo.id)}
-                className={`w-full flex items-center gap-4 p-4 rounded-xl border-2 text-left transition-all ${
-                  tipoUsuario === tipo.id
-                    ? 'border-primary bg-primary/5'
-                    : 'border-border hover:border-primary/40'
-                }`}
-              >
-                <span className="text-3xl">{tipo.emoji}</span>
-                <div>
-                  <p className={`font-black text-sm ${tipoUsuario === tipo.id ? 'text-primary' : 'text-foreground'}`}>
-                    {tipo.label}
-                  </p>
-                  <p className="text-xs text-muted-foreground font-semibold">{tipo.descripcion}</p>
-                </div>
-                {tipoUsuario === tipo.id && <CheckCircle className="w-5 h-5 text-primary ml-auto" />}
-              </button>
-            ))}
-          </div>
-          <button
-            onClick={() => setPaso(2)}
-            disabled={!puedeAvanzar()}
-            className="w-full mt-6 flex items-center justify-center gap-2 bg-emerald-600 text-white font-black py-4 rounded-2xl disabled:opacity-80 cursor-pointer"
-          >
-            Continuar <ChevronRight className="w-5 h-5" />
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-
-  // ── PASO 2: Datos básicos ───────────────────────────────────────────────────
-  if (paso === 2) return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-lg">
         <ProgressBar />
@@ -390,24 +321,19 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete, apiKey 
             </div>
           </div>
 
-          <div className="flex gap-3 mt-6">
-            <button onClick={() => setPaso(1)} className="flex items-center gap-1 px-4 py-3 rounded-xl border-2 border-border font-bold text-muted-foreground cursor-pointer">
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setPaso(3)}
-              className="flex-1 flex items-center justify-center gap-2 bg-emerald-500 text-white font-black py-3 rounded-2xl cursor-pointer"
-            >
-              Continuar <ChevronRight className="w-5 h-5" />
-            </button>
-          </div>
+          <button
+            onClick={() => setPaso(2)}
+            className="w-full mt-6 flex items-center justify-center gap-2 bg-emerald-500 text-white font-black py-3 rounded-2xl cursor-pointer"
+          >
+            Continuar <ChevronRight className="w-5 h-5" />
+          </button>
         </div>
       </div>
     </div>
   );
 
-  // ── PASO 3: Las 4 preguntas ─────────────────────────────────────────────────
-  if (paso === 3) return (
+  // ── PASO 2: Las 4 preguntas (antes era paso 3) ──────────────────────────────
+  if (paso === 2) return (
     <div className="min-h-screen bg-background p-4 py-8">
       <div className="w-full max-w-lg mx-auto">
         <ProgressBar />
@@ -439,11 +365,11 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete, apiKey 
           </div>
 
           <div className="flex gap-3 mt-6">
-            <button onClick={() => setPaso(2)} className="flex items-center gap-1 px-4 py-3 rounded-xl border-2 border-border font-bold text-muted-foreground cursor-pointer">
+            <button onClick={() => setPaso(1)} className="flex items-center gap-1 px-4 py-3 rounded-xl border-2 border-border font-bold text-muted-foreground cursor-pointer">
               <ChevronLeft className="w-4 h-4" />
             </button>
             <button
-              onClick={() => setPaso(4)}
+              onClick={() => setPaso(3)}
               disabled={!puedeAvanzar()}
               className="flex-1 flex items-center justify-center gap-2 bg-emerald-500 text-white font-black py-3 rounded-2xl disabled:opacity-40 cursor-pointer"
             >
@@ -455,8 +381,8 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete, apiKey 
     </div>
   );
 
-  // ── PASO 4: Documento opcional ──────────────────────────────────────────────
-  if (paso === 4) return (
+  // ── PASO 3: Documento opcional (antes era paso 4) ───────────────────────────
+  if (paso === 3) return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-lg">
         <ProgressBar />
@@ -508,7 +434,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete, apiKey 
           )}
 
           <div className="flex gap-3 mt-6">
-            <button onClick={() => setPaso(3)} className="flex items-center gap-1 px-4 py-3 rounded-xl border-2 border-border font-bold text-muted-foreground cursor-pointer">
+            <button onClick={() => setPaso(2)} className="flex items-center gap-1 px-4 py-3 rounded-xl border-2 border-border font-bold text-muted-foreground cursor-pointer">
               <ChevronLeft className="w-4 h-4" />
             </button>
             <button
@@ -531,21 +457,13 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete, apiKey 
           </div>
 
           {error && <p className="text-xs text-destructive font-bold mt-3 text-center">{error}</p>}
-
-          <button
-            type="button"
-            onClick={() => setPaso(4)}
-            className="w-full mt-3 text-xs text-muted-foreground font-semibold hover:text-foreground transition-colors cursor-pointer"
-          >
-            Omitir este paso →
-          </button>
         </div>
       </div>
     </div>
   );
 
-  // ── PASO 5: Perfil generado ─────────────────────────────────────────────────
-  if (paso === 5 && perfilGenerado) return (
+  // ── PASO 4: Perfil generado (antes era paso 5) ──────────────────────────────
+  if (paso === 4 && perfilGenerado) return (
     <div className="min-h-screen bg-background p-4 py-8">
       <div className="w-full max-w-2xl mx-auto">
         <ProgressBar />
@@ -576,7 +494,6 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete, apiKey 
                 <span>⭐</span> Fortalezas identificadas
               </h3>
               <div className="space-y-2">
-                
                 {(perfilGenerado.fortalezas || []).map((f, i) => (
                   <div key={i} className="flex items-start gap-2 p-3 bg-teo-green/5 border border-teo-green/20 rounded-xl">
                     <CheckCircle className="w-4 h-4 text-teo-green flex-shrink-0 mt-0.5" />
@@ -607,7 +524,6 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onComplete, apiKey 
                 <span>🧠</span> Estrategias para TEOplay
               </h3>
               <div className="space-y-2">
-            
                 {(perfilGenerado.estrategias || []).map((e, i) => (
                   <div key={i} className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-xl">
                     <span className="text-blue-500 font-black text-xs flex-shrink-0 mt-1">{i + 1}</span>

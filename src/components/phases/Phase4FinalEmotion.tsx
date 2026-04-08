@@ -164,7 +164,7 @@ export const ClosureScreen: React.FC<ClosureScreenProps> = ({
           onClick={onVerReporte}
           className="w-full py-3.5 px-4 rounded-xl border-2 border-border text-muted-foreground font-black text-sm hover:border-primary hover:text-primary transition-colors cursor-pointer"
         >
-          👤 Soy el adulto — ver resultados
+          👤 Ver resultados
         </button>
       </div>
     </div>

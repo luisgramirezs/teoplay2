@@ -6,9 +6,7 @@ import {
   ChevronDown, X, PlayCircle
 } from 'lucide-react';
 import { getDashboardMetrics } from '@/lib/dashboardMetrics';
-import { onAuthChange } from '@/lib/authService';
-import { getStudentsByUser } from '@/lib/studentsService';
-import { getSessionsByStudent } from '@/lib/sessionsService';
+import { getAllProfiles, getSessionsByChildId, getActiveProfileId } from '@/lib/dashboardStorage';
 import { ASIGNATURAS, EMOCIONES, CONDICIONES, INTERESES } from '@/types';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -248,8 +246,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [perfiles, setPerfiles] = useState<any[]>([]);
   const [todasSesiones, setTodasSesiones] = useState<any[]>([]);
-  const [selectedStudentId, setSelectedStudentId] = useState<string>('');
-  const [userId, setUserId] = useState<string>('');
+  const [selectedChildId, setSelectedChildId] = useState<string>('');
 
   // ── Filtro de fechas ──
   const [filtroFecha, setFiltroFecha] = useState<FiltroFecha>('mes');
@@ -260,31 +257,23 @@ export default function Dashboard() {
   // ── Detalle asignatura ──
   const [asignaturaDetalle, setAsignaturaDetalle] = useState<string | null>(null);
 
-  // Cargar datos desde Firestore con el usuario autenticado
+  // Cargar datos al montar
   useEffect(() => {
-    const unsub = onAuthChange(async (user) => {
-      if (!user) return;
-      try {
-        setUserId(user.uid);
-        const students = await getStudentsByUser(user.uid);
-        setPerfiles(students);
-        if (students.length > 0) {
-            setSelectedStudentId(students[0].id);
-        }
-      } catch (e) {
-        console.error('Error cargando alumnos:', e);
-      }
-    });
-    return () => unsub();
+    const profiles = getAllProfiles();
+    setPerfiles(profiles);
+    const activeId = getActiveProfileId();
+    if (activeId && profiles.find(p => p.id === activeId)) {
+      setSelectedChildId(activeId);
+    } else if (profiles.length > 0) {
+      setSelectedChildId(profiles[0].id);
+    }
   }, []);
 
   useEffect(() => {
-      if (!selectedStudentId) return;
-    setAsignaturaDetalle(null);
-      getSessionsByStudent(selectedStudentId, userId)
-      .then(sesiones => setTodasSesiones(sesiones))
-      .catch(e => console.error('Error cargando sesiones:', e));
-  }, [selectedStudentId, userId]);
+    if (!selectedChildId) return;
+    setTodasSesiones(getSessionsByChildId(selectedChildId));
+    setAsignaturaDetalle(null); // Cerrar detalle al cambiar de niño
+  }, [selectedChildId]);
 
   // Sesiones filtradas por rango de fecha
   const sesionesEnPeriodo = useMemo(() => {
@@ -293,8 +282,8 @@ export default function Dashboard() {
   }, [todasSesiones, filtroFecha, fechaInicio, fechaFin]);
 
   const nino = useMemo(
-      () => perfiles.find(p => p.id === selectedStudentId) || null,
-      [perfiles, selectedStudentId]
+    () => perfiles.find(p => p.id === selectedChildId) || null,
+    [perfiles, selectedChildId]
   );
 
   // Métricas sobre el período filtrado
@@ -366,21 +355,21 @@ export default function Dashboard() {
               {perfiles.map((p, i) => (
                 <button
                   key={p.id ?? `perfil-${i}`}
-                      onClick={() => setSelectedStudentId(p.id)}
+                  onClick={() => setSelectedChildId(p.id)}
                   className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-semibold transition-colors cursor-pointer text-left ${
-                      selectedStudentId === p.id
+                    selectedChildId === p.id
                       ? 'bg-orange-600 text-white'
                       : 'hover:bg-muted/50 text-foreground'
                   }`}
                 >
                   <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 ${
-                          selectedStudentId === p.id ? 'bg-white/20 text-white' : 'bg-primary/10 text-primary'
+                    selectedChildId === p.id ? 'bg-white/20 text-white' : 'bg-primary/10 text-primary'
                   }`}>
                     {p.nombre?.[0]?.toUpperCase() || '?'}
                   </div>
                   <div className="min-w-0">
                     <p className="truncate">{p.nombre} {p.apellido}</p>
-                          <p className={`text-[10px] truncate ${selectedStudentId === p.id ? 'text-white/70' : 'text-muted-foreground'}`}>
+                    <p className={`text-[10px] truncate ${selectedChildId === p.id ? 'text-white/70' : 'text-muted-foreground'}`}>
                       {p.grado} · {CONDICIONES[p.condicion]?.label || p.condicion}
                     </p>
                   </div>
@@ -438,8 +427,8 @@ export default function Dashboard() {
             {/* Selector móvil */}
             <div className="md:hidden flex flex-col gap-2">
               <select
-                value={selectedStudentId}
-                onChange={e => setSelectedStudentId(e.target.value)}
+                value={selectedChildId}
+                onChange={e => setSelectedChildId(e.target.value)}
                 className="w-full border-2 border-border rounded-xl px-3 py-2.5 font-semibold text-sm text-foreground bg-white outline-none focus:border-primary"
               >
                 <option value="">Seleccionar alumno…</option>

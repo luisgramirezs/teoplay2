@@ -28,7 +28,8 @@ export type Asignatura =
   | 'ciencias'
   | 'historia'
   | 'arte'
-  | 'ed_fisica';
+  | 'ed_fisica'
+  | 'sociales';
 
 export type Idioma = 'es' | 'en';
 
@@ -48,6 +49,7 @@ export interface PerfilNino {
   tema: string;
   idioma: Idioma;
   perfilNeuroeducativo?: import('@/components/OnboardingWizard').PerfilNeuroeducativo;
+  id:string;
 }
 
 /** Solo los campos que persisten entre sesiones */
@@ -199,6 +201,7 @@ export interface JuegoResult {
 }
 
 export interface SessionData {
+    
   perfil: PerfilNino | null;
   sesionGenerada: SesionGenerada | null;
   emocionInicio: { valor: number | null; timestamp: number | null };
@@ -212,6 +215,7 @@ export interface SessionData {
   juegos: JuegoResult[];
   porcentajeAciertos: number | null;
   nivelLogro: 'inicio' | 'proceso' | 'logrado' | null;
+  
 }
 
 export const CONDICIONES: Record<Condicion, { label: string; descripcion: string; color: string }> = {
@@ -245,6 +249,7 @@ export const ASIGNATURAS: Record<Asignatura, { label: string; emoji: string }> =
   historia: { label: 'Historia', emoji: '🏛️' },
   arte: { label: 'Arte', emoji: '🎨' },
   ed_fisica: { label: 'Ed. Física', emoji: '🏃' },
+  sociales: { label: 'Sociales', emoji: '👥' },
 };
 
 export const GRADOS = [
