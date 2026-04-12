@@ -144,12 +144,32 @@ export interface EjemploItem {
   traduccion: string;
 }
 
+export interface ConceptoClave {
+  nombre: string;
+  funcion?: string;
+  explicacionSimple: string;
+}
+
+export interface VisualSugerido {
+  tipo: 'diagrama' | 'pictograma' | 'escena' | 'secuencia' | 'comparacion' | 'ninguna';
+  descripcion: string;
+}
+
 export interface ExplicacionBloque {
+  objetivo?: string;
   intro: string;
-  pasos: string[];
+  pasos: string[]; // se mantiene por compatibilidad con tu render actual
+  conceptosClave?: ConceptoClave[];
   analogia: string;
   ejemplos: EjemploItem[];
   resumen: string;
+  visualSugerido?: {
+    tipo: 'diagrama' | 'pictograma' | 'escena' | 'secuencia' | 'comparacion' | 'ninguna';
+    descripcion: string;
+    justificacionPedagogica?: string;
+  };
+  chequeoCobertura?: string[];
+  justificacionPedagogica?: string;
 }
 
 // ── Reforzamiento híbrido (digital + físico) ──────────────────────────────────
@@ -191,6 +211,11 @@ export interface SesionGenerada {
   recomendaciones: string[];
   imagenUrl?: string;
   imagenPedagogicaUrl?: string;
+  mapaPedagogico?: {
+    contenidosEnsenados: string[];
+    contenidosEvaluables: string[];
+    restriccionesDeEvaluacion: string[];
+  };
 }
 
 export interface JuegoResult {
@@ -215,6 +240,11 @@ export interface SessionData {
   juegos: JuegoResult[];
   porcentajeAciertos: number | null;
   nivelLogro: 'inicio' | 'proceso' | 'logrado' | null;
+  mapaPedagogico?: {
+      contenidosEnsenados: string[];
+      contenidosEvaluables: string[];
+      restriccionesDeEvaluacion: string[];
+  };
   
 }
 
@@ -254,16 +284,16 @@ export const ASIGNATURAS: Record<Asignatura, { label: string; emoji: string }> =
 
 export const GRADOS = [
   'Kinder',
-  '1° Básico', '2° Básico', '3° Básico', '4° Básico',
-  '5° Básico', '6° Básico', '7° Básico', '8° Básico', '9° Básico',
+  '1°', '2°', '3°', '4°',
+  '5°', '6°', '7°', '8°', '9°', '10°','11°','12°'
 ];
 
 export const EMOCIONES = [
-  { valor: 1, emoji: '😢', label: 'Muy mal', color: '#ef4444' },
+  //{ valor: 1, emoji: '😢', label: 'Muy mal', color: '#ef4444' },
   { valor: 2, emoji: '😟', label: 'Mal', color: '#f97316' },
   { valor: 3, emoji: '😐', label: 'Regular', color: '#eab308' },
   { valor: 4, emoji: '🙂', label: 'Bien', color: '#22c55e' },
-  { valor: 5, emoji: '😄', label: '¡Muy bien!', color: '#06b6d4' },
+  //{ valor: 5, emoji: '😄', label: '¡Muy bien!', color: '#06b6d4' },
 ];
 
 export const PERFIL_STORAGE_KEY = 'teoplay_perfil';

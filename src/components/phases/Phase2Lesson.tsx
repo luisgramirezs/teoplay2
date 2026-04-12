@@ -76,28 +76,88 @@ const BtnNarrar: React.FC<{
 function normalizar(raw: unknown): ExplicacionBloque {
   if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
     const r = raw as Record<string, unknown>;
+
     let ejemplos: EjemploItem[] = [];
     if (Array.isArray(r.ejemplos)) {
       ejemplos = r.ejemplos.map((e: unknown) => {
         if (typeof e === 'object' && e !== null) {
           const ej = e as Record<string, string>;
-          return { original: ej.original || '', traduccion: ej.traduccion || '' };
+          return {
+            original: ej.original || '',
+            traduccion: ej.traduccion || '',
+          };
         }
         return { original: String(e), traduccion: '' };
       });
     } else if (typeof r.ejemplo === 'string' && r.ejemplo) {
       ejemplos = [{ original: r.ejemplo, traduccion: '' }];
     }
+
+    let conceptosClave = [];
+    if (Array.isArray(r.conceptosClave)) {
+      conceptosClave = r.conceptosClave.map((c: unknown) => {
+        if (typeof c === 'object' && c !== null) {
+          const cc = c as Record<string, unknown>;
+          return {
+            nombre: typeof cc.nombre === 'string' ? cc.nombre : '',
+            funcion: typeof cc.funcion === 'string' ? cc.funcion : '',
+            explicacionSimple:
+              typeof cc.explicacionSimple === 'string' ? cc.explicacionSimple : '',
+          };
+        }
+        return {
+          nombre: '',
+          funcion: '',
+          explicacionSimple: '',
+        };
+      }).filter(c => c.nombre || c.explicacionSimple);
+    }
+
+    let visualSugerido;
+    if (typeof r.visualSugerido === 'object' && r.visualSugerido !== null) {
+      const vs = r.visualSugerido as Record<string, unknown>;
+      visualSugerido = {
+          tipo: typeof vs.tipo === 'string'
+            ? (vs.tipo as 'diagrama' | 'pictograma' | 'escena' | 'secuencia' | 'comparacion' | 'ninguna')
+            : 'ninguna',
+          descripcion: typeof vs.descripcion === 'string' ? vs.descripcion : '',
+          justificacionPedagogica:
+            typeof vs.justificacionPedagogica === 'string'
+              ? vs.justificacionPedagogica
+              : '',
+      };
+    }
+
     return {
+      objetivo: typeof r.objetivo === 'string' ? r.objetivo : '',
       intro: typeof r.intro === 'string' ? r.intro : '',
       pasos: Array.isArray(r.pasos) ? r.pasos.map(String) : [],
+      conceptosClave,
       analogia: typeof r.analogia === 'string' ? r.analogia : '',
       ejemplos,
       resumen: typeof r.resumen === 'string' ? r.resumen : '',
+      visualSugerido,
+      chequeoCobertura: Array.isArray(r.chequeoCobertura)
+        ? r.chequeoCobertura.map(String)
+        : [],
     };
   }
-  return { intro: String(raw || ''), pasos: [], analogia: '', ejemplos: [], resumen: '' };
+
+  return {
+    objetivo: '',
+    intro: String(raw || ''),
+    pasos: [],
+    conceptosClave: [],
+    analogia: '',
+    ejemplos: [],
+    resumen: '',
+    visualSugerido: undefined,
+    chequeoCobertura: [],
+  };
 }
+
+
+
 
 function bloqueATexto(b: ExplicacionBloque): string {
   const ejs = b.ejemplos.map(e => e.traduccion ? `${e.original} — ${e.traduccion}` : e.original).join('. ');
@@ -206,6 +266,84 @@ const EjemplosBlock: React.FC<{ ejemplos: EjemploItem[]; fontSize: string }> = (
   );
 };
 
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Conceptos clave
+// ─────────────────────────────────────────────────────────────────────────────
+
+const ConceptosClaveBlock: React.FC<{
+  conceptos: NonNullable<ExplicacionBloque['conceptosClave']>;
+  fontSize: string;
+  seccionActiva: string | null;
+  onNarrar: (id: string, texto: string) => void;
+}> = ({ conceptos, fontSize, seccionActiva, onNarrar }) => {
+  if (!conceptos?.length) return null;
+
+  return (
+    <div className="space-y-3">
+      <p className="text-[11px] font-black text-primary uppercase tracking-wide px-1">
+        🧩 Conceptos importantes
+      </p>
+
+      {conceptos.map((concepto, i) => {
+        const textoNarracion = [
+          concepto.nombre,
+          concepto.funcion,
+          concepto.explicacionSimple,
+        ]
+          .filter(Boolean)
+          .join('. ');
+
+        return (
+          <div
+            key={i}
+            className="rounded-2xl border border-border bg-white shadow-sm overflow-hidden"
+          >
+            <div className="px-4 py-3 bg-primary/5 border-b border-border flex items-start gap-3">
+              <span className="flex-shrink-0 w-7 h-7 rounded-full bg-primary text-primary-foreground text-sm font-black flex items-center justify-center mt-0.5">
+                {i + 1}
+              </span>
+
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="font-black text-foreground" style={{ fontSize }}>
+                      {concepto.nombre}
+                    </p>
+                    {concepto.funcion && (
+                      <p className="text-sm font-bold text-primary mt-1">
+                        {concepto.funcion}
+                      </p>
+                    )}
+                  </div>
+
+                  <BtnNarrar
+                    id={`concepto-${i}`}
+                    texto={textoNarracion}
+                    seccionActiva={seccionActiva}
+                    onNarrar={onNarrar}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {concepto.explicacionSimple && (
+              <div className="px-4 py-3">
+                <p
+                  className="font-semibold text-foreground leading-relaxed"
+                  style={{ fontSize }}
+                >
+                  {concepto.explicacionSimple}
+                </p>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Renderizador por condición — imagen integrada entre intro y pasos
 // ─────────────────────────────────────────────────────────────────────────────
@@ -219,10 +357,16 @@ const ExplicacionRenderer: React.FC<{
   idioma: string;
 
 }> = ({ bloque, condicion, fontSize, imagenUrl, tema, idioma }) => {
-  const isTEA = condicion === 'tea';
-  const isTDAH = condicion === 'tdah';
-  const isDown = condicion === 'down';
-  const { narrar, seccionActiva } = useNarrador(idioma, condicion);
+    const isTEA = condicion === 'tea';
+    const isTDAH = condicion === 'tdah';
+    const isDown = condicion === 'down';
+    const isDislexia = condicion === 'dislexia';
+    const isDiscalculia = condicion === 'discalculia';
+    const isDisgrafia = condicion === 'disgrafia';
+    const isGeneral = condicion === 'general';
+    const isNinguna = condicion === 'ninguna';
+
+    const { narrar, seccionActiva } = useNarrador(idioma, condicion);
 
   // Imagen pedagógica se muestra entre intro y pasos — donde más ayuda
   const imagenBloque = imagenUrl ? (
@@ -247,20 +391,35 @@ const ExplicacionRenderer: React.FC<{
 
           {/* PASOS */}
           
-          {bloque.pasos.length > 0 && (
-            <div className="space-y-2">
-                <p className="text-xs font-black text-muted-foreground uppercase tracking-wide px-1">Lo que vamos a aprender:</p>
-                 {bloque.pasos.map((paso, i) => (
-                    <div key={i} className="flex items-start gap-3 p-3 bg-white border border-border rounded-xl">
-                        <span className="flex-shrink-0 w-7 h-7 rounded-full bg-primary text-primary-foreground text-sm font-black flex items-center justify-center">
-                            {i + 1}
-                        </span>
-                        <p className="font-semibold text-foreground leading-relaxed flex-1">{paso}</p>
-                        <BtnNarrar id={`paso-${i}`} texto={paso} seccionActiva={seccionActiva} onNarrar={narrar} />
-                    </div>
-                 ))}
-            </div>
-          )}
+        {/* CONCEPTOS CLAVE O PASOS */}
+        {bloque.conceptosClave && bloque.conceptosClave.length > 0 ? (
+          <ConceptosClaveBlock
+            conceptos={bloque.conceptosClave}
+            fontSize={fontSize}
+            seccionActiva={seccionActiva}
+            onNarrar={narrar}
+          />
+        ) : bloque.pasos.length > 0 ? (
+          <div className="space-y-2">
+            <p className="text-xs font-black text-muted-foreground uppercase tracking-wide px-1">
+              Lo que vamos a aprender:
+            </p>
+            {bloque.pasos.map((paso, i) => (
+              <div key={i} className="flex items-start gap-3 p-3 bg-white border border-border rounded-xl">
+                <span className="flex-shrink-0 w-7 h-7 rounded-full bg-primary text-primary-foreground text-sm font-black flex items-center justify-center">
+                  {i + 1}
+                </span>
+                <p className="font-semibold text-foreground leading-relaxed flex-1">{paso}</p>
+                <BtnNarrar
+                  id={`paso-${i}`}
+                  texto={paso}
+                  seccionActiva={seccionActiva}
+                  onNarrar={narrar}
+                />
+              </div>
+            ))}
+          </div>
+        ) : null}
 
           {/* ANALOGÍA */}
           {bloque.analogia && (
@@ -335,20 +494,35 @@ const ExplicacionRenderer: React.FC<{
 
           {/* PASOS */}
           
-          {bloque.pasos.length > 0 && (
-            <div className="space-y-2">
-                <p className="text-xs font-black text-muted-foreground uppercase tracking-wide px-1">Lo que vamos a aprender:</p>
-                 {bloque.pasos.map((paso, i) => (
-                    <div key={i} className="flex items-start gap-3 p-3 bg-white border border-border rounded-xl">
-                        <span className="flex-shrink-0 w-7 h-7 rounded-full bg-primary text-primary-foreground text-sm font-black flex items-center justify-center">
-                            {i + 1}
-                        </span>
-                        <p className="font-semibold text-foreground leading-relaxed flex-1">{paso}</p>
-                        <BtnNarrar id={`paso-${i}`} texto={paso} seccionActiva={seccionActiva} onNarrar={narrar} />
-                    </div>
-                 ))}
-            </div>
-          )}
+            {/* CONCEPTOS CLAVE O PASOS */}
+            {bloque.conceptosClave && bloque.conceptosClave.length > 0 ? (
+              <ConceptosClaveBlock
+                conceptos={bloque.conceptosClave}
+                fontSize={fontSize}
+                seccionActiva={seccionActiva}
+                onNarrar={narrar}
+              />
+            ) : bloque.pasos.length > 0 ? (
+              <div className="space-y-2">
+                <p className="text-xs font-black text-muted-foreground uppercase tracking-wide px-1">
+                  Lo que vamos a aprender:
+                </p>
+                {bloque.pasos.map((paso, i) => (
+                  <div key={i} className="flex items-start gap-3 p-3 bg-white border border-border rounded-xl">
+                    <span className="flex-shrink-0 w-7 h-7 rounded-full bg-primary text-primary-foreground text-sm font-black flex items-center justify-center">
+                      {i + 1}
+                    </span>
+                    <p className="font-semibold text-foreground leading-relaxed flex-1">{paso}</p>
+                    <BtnNarrar
+                      id={`paso-${i}`}
+                      texto={paso}
+                      seccionActiva={seccionActiva}
+                      onNarrar={narrar}
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : null}
 
           {/* ANALOGÍA */}
           {bloque.analogia && (
@@ -406,79 +580,323 @@ const ExplicacionRenderer: React.FC<{
       );
   }
 
-  // Down / Dislexia / General
+// Down
+if (isDown) {
   return (
-    <div className="space-y-4" style={{ fontSize, lineHeight: isDown ? '2' : '1.8' }}>
+    <div className="space-y-4" style={{ fontSize, lineHeight: '2' }}>
       <p className="font-semibold text-foreground">{bloque.intro}</p>
       {imagenBloque}
 
-      {/* PASOS */}
+        {bloque.conceptosClave && bloque.conceptosClave.length > 0 ? (
+          <ConceptosClaveBlock
+            conceptos={bloque.conceptosClave}
+            fontSize={fontSize}
+            seccionActiva={seccionActiva}
+            onNarrar={narrar}
+          />
+        ) : bloque.pasos.length > 0 ? (
+          <div className="space-y-2">
+            {bloque.pasos.map((paso, i) => (
+              <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-pink-50 border border-pink-100">
+                <span className="flex-shrink-0 w-7 h-7 rounded-full bg-pink-500 text-white text-sm font-black flex items-center justify-center">
+                  {i + 1}
+                </span>
+                <p className="font-semibold text-foreground leading-relaxed flex-1">{paso}</p>
+                <BtnNarrar
+                  id={`paso-${i}`}
+                  texto={paso}
+                  seccionActiva={seccionActiva}
+                  onNarrar={narrar}
+                />
+              </div>
+            ))}
+          </div>
+        ) : null}
 
-      {bloque.pasos.length > 0 && (
-        <div className="space-y-2">
-          {bloque.pasos.map((paso, i) => (
-            <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-muted/30">
-                  
-                  <span className="flex-shrink-0 w-7 h-7 rounded-full bg-primary text-primary-foreground text-sm font-black flex items-center justify-center">
-                      {i + 1}
-                  </span>
-
-              <p className="font-semibold text-foreground leading-relaxed">{paso}</p>
-              <BtnNarrar id={`paso-${i}`} texto={paso} seccionActiva={seccionActiva} onNarrar={narrar} />
-            </div>
-          ))}
+      {bloque.analogia && (
+        <div className="p-4 bg-purple-50 border-l-4 border-purple-400 rounded-r-xl">
+          <div className="lesson-block-label text-teo-purple">🔗 Analogía</div>
+          <p className="font-semibold text-foreground/90">{bloque.analogia}</p>
         </div>
-          )}
+      )}
 
-      {/* ANALOGÍA */}
+      <EjemplosBlock ejemplos={bloque.ejemplos} fontSize={fontSize} />
+
+      {bloque.resumen && (
+        <div className="p-4 bg-yellow-50 border border-yellow-300 rounded-xl">
+          <p className="text-[11px] font-black text-yellow-700 uppercase tracking-wide mb-1">⭐ Para recordar</p>
+          <p className="font-bold text-foreground">{bloque.resumen}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Dislexia
+if (isDislexia) {
+  return (
+    <div className="space-y-4" style={{ fontSize, lineHeight: '2.1' }}>
+      <p className="font-semibold text-foreground">{bloque.intro}</p>
+      {imagenBloque}
+
+        {bloque.conceptosClave && bloque.conceptosClave.length > 0 ? (
+          <ConceptosClaveBlock
+            conceptos={bloque.conceptosClave}
+            fontSize={fontSize}
+            seccionActiva={seccionActiva}
+            onNarrar={narrar}
+          />
+        ) : bloque.pasos.length > 0 ? (
+          <div className="space-y-3">
+            {bloque.pasos.map((paso, i) => (
+              <div key={i} className="p-4 rounded-2xl bg-white border-2 border-sky-100">
+                <div className="flex items-start gap-3">
+                  <span className="flex-shrink-0 w-7 h-7 rounded-full bg-sky-500 text-white text-sm font-black flex items-center justify-center">
+                    {i + 1}
+                  </span>
+                  <p className="font-semibold text-foreground leading-relaxed flex-1">{paso}</p>
+                  <BtnNarrar
+                    id={`paso-${i}`}
+                    texto={paso}
+                    seccionActiva={seccionActiva}
+                    onNarrar={narrar}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : null} 
+    {bloque.analogia && (
+        <div className="p-4 bg-sky-50 border border-sky-200 rounded-2xl">
+          <div className="lesson-block-label text-sky-700">🔗 Analogía</div>
+          <p className="font-semibold text-foreground/90">{bloque.analogia}</p>
+        </div>
+      )}
+
+      <EjemplosBlock ejemplos={bloque.ejemplos} fontSize={fontSize} />
+
+      {bloque.resumen && (
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl">
+          <p className="text-[11px] font-black text-amber-700 uppercase tracking-wide mb-1">⭐ Para recordar</p>
+          <p className="font-bold text-foreground">{bloque.resumen}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Discalculia
+if (isDiscalculia) {
+  return (
+    <div className="space-y-4" style={{ fontSize, lineHeight: '1.9' }}>
+      <p className="font-semibold text-foreground">{bloque.intro}</p>
+      {imagenBloque}
+
+        {bloque.conceptosClave && bloque.conceptosClave.length > 0 ? (
+          <ConceptosClaveBlock
+            conceptos={bloque.conceptosClave}
+            fontSize={fontSize}
+            seccionActiva={seccionActiva}
+            onNarrar={narrar}
+          />
+        ) : bloque.pasos.length > 0 ? (
+          <div className="space-y-2">
+            <p className="text-xs font-black text-muted-foreground uppercase tracking-wide px-1">
+              Paso a paso
+            </p>
+            {bloque.pasos.map((paso, i) => (
+              <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-orange-50 border border-orange-100">
+                <span className="flex-shrink-0 w-7 h-7 rounded-full bg-orange-500 text-white text-sm font-black flex items-center justify-center">
+                  {i + 1}
+                </span>
+                <p className="font-semibold text-foreground leading-relaxed flex-1">{paso}</p>
+                <BtnNarrar
+                  id={`paso-${i}`}
+                  texto={paso}
+                  seccionActiva={seccionActiva}
+                  onNarrar={narrar}
+                />
+              </div>
+            ))}
+          </div>
+        ) : null}
+      {bloque.analogia && (
+        <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
+          <div className="lesson-block-label text-yellow-700">🧠 Pista para entenderlo</div>
+          <p className="font-semibold text-foreground/90">{bloque.analogia}</p>
+        </div>
+      )}
+
+      <EjemplosBlock ejemplos={bloque.ejemplos} fontSize={fontSize} />
+
+      {bloque.resumen && (
+        <div className="p-4 bg-orange-50 border border-orange-300 rounded-xl">
+          <p className="text-[11px] font-black text-orange-700 uppercase tracking-wide mb-1">⭐ Recuerda</p>
+          <p className="font-bold text-foreground">{bloque.resumen}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Disgrafía
+if (isDisgrafia) {
+  return (
+    <div className="space-y-4" style={{ fontSize, lineHeight: '1.9' }}>
+      <p className="font-semibold text-foreground">{bloque.intro}</p>
+      {imagenBloque}
+
+        {bloque.conceptosClave && bloque.conceptosClave.length > 0 ? (
+          <ConceptosClaveBlock
+            conceptos={bloque.conceptosClave}
+            fontSize={fontSize}
+            seccionActiva={seccionActiva}
+            onNarrar={narrar}
+          />
+        ) : bloque.pasos.length > 0 ? (
+          <div className="space-y-2">
+            {bloque.pasos.map((paso, i) => (
+              <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-green-50 border border-green-100">
+                <span className="flex-shrink-0 w-7 h-7 rounded-full bg-green-600 text-white text-sm font-black flex items-center justify-center">
+                  {i + 1}
+                </span>
+                <p className="font-semibold text-foreground leading-relaxed flex-1">{paso}</p>
+                <BtnNarrar
+                  id={`paso-${i}`}
+                  texto={paso}
+                  seccionActiva={seccionActiva}
+                  onNarrar={narrar}
+                />
+              </div>
+            ))}
+          </div>
+        ) : null}
+
+      {bloque.analogia && (
+        <div className="lesson-block-analogy">
+          <div className="lesson-block-label text-emerald-700">🔗 Para imaginarlo mejor</div>
+          <p className="font-semibold text-foreground/90">{bloque.analogia}</p>
+        </div>
+      )}
+
+      <EjemplosBlock ejemplos={bloque.ejemplos} fontSize={fontSize} />
+
+      {bloque.resumen && (
+        <div className="p-4 bg-lime-50 border border-lime-200 rounded-xl">
+          <p className="text-[11px] font-black text-lime-700 uppercase tracking-wide mb-1">⭐ Idea importante</p>
+          <p className="font-bold text-foreground">{bloque.resumen}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// General o ninguna
+if (isGeneral || isNinguna) {
+  return (
+    <div className="space-y-4" style={{ fontSize, lineHeight: '1.8' }}>
+      <p className="font-semibold text-foreground">{bloque.intro}</p>
+      {imagenBloque}
+
+        {bloque.conceptosClave && bloque.conceptosClave.length > 0 ? (
+          <ConceptosClaveBlock
+            conceptos={bloque.conceptosClave}
+            fontSize={fontSize}
+            seccionActiva={seccionActiva}
+            onNarrar={narrar}
+          />
+        ) : bloque.pasos.length > 0 ? (
+          <div className="space-y-2">
+            {bloque.pasos.map((paso, i) => (
+              <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-muted/30">
+                <span className="flex-shrink-0 w-7 h-7 rounded-full bg-primary text-primary-foreground text-sm font-black flex items-center justify-center">
+                  {i + 1}
+                </span>
+                <p className="font-semibold text-foreground leading-relaxed flex-1">{paso}</p>
+                <BtnNarrar
+                  id={`paso-${i}`}
+                  texto={paso}
+                  seccionActiva={seccionActiva}
+                  onNarrar={narrar}
+                />
+              </div>
+            ))}
+          </div>
+        ) : null}
 
       {bloque.analogia && (
         <div className="lesson-block-analogy">
           <div className="lesson-block-label text-teo-purple">🔗 Analogía</div>
           <p className="font-semibold text-foreground/90">{bloque.analogia}</p>
-          <BtnNarrar id="analogia" texto={bloque.analogia} seccionActiva={seccionActiva} onNarrar={narrar} />
+          <BtnNarrar
+            id="analogia"
+            texto={bloque.analogia}
+            seccionActiva={seccionActiva}
+            onNarrar={narrar}
+          />
         </div>
       )}
 
-      {/* EJEMPLOS */}
-
-      {bloque.ejemplos?.length > 0 && (
-        <div className="space-y-2">
-            <p className="text-[11px] font-black text-teo-green uppercase tracking-wide px-1">💡 Ejemplos</p>
-            {bloque.ejemplos.map((ej, i) => (
-                 <div key={i} className="rounded-xl border border-green-100 overflow-hidden">
-                    <div className="px-4 py-2.5 bg-green-50 flex items-start gap-2">
-                        <span className="flex-shrink-0 w-5 h-5 rounded-full bg-teo-green text-white text-[10px] font-black flex items-center justify-center mt-0.5">
-                            {i + 1}
-                        </span>
-                        <p className="font-black text-green-900 flex-1" style={{ fontSize }}>{ej.original}</p>
-                            <BtnNarrar id={`ej-${i}`} texto={ej.traduccion ? `${ej.original}. ${ej.traduccion}` : ej.original} seccionActiva={seccionActiva} onNarrar={narrar} />
-                    </div>
-                    {ej.traduccion && (
-                        <div className="px-4 py-2 bg-white flex items-start gap-2 border-t border-green-100">
-                            <span className="flex-shrink-0 mt-0.5">→</span>
-                            <p className="font-semibold text-foreground/80" style={{ fontSize }}>{ej.traduccion}</p>
-                        </div>
-                    )}
-                 </div>
-            ))}
-        </div>
-      )}
-
-
-     {/* RESUMEN */}
+      <EjemplosBlock ejemplos={bloque.ejemplos} fontSize={fontSize} />
 
       {bloque.resumen && (
         <div className="p-4 bg-teo-yellow/10 border border-teo-yellow/30 rounded-xl">
           <p className="text-[11px] font-black text-yellow-700 uppercase tracking-wide mb-1">⭐ Para recordar</p>
           <p className="font-bold text-foreground">{bloque.resumen}</p>
-                         
-         <BtnNarrar id="resumen" texto={bloque.resumen} seccionActiva={seccionActiva} onNarrar={narrar} />
-             
+          <BtnNarrar
+            id="resumen"
+            texto={bloque.resumen}
+            seccionActiva={seccionActiva}
+            onNarrar={narrar}
+          />
         </div>
       )}
     </div>
   );
+}
+
+// Fallback
+return (
+  <div className="space-y-4" style={{ fontSize, lineHeight: '1.8' }}>
+    <p className="font-semibold text-foreground">{bloque.intro}</p>
+    {imagenBloque}
+
+    {bloque.conceptosClave && bloque.conceptosClave.length > 0 ? (
+      <ConceptosClaveBlock
+        conceptos={bloque.conceptosClave}
+        fontSize={fontSize}
+        seccionActiva={seccionActiva}
+        onNarrar={narrar}
+      />
+    ) : bloque.pasos.length > 0 ? (
+      <div className="space-y-2">
+        {bloque.pasos.map((paso, i) => (
+          <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-muted/30">
+            <span className="flex-shrink-0 w-7 h-7 rounded-full bg-primary text-primary-foreground text-sm font-black flex items-center justify-center">
+              {i + 1}
+            </span>
+            <p className="font-semibold text-foreground leading-relaxed flex-1">{paso}</p>
+            <BtnNarrar
+              id={`paso-${i}`}
+              texto={paso}
+              seccionActiva={seccionActiva}
+              onNarrar={narrar}
+            />
+          </div>
+        ))}
+      </div>
+    ) : null}
+
+    <EjemplosBlock ejemplos={bloque.ejemplos} fontSize={fontSize} />
+
+    {bloque.resumen && (
+      <div className="p-4 bg-teo-yellow/10 border border-teo-yellow/30 rounded-xl">
+        <p className="text-[11px] font-black text-yellow-700 uppercase tracking-wide mb-1">⭐ Para recordar</p>
+        <p className="font-bold text-foreground">{bloque.resumen}</p>
+      </div>
+    )}
+  </div>
+);
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
