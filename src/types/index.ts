@@ -139,37 +139,90 @@ export type Juego = JuegoA | JuegoB | JuegoC | JuegoD | JuegoE;
 
 // ── Nuevos tipos para explicación estructurada ────────────────────────────────
 
-export interface EjemploItem {
-  original: string;
-  traduccion: string;
+
+// Bloque nuevo de estructura para ejemplos con pasos
+export interface ExploracionConcreta {
+    aplica?: boolean;
+    materiales?: string[];
+    instrucciones?: string[];
+    conclusion?: string;
 }
 
+export interface PasoGuiado {
+    numeroPaso?: number;
+    accionPrincipal?: string;
+    accion?: string; 
+    explicacion?: string;
+    resultadoParcial?: string;
+    vinculoConcepto?: string;
+    exploracionConcreta?: ExploracionConcreta;
+}
+export interface EjemploLeccion {
+    enunciado?: string;
+    requiereProcedimiento?: boolean;
+    explicacionBreve?: string;
+    pasosGuiados?: PasoGuiado[];
+    visualSugerido?: {
+        tipo: 'diagrama' | 'pictograma' | 'escena' | 'secuencia' | 'comparacion' | 'ninguna';
+        descripcion: string;
+        justificacionPedagogica?: string;
+    };
+    conclusionPedagogica?: string;
+}
+
+
+////
+
+
+
 export interface ConceptoClave {
-  nombre: string;
-  funcion?: string;
-  explicacionSimple: string;
+    nombre: string;
+    formula: string;
+    elementos: string;
+    uso: string;
+    necesidad: string;
+    apoyoVisual?: string;
+    etiqueta?: string;
+    funcion?: string;
+    explicacionSimple: string;
+    icono?: string;
+    colorRamp?: 'blue' | 'green' | 'amber' | 'purple' | 'teal' | 'coral' | 'pink' | 'gray';
 }
 
 export interface VisualSugerido {
-  tipo: 'diagrama' | 'pictograma' | 'escena' | 'secuencia' | 'comparacion' | 'ninguna';
-  descripcion: string;
+    tipo: 'secuencia' | 'diagrama' | 'comparacion' | 'formula' | 'ninguna';
+    icono?: string;
+    colorRamp?: 'blue' | 'green' | 'amber' | 'purple' | 'teal' | 'coral' | 'pink' | 'gray';
+    descripcion: string;
+    justificacionPedagogica?: string;
+}
+
+export interface IntroBloque {
+    fraseEnganche: string;
+    ejemploAncla: string;
+    cuerpo: string;
+}
+
+
+export interface ApoyoVisualLeccion {
+    tipo: 'formula' | 'flujo' | 'nodos' | 'linea_tiempo' | 'ciclo' | 'reparto';
+    titulo: string;
+    elementos: string[];
+    asignatura: string;
 }
 
 export interface ExplicacionBloque {
-  objetivo?: string;
-  intro: string;
-  pasos: string[]; // se mantiene por compatibilidad con tu render actual
-  conceptosClave?: ConceptoClave[];
-  analogia: string;
-  ejemplos: EjemploItem[];
-  resumen: string;
-  visualSugerido?: {
-    tipo: 'diagrama' | 'pictograma' | 'escena' | 'secuencia' | 'comparacion' | 'ninguna';
-    descripcion: string;
+    objetivo?: string;
+    intro: string | IntroBloque; // union para compatibilidad con sesiones anteriores
+    pasos: string[];
+    conceptosClave?: ConceptoClave[];
+    analogia: string;
+    ejemplos: EjemploLeccion[];
+    apoyoVisual?: ApoyoVisualLeccion; 
+    resumen: string;
+    visualSugerido?: VisualSugerido;
+    chequeoCobertura?: string[];
     justificacionPedagogica?: string;
-  };
-  chequeoCobertura?: string[];
-  justificacionPedagogica?: string;
 }
 
 // ── Reforzamiento híbrido (digital + físico) ──────────────────────────────────
@@ -199,7 +252,16 @@ export interface Reforzamiento {
 
 // ── Sesión generada completa ──────────────────────────────────────────────────
 
+export interface MaterialesLeccion {
+    requiereMateriales: boolean;
+    lista: string[];
+    justificacion: string;
+}
+
+
 export interface SesionGenerada {
+  tipoLeccion?: 'procedimiento_matematico' | 'observacion_experimental' | 'formula_gramatical' | 'clasificacion_conceptual' | 'secuencia_biologica' | 'descripcion_conceptual';
+  materiales?: MaterialesLeccion;
   numeroJuegos: number;
   explicacion: ExplicacionBloque | string;
   explicacionAlternativa1: ExplicacionBloque | string;

@@ -5,9 +5,13 @@ import {
 } from 'lucide-react';
 import {
   PerfilNino, SesionGenerada, ASIGNATURAS,
-  ExplicacionBloque, EjemploItem, Reforzamiento
+  ExplicacionBloque, Reforzamiento,
+  ConceptoClave, VisualSugerido, IntroBloque, ApoyoVisualLeccion,
 } from '@/types';
+import ApoyoVisualBlock from '../lesson/ApoyoVisualBlock';
 
+import ExamplesBlock from '../lesson/ExamplesBlock';
+import { normalizeEjemplos } from '@/utils/normalizeLesson';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Hook de narración por sección — toggle on/off, una sola voz activa
@@ -77,65 +81,87 @@ function normalizar(raw: unknown): ExplicacionBloque {
   if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
     const r = raw as Record<string, unknown>;
 
-    let ejemplos: EjemploItem[] = [];
-    if (Array.isArray(r.ejemplos)) {
-      ejemplos = r.ejemplos.map((e: unknown) => {
-        if (typeof e === 'object' && e !== null) {
-          const ej = e as Record<string, string>;
-          return {
-            original: ej.original || '',
-            traduccion: ej.traduccion || '',
-          };
-        }
-        return { original: String(e), traduccion: '' };
-      });
-    } else if (typeof r.ejemplo === 'string' && r.ejemplo) {
-      ejemplos = [{ original: r.ejemplo, traduccion: '' }];
-    }
+    // ── Ejemplos ────────────────────────────────────────────────────────────
+    const ejemplos = normalizeEjemplos(r.ejemplos);
 
-    let conceptosClave = [];
+    // ── Conceptos clave — lee icono, colorRamp y etiqueta ───────────────────
+    let conceptosClave: ConceptoClave[] = [];
     if (Array.isArray(r.conceptosClave)) {
-      conceptosClave = r.conceptosClave.map((c: unknown) => {
-        if (typeof c === 'object' && c !== null) {
-          const cc = c as Record<string, unknown>;
-          return {
-            nombre: typeof cc.nombre === 'string' ? cc.nombre : '',
-            funcion: typeof cc.funcion === 'string' ? cc.funcion : '',
-            explicacionSimple:
-              typeof cc.explicacionSimple === 'string' ? cc.explicacionSimple : '',
-          };
-        }
-        return {
-          nombre: '',
-          funcion: '',
-          explicacionSimple: '',
-        };
-      }).filter(c => c.nombre || c.explicacionSimple);
+      conceptosClave = r.conceptosClave
+        .map((c: unknown) => {
+          if (typeof c === 'object' && c !== null) {
+            const cc = c as Record<string, unknown>;
+            return {
+              nombre:            typeof cc.nombre            === 'string' ? cc.nombre            : '',
+              formula:           typeof cc.formula           === 'string' ? cc.formula           : '',
+              uso:               typeof cc.uso               === 'string' ? cc.uso               : '',
+              necesidad:         typeof cc.necesidad         === 'string' ? cc.necesidad         : '',
+              elementos:         typeof cc.elementos         === 'string' ? cc.elementos         : '',
+              apoyoVisual:       typeof cc.apoyoVisual       === 'string' ? cc.apoyoVisual       : '',
+              etiqueta:          typeof cc.etiqueta          === 'string' ? cc.etiqueta          : '',
+              funcion:           typeof cc.funcion           === 'string' ? cc.funcion           : '',
+              explicacionSimple: typeof cc.explicacionSimple === 'string' ? cc.explicacionSimple : '',
+              icono:             typeof cc.icono             === 'string' ? cc.icono             : '',
+              colorRamp:         typeof cc.colorRamp         === 'string' ? cc.colorRamp         : 'gray',
+            };
+          }
+            return { nombre: '', formula: '', elementos: '', uso: '', etiqueta: '', necesidad: '', apoyoVisual: '', funcion: '', explicacionSimple: '', icono: '', colorRamp: 'gray' };
+        })
+        .filter(c => c.nombre || c.explicacionSimple);
     }
 
-    let visualSugerido;
+    // ── visualSugerido — lee icono y colorRamp ──────────────────────────────
+    let visualSugerido: VisualSugerido | undefined;
     if (typeof r.visualSugerido === 'object' && r.visualSugerido !== null) {
       const vs = r.visualSugerido as Record<string, unknown>;
+      const tiposValidos = ['secuencia','diagrama','comparacion','formula','ninguna'];
       visualSugerido = {
-          tipo: typeof vs.tipo === 'string'
-            ? (vs.tipo as 'diagrama' | 'pictograma' | 'escena' | 'secuencia' | 'comparacion' | 'ninguna')
-            : 'ninguna',
-          descripcion: typeof vs.descripcion === 'string' ? vs.descripcion : '',
-          justificacionPedagogica:
-            typeof vs.justificacionPedagogica === 'string'
-              ? vs.justificacionPedagogica
-              : '',
+        tipo: (tiposValidos.includes(vs.tipo as string) ? vs.tipo : 'ninguna') as VisualSugerido['tipo'],
+        icono:       typeof vs.icono       === 'string' ? vs.icono       : '',
+        colorRamp:   typeof vs.colorRamp   === 'string' ? vs.colorRamp   : 'gray',
+        descripcion: typeof vs.descripcion === 'string' ? vs.descripcion : '',
+        justificacionPedagogica:
+          typeof vs.justificacionPedagogica === 'string' ? vs.justificacionPedagogica : '',
       };
+    }
+
+    // ── intro — acepta string legacy u objeto nuevo ─────────────────────────
+    let intro: string | IntroBloque = '';
+    if (typeof r.intro === 'string') {
+      intro = r.intro;
+    } else if (typeof r.intro === 'object' && r.intro !== null) {
+      const ri = r.intro as Record<string, unknown>;
+      intro = {
+        fraseEnganche: typeof ri.fraseEnganche === 'string' ? ri.fraseEnganche : '',
+        ejemploAncla:  typeof ri.ejemploAncla  === 'string' ? ri.ejemploAncla  : '',
+        cuerpo:        typeof ri.cuerpo        === 'string' ? ri.cuerpo        : '',
+      };
+    }
+
+    // ── apoyoVisual — campo a nivel de explicacion ──────────────────────────────
+    let apoyoVisual: ApoyoVisualLeccion | undefined;
+    if (typeof r.apoyoVisual === 'object' && r.apoyoVisual !== null) {
+      const av = r.apoyoVisual as Record<string, unknown>;
+      const tiposValidos = ['formula', 'flujo', 'nodos', 'linea_tiempo', 'ciclo', 'reparto'];
+      if (typeof av.tipo === 'string' && tiposValidos.includes(av.tipo)) {
+        apoyoVisual = {
+          tipo: av.tipo as ApoyoVisualLeccion['tipo'],
+          titulo: typeof av.titulo === 'string' ? av.titulo : '',
+          elementos: Array.isArray(av.elementos) ? av.elementos.map(String) : [],
+          asignatura: typeof av.asignatura === 'string' ? av.asignatura : '',
+        };
+      }
     }
 
     return {
       objetivo: typeof r.objetivo === 'string' ? r.objetivo : '',
-      intro: typeof r.intro === 'string' ? r.intro : '',
+      intro,
       pasos: Array.isArray(r.pasos) ? r.pasos.map(String) : [],
       conceptosClave,
-      analogia: typeof r.analogia === 'string' ? r.analogia : '',
+      analogia:  typeof r.analogia  === 'string' ? r.analogia  : '',
       ejemplos,
-      resumen: typeof r.resumen === 'string' ? r.resumen : '',
+      apoyoVisual,
+      resumen:   typeof r.resumen   === 'string' ? r.resumen   : '',
       visualSugerido,
       chequeoCobertura: Array.isArray(r.chequeoCobertura)
         ? r.chequeoCobertura.map(String)
@@ -144,13 +170,13 @@ function normalizar(raw: unknown): ExplicacionBloque {
   }
 
   return {
-    objetivo: '',
-    intro: String(raw || ''),
-    pasos: [],
+    objetivo:       '',
+    intro:          String(raw || ''),
+    pasos:          [],
     conceptosClave: [],
-    analogia: '',
-    ejemplos: [],
-    resumen: '',
+    analogia:       '',
+    ejemplos:       [],
+    resumen:        '',
     visualSugerido: undefined,
     chequeoCobertura: [],
   };
@@ -160,8 +186,24 @@ function normalizar(raw: unknown): ExplicacionBloque {
 
 
 function bloqueATexto(b: ExplicacionBloque): string {
-  const ejs = b.ejemplos.map(e => e.traduccion ? `${e.original} — ${e.traduccion}` : e.original).join('. ');
-  return [b.intro, ...b.pasos, b.analogia, ejs, b.resumen].filter(Boolean).join('. ');
+    const introTexto = typeof b.intro === 'string'
+        ? b.intro
+        : [b.intro.fraseEnganche, b.intro.ejemploAncla, b.intro.cuerpo].filter(Boolean).join('. ');
+
+    const ejs = b.ejemplos
+        .map((e) => {
+            const pasos = e.pasosGuiados?.map((p) =>
+                [p.accionPrincipal ?? p.accion, p.explicacion, p.resultadoParcial].filter(Boolean).join('. ')
+            ).join('. ');
+            return [e.enunciado, e.explicacionBreve, pasos, e.conclusionPedagogica]
+                .filter(Boolean)
+                .join('. ');
+        })
+        .join('. ');
+
+    return [introTexto, ...b.pasos, b.analogia, ejs, b.resumen]
+        .filter(Boolean)
+        .join('. ');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -241,112 +283,311 @@ const ImagenPedagogica: React.FC<{
 // Ejemplos
 // ─────────────────────────────────────────────────────────────────────────────
 
-const EjemplosBlock: React.FC<{ ejemplos: EjemploItem[]; fontSize: string }> = ({ ejemplos, fontSize }) => {
-  if (!ejemplos?.length) return null;
-  return (
-    <div className="space-y-2">
-      <p className="text-[11px] font-black text-teo-green uppercase tracking-wide px-1">💡 Ejemplos</p>
-      {ejemplos.map((ej, i) => (
-        <div key={i} className="rounded-xl border border-green-100 overflow-hidden">
-          <div className="px-4 py-2.5 bg-green-50 flex items-start gap-2">
-            <span className="flex-shrink-0 w-5 h-5 rounded-full bg-teo-green text-white text-[10px] font-black flex items-center justify-center mt-0.5">
-              {i + 1}
-            </span>
-            <p className="font-black text-green-900" style={{ fontSize }}>{ej.original}</p>
-          </div>
-          {ej.traduccion && (
-            <div className="px-4 py-2 bg-white flex items-start gap-2 border-t border-green-100">
-              <span className="flex-shrink-0 mt-0.5">→</span>
-              <p className="font-semibold text-foreground/80" style={{ fontSize }}>{ej.traduccion}</p>
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-};
+
 
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Conceptos clave
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ── Mapa de colores por ramp ────────────────────────────────────────────────
+const rampStyles: Record<string, { border: string; bg: string; badge: string; badgeText: string; title: string }> = {
+  blue:   { border: 'border-blue-300',   bg: 'bg-blue-50',   badge: 'bg-blue-100',   badgeText: 'text-blue-700',   title: 'text-blue-800'   },
+  green:  { border: 'border-green-300',  bg: 'bg-green-50',  badge: 'bg-green-100',  badgeText: 'text-green-700',  title: 'text-green-800'  },
+  amber:  { border: 'border-amber-300',  bg: 'bg-amber-50',  badge: 'bg-amber-100',  badgeText: 'text-amber-700',  title: 'text-amber-800'  },
+  purple: { border: 'border-purple-300', bg: 'bg-purple-50', badge: 'bg-purple-100', badgeText: 'text-purple-700', title: 'text-purple-800' },
+  teal:   { border: 'border-teal-300',   bg: 'bg-teal-50',   badge: 'bg-teal-100',   badgeText: 'text-teal-700',   title: 'text-teal-800'   },
+  coral:  { border: 'border-orange-300', bg: 'bg-orange-50', badge: 'bg-orange-100', badgeText: 'text-orange-700', title: 'text-orange-800' },
+  pink:   { border: 'border-pink-300',   bg: 'bg-pink-50',   badge: 'bg-pink-100',   badgeText: 'text-pink-700',   title: 'text-pink-800'   },
+  gray:   { border: 'border-gray-300',   bg: 'bg-gray-50',   badge: 'bg-gray-100',   badgeText: 'text-gray-600',   title: 'text-gray-800'   },
+};
+
 const ConceptosClaveBlock: React.FC<{
-  conceptos: NonNullable<ExplicacionBloque['conceptosClave']>;
+    conceptos: NonNullable<ExplicacionBloque['conceptosClave']>;
+    fontSize: string;
+    seccionActiva: string | null;
+    onNarrar: (id: string, texto: string) => void;
+}> = ({ conceptos, fontSize, seccionActiva, onNarrar }) => {
+    if (!conceptos?.length) return null;
+
+    return (
+        <div className="space-y-8">
+            <p className="text-[14px] font-black text-primary uppercase tracking-wide px-1">
+                🧩 Conceptos importantes:
+            </p>
+
+            {conceptos.map((concepto, i) => {
+                const ramp = rampStyles[concepto.colorRamp ?? 'gray'] ?? rampStyles.gray;
+
+                return (
+                    <div key={i} className="space-y-5 mb-12 border-b border-slate-100 pb-8 last:border-0">
+
+                        {/* 1. BLOQUE: FÓRMULA */}
+                        {concepto.formula && (
+                            <div className="rounded-2xl bg-[#f3f0ff] p-6 shadow-sm flex flex-col items-center border border-purple-100">
+                                <span className="text-[11px] font-black uppercase tracking-[0.2em] text-[#5b40d6] mb-4">
+                                    Fórmula de {concepto.nombre}
+                                </span>
+                                <div className="flex items-center gap-2 flex-wrap justify-center font-bold">
+                                    {concepto.formula.split('+').map((parte, idx) => (
+                                        <React.Fragment key={idx}>
+                                            <span className={`px-4 py-2 rounded-xl shadow-sm border-2 text-sm ${idx % 3 === 0 ? 'bg-[#fff4e0] text-[#8a5d1a] border-[#ffe0a3]' : idx % 3 === 1 ? 'bg-[#e0f0ff] text-[#1a5d8a] border-[#a3d1ff]' : 'bg-[#f0ffe0] text-[#3d8a1a] border-[#c1ffa3]'}`}>
+                                                {parte.trim()}
+                                            </span>
+                                            {idx < concepto.formula.split('+').length - 1 && (
+                                                <span className="text-[#5b40d6] text-xl font-black mx-1">+</span>
+                                            )}
+                                        </React.Fragment>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* 2. BLOQUE: EXPLICACIÓN */}
+                        <div className="rounded-2xl border-2 border-l-[6px] border-l-[#5b40d6] border-slate-100 bg-white p-5 shadow-sm">
+                            <h4 className="text-[#5b40d6] font-black text-lg mb-1">{concepto.nombre}</h4>
+                            <p className="text-slate-700 font-medium leading-relaxed" style={{ fontSize }}>
+                                {concepto.explicacionSimple}
+                            </p>
+                        </div>
+
+                        {/* 3. BLOQUE: LAS PIEZAS (ELEMENTOS) */}
+                        {concepto.elementos && (
+                            <div className="rounded-2xl bg-[#f8fafc] border-2 border-slate-100 overflow-hidden shadow-sm">
+                                {/* Encabezado dinámico */}
+                                <div className="p-4 border-b border-slate-100 bg-white flex items-center justify-between">
+                                    <div>
+                                        <h5 className="text-[#1a5d8a] font-black text-md">
+                                            {/* Si el nombre del concepto es técnico, lo usamos, si no, un título genérico amigable */}
+                                            {concepto.nombre ? `Componentes de "${concepto.nombre}"` : "Las piezas clave"}
+                                        </h5>
+                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                                            Análisis de la estructura y reglas
+                                        </p>
+                                    </div>
+                                    <span className="text-xl opacity-40">🧩</span>
+                                </div>
+
+                                <div className="p-4 bg-white/40">
+                                    <div className="space-y-2">
+                                        {/* Separamos cada línea generada por el \n del prompt */}
+                                        
+                                        {concepto.elementos.replace(/\\n/g, '\n').split('\n').filter(l => l.includes(':')).map((linea, idx) => {
+                                            const [izquierda, derecha] = linea.split(':');
+
+                                            return (
+                                                <div
+                                                    key={idx}
+                                                    className="flex items-center gap-3 py-3 px-3 rounded-xl border border-slate-100 bg-white/80 shadow-sm transition-all hover:border-blue-200"
+                                                >
+                                                    {/* PARTE IZQUIERDA: El elemento técnico (I, He, She / Verbo base) */}
+                                                    <div className="min-w-[90px] flex-shrink-0">
+                                                        <span className="inline-block w-full text-center font-black text-[#1a5d8a] bg-blue-50 px-2 py-1.5 rounded-lg border border-blue-100 shadow-inner" style={{ fontSize }}>
+                                                            {izquierda.trim()}
+                                                        </span>
+                                                    </div>
+
+                                                    {/* CONECTOR VISUAL: La flecha que indica relación */}
+                                                    <div className="text-blue-300 font-bold flex-shrink-0">
+                                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                                            <path d="M5 12h14m-7-7 7 7-7 7" />
+                                                        </svg>
+                                                    </div>
+
+                                                    {/* PARTE DERECHA: La explicación o transformación */}
+                                                    <div className="flex-1">
+                                                        <p
+                                                            className="text-slate-600 font-bold leading-tight"
+                                                            style={{ fontSize: `calc(${fontSize} - 2px)` }}
+                                                        >
+                                                            {derecha.trim()}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                        {/* 4. BLOQUE: USO (PASO A PASO) */}
+                        {concepto.uso && (
+                            <div className="rounded-2xl border-2 border-green-100 bg-green-50/30 overflow-hidden shadow-sm">
+                                <div className="p-4 border-b border-green-100 bg-white flex items-center gap-2">
+                                    <div className="bg-green-100 p-1.5 rounded-lg text-lg">⚙️</div>
+                                    <div>
+                                        <h5 className="text-green-800 font-black text-md">¿Cómo se usa?</h5>
+                                        <p className="text-[10px] text-green-600/70 font-bold uppercase tracking-wider">Guía práctica</p>
+                                    </div>
+                                </div>
+                                <div className="p-5 space-y-4">
+                                    {concepto.uso.split('\n').filter(l => l.trim()).map((paso, idx) => (
+                                        <div key={idx} className="flex items-start gap-3">
+                                            <span className="flex-shrink-0 w-6 h-6 rounded-full bg-green-500 text-white text-[11px] font-black flex items-center justify-center mt-0.5">
+                                                {idx + 1}
+                                            </span>
+                                            <p className="text-slate-700 font-semibold" style={{ fontSize: `calc(${fontSize} - 1px)` }}>{paso.trim()}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* 5. BLOQUE: NECESIDAD (¿CUÁNDO?) */}
+                        {concepto.necesidad && (
+                            <div className="rounded-2xl border-2 border-amber-100 bg-amber-50/30 overflow-hidden shadow-sm">
+                                <div className="p-4 border-b border-amber-100 bg-white flex items-center gap-2">
+                                    <div className="bg-amber-100 p-1.5 rounded-lg text-lg">💡</div>
+                                    <div>
+                                        <h5 className="text-amber-800 font-black text-md">¿Cuándo lo necesito?</h5>
+                                        <p className="text-[10px] text-amber-600/70 font-bold uppercase tracking-wider">Momento de aplicación</p>
+                                    </div>
+                                </div>
+                                <div className="p-5 space-y-3">
+                                    {concepto.necesidad.split('\n').filter(l => l.trim()).map((item, idx) => (
+                                        <div key={idx} className="flex items-center gap-3 bg-white/60 p-3 rounded-xl border border-amber-100/50">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+                                            <p className="text-slate-700 font-bold italic" style={{ fontSize: `calc(${fontSize} - 1px)` }}>
+                                                {item.trim()}
+                                            </p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+
+                        {/* BLOQUE 6: APOYO VISUAL DINÁMICO UNIVERSAL */}
+                        {concepto.apoyoVisual && (
+                            <div className="my-6 p-6 rounded-[2rem] bg-slate-50/80 border-2 border-dashed border-slate-200 flex flex-col items-center">
+                                {(() => {
+                                    const [tipo, titulo, datosRaw] = concepto.apoyoVisual.split('|').map(v => v.trim());
+                                    const datos = datosRaw ? datosRaw.split(',').map(d => d.trim()) : [];
+
+                                    return (
+                                        <>
+                                            <div className="flex items-center gap-2 mb-6">
+                                                <span className="text-lg">💡</span>
+                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">{titulo}</p>
+                                            </div>
+
+                                            {/* CASO 1: REPARTO MATEMÁTICO (Tu lógica original) */}
+                                            {tipo === 'reparto' && (
+                                                <div className="flex flex-col items-center gap-6">
+                                                    <div className="flex flex-wrap justify-center gap-1.5 max-w-[200px]">
+                                                        {[...Array(parseInt(datos[0]))].map((_, i) => (
+                                                            <div key={i} className="w-2.5 h-2.5 bg-amber-400 rounded-full shadow-sm" />
+                                                        ))}
+                                                    </div>
+                                                    <div className="text-slate-300 font-black text-[10px]">⬇ REPARTIR EN PARTES IGUALES ⬇</div>
+                                                    <div className="flex flex-wrap justify-center gap-4">
+                                                        {[...Array(parseInt(datos[1]))].map((_, i) => (
+                                                            <div key={i} className="w-14 h-14 border-2 border-amber-100 bg-white rounded-2xl flex items-center justify-center relative shadow-sm">
+                                                                <div className="flex flex-wrap gap-1 justify-center p-1">
+                                                                    {[...Array(parseInt(datos[2]))].map((_, j) => (
+                                                                        <div key={j} className="w-2 h-2 bg-amber-400 rounded-full" />
+                                                                    ))}
+                                                                </div>
+                                                                <span className="absolute -bottom-5 text-[8px] font-bold text-slate-400 uppercase">Grupo {i + 1}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* CASO 2: PASOS / LÍNEA DE TIEMPO (Historia, Ciencias) */}
+                                            {tipo === 'pasos' && (
+                                                <div className="flex flex-col items-start gap-4 w-full max-w-xs">
+                                                    {datos.map((text, i) => (
+                                                        <div key={i} className="flex items-center gap-3 w-full">
+                                                            <div className="w-6 h-6 rounded-full bg-blue-500 text-white text-[10px] font-bold flex items-center justify-center shrink-0">
+                                                                {i + 1}
+                                                            </div>
+                                                            <div className="flex-1 p-3 bg-white rounded-xl border border-blue-100 text-[11px] font-medium text-slate-600 shadow-sm">
+                                                                {text}
+                                                            </div>
+                                                            {i < datos.length - 1 && <div className="absolute h-4 w-0.5 bg-blue-100 ml-[11px] mt-12" />}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {/* CASO 3: NODOS / CATEGORÍAS (Lenguaje, Inglés, Sociales) */}
+                                            {tipo === 'nodos' && (
+                                                <div className="flex flex-wrap justify-center gap-2">
+                                                    {datos.map((text, i) => (
+                                                        <div key={i} className={`px-4 py-2 rounded-full border-2 text-[11px] font-bold shadow-sm
+                                                            ${i === 0 ? 'bg-indigo-500 border-indigo-500 text-white scale-110 mb-2' : 'bg-white border-indigo-100 text-indigo-600'}`}>
+                                                            {text}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </>
+                                    );
+                                })()}
+                            </div>
+                        )}
+                    </div>
+                );
+            })}
+        </div>
+    );
+};
+
+
+// ── Helper para renderizar intro en cualquier formato ──────────────────────
+const IntroRenderer: React.FC<{
+  intro: string | IntroBloque;
   fontSize: string;
   seccionActiva: string | null;
   onNarrar: (id: string, texto: string) => void;
-}> = ({ conceptos, fontSize, seccionActiva, onNarrar }) => {
-  if (!conceptos?.length) return null;
+  colorScheme?: { bg: string; border: string; engancheBg: string; engancheText: string };
+}> = ({ intro, fontSize, seccionActiva, onNarrar, colorScheme }) => {
+  const cs = colorScheme ?? {
+    bg: 'bg-blue-50', border: 'border-blue-400',
+    engancheBg: 'bg-blue-100', engancheText: 'text-blue-800',
+  };
+
+  if (typeof intro === 'string') {
+    return (
+      <div className={`p-4 ${cs.bg} border-l-4 ${cs.border} rounded-r-xl`}>
+        <div className="flex items-start justify-between gap-2">
+          <p className="font-bold text-foreground" style={{ fontSize }}>{intro}</p>
+          <BtnNarrar id="intro" texto={intro} seccionActiva={seccionActiva} onNarrar={onNarrar} />
+        </div>
+      </div>
+    );
+  }
+
+  const textoNarracion = [intro.fraseEnganche, intro.ejemploAncla, intro.cuerpo].filter(Boolean).join('. ');
 
   return (
-    <div className="space-y-3">
-      <p className="text-[11px] font-black text-primary uppercase tracking-wide px-1">
-        🧩 Conceptos importantes
-      </p>
-
-      {conceptos.map((concepto, i) => {
-        const textoNarracion = [
-          concepto.nombre,
-          concepto.funcion,
-          concepto.explicacionSimple,
-        ]
-          .filter(Boolean)
-          .join('. ');
-
-        return (
-          <div
-            key={i}
-            className="rounded-2xl border border-border bg-white shadow-sm overflow-hidden"
-          >
-            <div className="px-4 py-3 bg-primary/5 border-b border-border flex items-start gap-3">
-              <span className="flex-shrink-0 w-7 h-7 rounded-full bg-primary text-primary-foreground text-sm font-black flex items-center justify-center mt-0.5">
-                {i + 1}
-              </span>
-
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="font-black text-foreground" style={{ fontSize }}>
-                      {concepto.nombre}
-                    </p>
-                    {concepto.funcion && (
-                      <p className="text-sm font-bold text-primary mt-1">
-                        {concepto.funcion}
-                      </p>
-                    )}
-                  </div>
-
-                  <BtnNarrar
-                    id={`concepto-${i}`}
-                    texto={textoNarracion}
-                    seccionActiva={seccionActiva}
-                    onNarrar={onNarrar}
-                  />
-                </div>
-              </div>
+    <div className={`rounded-xl border-l-4 ${cs.border} ${cs.bg} overflow-hidden`}>
+      <div className="flex items-start justify-between gap-2 px-4 pt-3 pb-1">
+        <div className="flex-1 space-y-2">
+          {/* Frase de enganche */}
+          {intro.fraseEnganche && (
+            <p className={`font-black text-base ${cs.engancheText}`} style={{ fontSize }}>
+              {intro.fraseEnganche}
+            </p>
+          )}
+          {/* Ejemplo ancla */}
+          {intro.ejemploAncla && (
+            <div className={`px-3 py-2 rounded-lg ${cs.engancheBg} border border-current/10`}>
+              <p className="font-bold text-foreground text-sm italic">{intro.ejemploAncla}</p>
             </div>
-
-            {concepto.explicacionSimple && (
-              <div className="px-4 py-3">
-                <p
-                  className="font-semibold text-foreground leading-relaxed"
-                  style={{ fontSize }}
-                >
-                  {concepto.explicacionSimple}
-                </p>
-              </div>
-            )}
-          </div>
-        );
-      })}
+          )}
+          {/* Cuerpo */}
+          {intro.cuerpo && (
+            <p className="font-semibold text-foreground leading-relaxed text-sm pb-1">{intro.cuerpo}</p>
+          )}
+        </div>
+        <BtnNarrar id="intro" texto={textoNarracion} seccionActiva={seccionActiva} onNarrar={onNarrar} />
+      </div>
     </div>
   );
 };
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Renderizador por condición — imagen integrada entre intro y pasos
-// ─────────────────────────────────────────────────────────────────────────────
 
 const ExplicacionRenderer: React.FC<{
   bloque: ExplicacionBloque;
@@ -368,10 +609,8 @@ const ExplicacionRenderer: React.FC<{
 
     const { narrar, seccionActiva } = useNarrador(idioma, condicion);
 
-  // Imagen pedagógica se muestra entre intro y pasos — donde más ayuda
-  const imagenBloque = imagenUrl ? (
-    <ImagenPedagogica url={imagenUrl} tema={tema} condicion={condicion} />
-  ) : null;
+  // Imágenes externas desactivadas — el sistema usa iconos y visuales propios
+  const imagenBloque = null;
 
 
   if (isTEA) {
@@ -379,12 +618,13 @@ const ExplicacionRenderer: React.FC<{
         <div className="space-y-3" style={{ fontSize, lineHeight: '1.9' }}>
 
           {/* INTRO */}
-          <div className="p-4 bg-blue-50 border-l-4 border-blue-400 rounded-r-xl">
-            <div className="flex items-start justify-between gap-2">
-              <p className="font-bold text-foreground">{bloque.intro}</p>
-              <BtnNarrar id="intro" texto={bloque.intro} seccionActiva={seccionActiva} onNarrar={narrar} />
-            </div>
-          </div>
+          <IntroRenderer
+            intro={bloque.intro}
+            fontSize={fontSize}
+            seccionActiva={seccionActiva}
+            onNarrar={narrar}
+            colorScheme={{ bg: 'bg-blue-50', border: 'border-blue-400', engancheBg: 'bg-blue-100', engancheText: 'text-blue-800' }}
+          />
 
           {/* Imagen */}
           {imagenBloque}
@@ -436,29 +676,10 @@ const ExplicacionRenderer: React.FC<{
 
           {/* EJEMPLOS */}
          
-          {bloque.ejemplos?.length > 0 && (
-                  <div className="space-y-2">
-                      <p className="text-[11px] font-black text-teo-green uppercase tracking-wide px-1">💡 Ejemplos</p>
-                      {bloque.ejemplos.map((ej, i) => (
-                          <div key={i} className="rounded-xl border border-green-100 overflow-hidden">
-                              <div className="px-4 py-2.5 bg-green-50 flex items-start gap-2">
-                                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-teo-green text-white text-[10px] font-black flex items-center justify-center mt-0.5">
-                                      {i + 1}
-                                  </span>
-                                  <p className="font-black text-green-900 flex-1" style={{ fontSize }}>{ej.original}</p>
-                                  <BtnNarrar id={`ej-${i}`} texto={ej.traduccion ? `${ej.original}. ${ej.traduccion}` : ej.original} seccionActiva={seccionActiva} onNarrar={narrar} />
-                              </div>
-                              {ej.traduccion && (
-                                  <div className="px-4 py-2 bg-white flex items-start gap-2 border-t border-green-100">
-                                      <span className="flex-shrink-0 mt-0.5">→</span>
-                                      <p className="font-semibold text-foreground/80" style={{ fontSize }}>{ej.traduccion}</p>
-                                  </div>
-                              )}
-                          </div>
-                      ))}
-                  </div>
-          )}
-
+           {bloque.apoyoVisual && (
+              <ApoyoVisualBlock apoyoVisual={bloque.apoyoVisual} />
+            )}
+            <ExamplesBlock ejemplos={bloque.ejemplos} />
         
           {/* RESUMEN */}
           {bloque.resumen && (
@@ -482,12 +703,13 @@ const ExplicacionRenderer: React.FC<{
         <div className="space-y-3" style={{ fontSize, lineHeight: '1.9' }}>
 
           {/* INTRO */}
-          <div className="p-4 bg-blue-50 border-l-4 border-blue-400 rounded-r-xl">
-            <div className="flex items-start justify-between gap-2">
-              <p className="font-bold text-foreground">{bloque.intro}</p>
-              <BtnNarrar id="intro" texto={bloque.intro} seccionActiva={seccionActiva} onNarrar={narrar} />
-            </div>
-          </div>
+          <IntroRenderer
+            intro={bloque.intro}
+            fontSize={fontSize}
+            seccionActiva={seccionActiva}
+            onNarrar={narrar}
+            colorScheme={{ bg: 'bg-blue-50', border: 'border-blue-400', engancheBg: 'bg-blue-100', engancheText: 'text-blue-800' }}
+          />
 
           {/* Imagen */}
           {imagenBloque}
@@ -539,29 +761,11 @@ const ExplicacionRenderer: React.FC<{
 
           {/* EJEMPLOS */}
          
-          {bloque.ejemplos?.length > 0 && (
-                  <div className="space-y-2">
-                      <p className="text-[11px] font-black text-teo-green uppercase tracking-wide px-1">💡 Ejemplos</p>
-                      {bloque.ejemplos.map((ej, i) => (
-                          <div key={i} className="rounded-xl border border-green-100 overflow-hidden">
-                              <div className="px-4 py-2.5 bg-green-50 flex items-start gap-2">
-                                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-teo-green text-white text-[10px] font-black flex items-center justify-center mt-0.5">
-                                      {i + 1}
-                                  </span>
-                                  <p className="font-black text-green-900 flex-1" style={{ fontSize }}>{ej.original}</p>
-                                  <BtnNarrar id={`ej-${i}`} texto={ej.traduccion ? `${ej.original}. ${ej.traduccion}` : ej.original} seccionActiva={seccionActiva} onNarrar={narrar} />
-                              </div>
-                              {ej.traduccion && (
-                                  <div className="px-4 py-2 bg-white flex items-start gap-2 border-t border-green-100">
-                                      <span className="flex-shrink-0 mt-0.5">→</span>
-                                      <p className="font-semibold text-foreground/80" style={{ fontSize }}>{ej.traduccion}</p>
-                                  </div>
-                              )}
-                          </div>
-                      ))}
-                  </div>
-          )}
-
+             
+          {bloque.apoyoVisual && (
+              <ApoyoVisualBlock apoyoVisual={bloque.apoyoVisual} />
+            )}
+            <ExamplesBlock ejemplos={bloque.ejemplos} />
         
           {/* RESUMEN */}
           {bloque.resumen && (
@@ -584,7 +788,13 @@ const ExplicacionRenderer: React.FC<{
 if (isDown) {
   return (
     <div className="space-y-4" style={{ fontSize, lineHeight: '2' }}>
-      <p className="font-semibold text-foreground">{bloque.intro}</p>
+      <IntroRenderer
+        intro={bloque.intro}
+        fontSize={fontSize}
+        seccionActiva={seccionActiva}
+        onNarrar={narrar}
+        colorScheme={{ bg: 'bg-pink-50', border: 'border-pink-400', engancheBg: 'bg-pink-100', engancheText: 'text-pink-800' }}
+      />
       {imagenBloque}
 
         {bloque.conceptosClave && bloque.conceptosClave.length > 0 ? (
@@ -620,7 +830,11 @@ if (isDown) {
         </div>
       )}
 
-      <EjemplosBlock ejemplos={bloque.ejemplos} fontSize={fontSize} />
+      
+      {bloque.apoyoVisual && (
+              <ApoyoVisualBlock apoyoVisual={bloque.apoyoVisual} />
+            )}
+            <ExamplesBlock ejemplos={bloque.ejemplos} />
 
       {bloque.resumen && (
         <div className="p-4 bg-yellow-50 border border-yellow-300 rounded-xl">
@@ -636,7 +850,13 @@ if (isDown) {
 if (isDislexia) {
   return (
     <div className="space-y-4" style={{ fontSize, lineHeight: '2.1' }}>
-      <p className="font-semibold text-foreground">{bloque.intro}</p>
+      <IntroRenderer
+        intro={bloque.intro}
+        fontSize={fontSize}
+        seccionActiva={seccionActiva}
+        onNarrar={narrar}
+        colorScheme={{ bg: 'bg-sky-50', border: 'border-sky-400', engancheBg: 'bg-sky-100', engancheText: 'text-sky-800' }}
+      />
       {imagenBloque}
 
         {bloque.conceptosClave && bloque.conceptosClave.length > 0 ? (
@@ -673,7 +893,10 @@ if (isDislexia) {
         </div>
       )}
 
-      <EjemplosBlock ejemplos={bloque.ejemplos} fontSize={fontSize} />
+      {bloque.apoyoVisual && (
+              <ApoyoVisualBlock apoyoVisual={bloque.apoyoVisual} />
+            )}
+            <ExamplesBlock ejemplos={bloque.ejemplos} />
 
       {bloque.resumen && (
         <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl">
@@ -689,7 +912,13 @@ if (isDislexia) {
 if (isDiscalculia) {
   return (
     <div className="space-y-4" style={{ fontSize, lineHeight: '1.9' }}>
-      <p className="font-semibold text-foreground">{bloque.intro}</p>
+      <IntroRenderer
+        intro={bloque.intro}
+        fontSize={fontSize}
+        seccionActiva={seccionActiva}
+        onNarrar={narrar}
+        colorScheme={{ bg: 'bg-orange-50', border: 'border-orange-400', engancheBg: 'bg-orange-100', engancheText: 'text-orange-800' }}
+      />
       {imagenBloque}
 
         {bloque.conceptosClave && bloque.conceptosClave.length > 0 ? (
@@ -727,7 +956,10 @@ if (isDiscalculia) {
         </div>
       )}
 
-      <EjemplosBlock ejemplos={bloque.ejemplos} fontSize={fontSize} />
+      {bloque.apoyoVisual && (
+              <ApoyoVisualBlock apoyoVisual={bloque.apoyoVisual} />
+            )}
+            <ExamplesBlock ejemplos={bloque.ejemplos} />
 
       {bloque.resumen && (
         <div className="p-4 bg-orange-50 border border-orange-300 rounded-xl">
@@ -743,7 +975,13 @@ if (isDiscalculia) {
 if (isDisgrafia) {
   return (
     <div className="space-y-4" style={{ fontSize, lineHeight: '1.9' }}>
-      <p className="font-semibold text-foreground">{bloque.intro}</p>
+      <IntroRenderer
+        intro={bloque.intro}
+        fontSize={fontSize}
+        seccionActiva={seccionActiva}
+        onNarrar={narrar}
+        colorScheme={{ bg: 'bg-green-50', border: 'border-green-400', engancheBg: 'bg-green-100', engancheText: 'text-green-800' }}
+      />
       {imagenBloque}
 
         {bloque.conceptosClave && bloque.conceptosClave.length > 0 ? (
@@ -779,7 +1017,10 @@ if (isDisgrafia) {
         </div>
       )}
 
-      <EjemplosBlock ejemplos={bloque.ejemplos} fontSize={fontSize} />
+      {bloque.apoyoVisual && (
+              <ApoyoVisualBlock apoyoVisual={bloque.apoyoVisual} />
+            )}
+            <ExamplesBlock ejemplos={bloque.ejemplos} />
 
       {bloque.resumen && (
         <div className="p-4 bg-lime-50 border border-lime-200 rounded-xl">
@@ -795,7 +1036,13 @@ if (isDisgrafia) {
 if (isGeneral || isNinguna) {
   return (
     <div className="space-y-4" style={{ fontSize, lineHeight: '1.8' }}>
-      <p className="font-semibold text-foreground">{bloque.intro}</p>
+      <IntroRenderer
+        intro={bloque.intro}
+        fontSize={fontSize}
+        seccionActiva={seccionActiva}
+        onNarrar={narrar}
+        colorScheme={{ bg: 'bg-blue-50', border: 'border-blue-300', engancheBg: 'bg-blue-100', engancheText: 'text-blue-700' }}
+      />
       {imagenBloque}
 
         {bloque.conceptosClave && bloque.conceptosClave.length > 0 ? (
@@ -837,7 +1084,10 @@ if (isGeneral || isNinguna) {
         </div>
       )}
 
-      <EjemplosBlock ejemplos={bloque.ejemplos} fontSize={fontSize} />
+      {bloque.apoyoVisual && (
+              <ApoyoVisualBlock apoyoVisual={bloque.apoyoVisual} />
+            )}
+            <ExamplesBlock ejemplos={bloque.ejemplos} />
 
       {bloque.resumen && (
         <div className="p-4 bg-teo-yellow/10 border border-teo-yellow/30 rounded-xl">
@@ -858,7 +1108,12 @@ if (isGeneral || isNinguna) {
 // Fallback
 return (
   <div className="space-y-4" style={{ fontSize, lineHeight: '1.8' }}>
-    <p className="font-semibold text-foreground">{bloque.intro}</p>
+    <IntroRenderer
+      intro={bloque.intro}
+      fontSize={fontSize}
+      seccionActiva={seccionActiva}
+      onNarrar={narrar}
+    />
     {imagenBloque}
 
     {bloque.conceptosClave && bloque.conceptosClave.length > 0 ? (
@@ -887,7 +1142,10 @@ return (
       </div>
     ) : null}
 
-    <EjemplosBlock ejemplos={bloque.ejemplos} fontSize={fontSize} />
+    {bloque.apoyoVisual && (
+              <ApoyoVisualBlock apoyoVisual={bloque.apoyoVisual} />
+            )}
+            <ExamplesBlock ejemplos={bloque.ejemplos} />
 
     {bloque.resumen && (
       <div className="p-4 bg-teo-yellow/10 border border-teo-yellow/30 rounded-xl">
@@ -1122,8 +1380,8 @@ const Phase2Lesson: React.FC<Phase2LessonProps> = ({ perfil, sesion, onComplete 
   };
 
   const labelSimplificacion = explicacionIndex === 0 ? null
-    : explicacionIndex === 1 ? 'Explicación alternativa'
-    : 'Versión simplificada';
+        : explicacionIndex === 1 ? 'Versión desarrollada'
+            : 'Versión desarrollada';
 
   return (
     <div className={`flex flex-col items-center justify-center min-h-[60vh] px-4 py-8 ${!isTEA ? 'animate-slide-up' : ''}`}>
@@ -1177,11 +1435,11 @@ const Phase2Lesson: React.FC<Phase2LessonProps> = ({ perfil, sesion, onComplete 
                     className="child-btn flex items-center justify-center gap-2 flex-1 font-black py-3.5 rounded-xl border-2 border-teo-orange/40 text-teo-orange bg-[#FFF7ED] hover:bg-teo-orange/10 transition-all cursor-pointer text-sm"
                   >
                     <RefreshCw className="w-5 h-5" />
-                    🤔 Explícame diferente
+                    🤔 Saber más
                   </button>
                 ) : (
                   <div className="flex-1 flex items-center justify-center gap-2 py-3.5 text-sm text-muted-foreground font-bold">
-                    <span>📌</span> Esta es la explicación más sencilla
+                    <span>📌</span> Esta es la explicación más profunda recomendada
                   </div>
                 )}
               </div>
