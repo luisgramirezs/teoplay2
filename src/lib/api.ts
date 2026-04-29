@@ -558,7 +558,7 @@ function buildPrompt(perfil: PerfilNino): string {
         'IMPORTANTE: Si eliges tipo B debes incluir preguntas; si eliges tipo C debes incluir tarjetas; si eliges tipo A o D debes incluir items; si eliges tipo E debes incluir actividad y su validación.',
         estructuraJson,
         'ESTRUCTURAS OBLIGATORIAS DE JUEGOS:',
-        `TIPO A: { "tipo": "A", "instruccion": "...", "categoria1": { "nombre": "...", "icono": "star" }, "categoria2": { "nombre": "...", "icono": "circle" }, "items": [ { "texto": "...", "icono": "zap", "categoriaCorrecta": 1 } ] }`,
+        //`TIPO A: { "tipo": "A", "instruccion": "...", "categoria1": { "nombre": "...", "icono": "star" }, "categoria2": { "nombre": "...", "icono": "circle" }, "items": [ { "texto": "...", "icono": "zap", "categoriaCorrecta": 1 } ] }`,
         `TIPO B: { "tipo": "B", "instruccion": "...", "preguntas": [ { "pregunta": "...", "opciones": [ { "texto": "...", "correcta": true }, { "texto": "...", "correcta": false }, { "texto": "...", "correcta": false } ] } ] }`,
         `TIPO C: { "tipo": "C", "instruccion": "...", "tarjetas": [ { "pregunta": "...", "respuesta": "...", "pista": "...", "alternativas": [] } ] }`,
         `TIPO D: { "tipo": "D", "instruccion": "...", "items": [ { "texto": "...", "icono": "star", "esIntruso": false }, { "texto": "...", "icono": "cloud", "esIntruso": true } ] }`,
