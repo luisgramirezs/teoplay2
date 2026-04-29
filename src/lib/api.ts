@@ -560,7 +560,7 @@ function buildPrompt(perfil: PerfilNino): string {
         'ESTRUCTURAS OBLIGATORIAS DE JUEGOS:',
         //`TIPO A: { "tipo": "A", "instruccion": "...", "categoria1": { "nombre": "...", "icono": "star" }, "categoria2": { "nombre": "...", "icono": "circle" }, "items": [ { "texto": "...", "icono": "zap", "categoriaCorrecta": 1 } ] }`,
         `TIPO B: { "tipo": "B", "instruccion": "...", "preguntas": [ { "pregunta": "...", "opciones": [ { "texto": "...", "correcta": true }, { "texto": "...", "correcta": false }, { "texto": "...", "correcta": false } ] } ] }`,
-        `TIPO C: { "tipo": "C", "instruccion": "...", "tarjetas": [ { "pregunta": "...", "respuesta": "...", "pista": "...", "alternativas": [] } ] }`,
+        //`TIPO C: { "tipo": "C", "instruccion": "...", "tarjetas": [ { "pregunta": "...", "respuesta": "...", "pista": "...", "alternativas": [] } ] }`,
         `TIPO D: { "tipo": "D", "instruccion": "...", "items": [ { "texto": "...", "icono": "star", "esIntruso": false }, { "texto": "...", "icono": "cloud", "esIntruso": true } ] }`,
         `TIPO E: { "tipo": "E", "instruccion": "...", "actividad": "...", "tipoValidacion": "exacta | ia | confirmacion", "respuestaEsperada": "", "criterios": "", "mensajeMotor": "..." }`,
     ].join('\n');
