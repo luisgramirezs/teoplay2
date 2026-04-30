@@ -9,9 +9,11 @@ import {
   ConceptoClave, VisualSugerido, IntroBloque, ApoyoVisualLeccion,
 } from '@/types';
 import ApoyoVisualBlock from '../lesson/ApoyoVisualBlock';
-
 import ExamplesBlock from '../lesson/ExamplesBlock';
 import { normalizeEjemplos } from '@/utils/normalizeLesson';
+import { resolveLucideIcon } from "@/utils/iconResolver";
+
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Hook de narración por sección — toggle on/off, una sola voz activa
@@ -139,20 +141,33 @@ function normalizar(raw: unknown): ExplicacionBloque {
     }
 
     // ── apoyoVisual — campo a nivel de explicacion ──────────────────────────────
-    let apoyoVisual: ApoyoVisualLeccion | undefined;
-    if (typeof r.apoyoVisual === 'object' && r.apoyoVisual !== null) {
-      const av = r.apoyoVisual as Record<string, unknown>;
-      const tiposValidos = ['formula', 'flujo', 'nodos', 'linea_tiempo', 'ciclo', 'reparto'];
-      if (typeof av.tipo === 'string' && tiposValidos.includes(av.tipo)) {
-        apoyoVisual = {
-          tipo: av.tipo as ApoyoVisualLeccion['tipo'],
-          titulo: typeof av.titulo === 'string' ? av.titulo : '',
-          elementos: Array.isArray(av.elementos) ? av.elementos.map(String) : [],
-          asignatura: typeof av.asignatura === 'string' ? av.asignatura : '',
-        };
-      }
-    }
+      let apoyoVisual: ApoyoVisualLeccion | undefined;
+      if (typeof r.apoyoVisual === 'object' && r.apoyoVisual !== null) {
+          const av = r.apoyoVisual as Record<string, unknown>;
+          const tiposValidos = ['formula', 'flujo', 'nodos', 'linea_tiempo', 'ciclo', 'reparto'];
 
+          if (typeof av.tipo === 'string' && tiposValidos.includes(av.tipo)) {
+              apoyoVisual = {
+                  tipo: av.tipo as ApoyoVisualLeccion['tipo'],
+                  titulo: typeof av.titulo === 'string' ? av.titulo : '',
+                  elementos: Array.isArray(av.elementos) ? av.elementos.map(String) : [],
+                  asignatura: typeof av.asignatura === 'string' ? av.asignatura : '',
+                  items: Array.isArray(av.items)
+                      ? av.items.map((it) => {
+                          const item = it as Record<string, unknown>;
+                          return {
+                              label: typeof item.label === 'string' ? item.label : '',
+                              title: typeof item.title === 'string' ? item.title : '',
+                              description: typeof item.description === 'string' ? item.description : '',
+                              shortLabel: typeof item.shortLabel === 'string' ? item.shortLabel : '',
+                              meta: typeof item.meta === 'string' ? item.meta : '',
+                          };
+                      })
+                      : undefined,
+              };
+          }
+      }
+      console.log('[Phase2Lesson normalizado] apoyoVisual', apoyoVisual);
     return {
       objetivo: typeof r.objetivo === 'string' ? r.objetivo : '',
       intro,
@@ -308,9 +323,44 @@ const ConceptosClaveBlock: React.FC<{
     seccionActiva: string | null;
     onNarrar: (id: string, texto: string) => void;
 }> = ({ conceptos, fontSize, seccionActiva, onNarrar }) => {
+
+    const [selectedNodo, setSelectedNodo] = React.useState<{
+        nombre: string;
+        descripcion: string;
+        icono?: string;
+    } | null>(null);
+
+    const parseNodo = (text: string) => {
+        // 1. Limpiar espacios y quitar el icono al final si existe entre paréntesis
+        const cleaned = text.trim();
+        const iconMatch = cleaned.match(/\(([^)]+)\)\s*$/);
+        const icono = iconMatch ? iconMatch[1].trim() : '';
+        const withoutIcon = cleaned.replace(/\(([^)]+)\)\s*$/, '').trim();
+
+        // 2. Separar por el primer ":" que encuentre
+        const separatorIndex = withoutIcon.indexOf(':');
+
+        if (separatorIndex !== -1) {
+            return {
+                nombre: withoutIcon.substring(0, separatorIndex).trim(),
+                descripcion: withoutIcon.substring(separatorIndex + 1).trim(),
+                icono
+            };
+        }
+
+        // 3. Si no hay ":", todo es nombre
+        return {
+            nombre: withoutIcon,
+            descripcion: '',
+            icono
+        };
+    };
+
     if (!conceptos?.length) return null;
 
     return (
+
+
         <div className="space-y-8">
             <p className="text-[14px] font-black text-primary uppercase tracking-wide px-1">
                 🧩 Conceptos importantes:
@@ -318,6 +368,7 @@ const ConceptosClaveBlock: React.FC<{
 
             {conceptos.map((concepto, i) => {
                 const ramp = rampStyles[concepto.colorRamp ?? 'gray'] ?? rampStyles.gray;
+                const Icon = resolveLucideIcon(concepto.icono);
 
                 return (
                     <div key={i} className="space-y-5 mb-12 border-b border-slate-100 pb-8 last:border-0">
@@ -344,11 +395,21 @@ const ConceptosClaveBlock: React.FC<{
                         )}
 
                         {/* 2. BLOQUE: EXPLICACIÓN */}
-                        <div className="rounded-2xl border-2 border-l-[6px] border-l-[#5b40d6] border-slate-100 bg-white p-5 shadow-sm">
-                            <h4 className="text-[#5b40d6] font-black text-lg mb-1">{concepto.nombre}</h4>
-                            <p className="text-slate-700 font-medium leading-relaxed" style={{ fontSize }}>
-                                {concepto.explicacionSimple}
-                            </p>
+                        <div className={`rounded-2xl border-2 border-l-[6px] ${ramp.border} bg-white p-5 shadow-sm`}>
+                            <div className="flex items-start justify-between gap-4">
+                                <div className="flex-1 min-w-0">
+                                    <h4 className={`${ramp.title} font-black text-lg mb-1`}>
+                                        {concepto.nombre}
+                                    </h4>
+                                    <p className="text-slate-700 font-medium leading-relaxed" style={{ fontSize }}>
+                                        {concepto.explicacionSimple}
+                                    </p>
+                                </div>
+
+                                <div className={`shrink-0 ${ramp.title} opacity-90`}>
+                                    <Icon size={34} strokeWidth={1.8} />
+                                </div>
+                            </div>
                         </div>
 
                         {/* 3. BLOQUE: LAS PIEZAS (ELEMENTOS) */}
@@ -512,15 +573,69 @@ const ConceptosClaveBlock: React.FC<{
                                                 </div>
                                             )}
 
-                                            {/* CASO 3: NODOS / CATEGORÍAS (Lenguaje, Inglés, Sociales) */}
+
+                                            {/* CASO 3: NODOS / CATEGORÍAS (Lenguaje, Inglés, Sociales, Ciencias) */}
+                                            {/* CASO 3: NODOS / CATEGORÍAS */}
                                             {tipo === 'nodos' && (
-                                                <div className="flex flex-wrap justify-center gap-2">
-                                                    {datos.map((text, i) => (
-                                                        <div key={i} className={`px-4 py-2 rounded-full border-2 text-[11px] font-bold shadow-sm
-                                                            ${i === 0 ? 'bg-indigo-500 border-indigo-500 text-white scale-110 mb-2' : 'bg-white border-indigo-100 text-indigo-600'}`}>
-                                                            {text}
+                                                <div className="w-full flex flex-col items-center gap-6 py-4">
+                                                    {datos.length > 0 && (() => {
+                                                        const nodoCentral = parseNodo(datos[0]);
+                                                        return (
+                                                            <div className="px-8 py-4 rounded-[2rem] bg-teal-500 text-white shadow-lg border-4 border-teal-300 text-center max-w-[340px]">
+                                                                <span className="block font-black text-lg uppercase tracking-tight">
+                                                                    {nodoCentral.nombre}
+                                                                </span>
+                                                                {nodoCentral.descripcion && (
+                                                                    <span className="block mt-1 text-teal-50 font-bold text-sm leading-tight opacity-90">
+                                                                        {nodoCentral.descripcion}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })()}
+
+                                                    {datos.length > 1 && (
+                                                        <div className="flex flex-col items-center">
+                                                            <div className="w-1.5 h-8 bg-teal-200 rounded-full" />
+                                                            <div className="w-3 h-3 bg-teal-300 rounded-full -mt-1" />
                                                         </div>
-                                                    ))}
+                                                    )}
+
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+                                                        {datos.slice(1).map((text, i) => {
+                                                            const nodo = parseNodo(text);
+                                                            return (
+                                                                <button
+                                                                    key={i}
+                                                                    type="button"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setSelectedNodo(nodo);
+                                                                    }}
+                                                                    className="group relative flex flex-col p-5 rounded-[1.5rem] border-b-4 border-2 border-teal-200 bg-white hover:bg-teal-50 hover:border-teal-400 text-left transition-all hover:-translate-y-1 shadow-sm active:translate-y-0 cursor-pointer"
+                                                                >
+                                                                    <div className="flex justify-between items-start mb-1">
+                                                                        <span className="font-black text-teal-600 text-base group-hover:text-teal-700">
+                                                                            {nodo.nombre}
+                                                                        </span>
+                                                                        <span className="text-teal-300 group-hover:text-teal-500 transition-colors">
+                                                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" /></svg>
+                                                                        </span>
+                                                                    </div>
+
+                                                                    {nodo.descripcion && (
+                                                                        <span className="text-slate-500 font-bold text-xs leading-snug line-clamp-2">
+                                                                            {nodo.descripcion}
+                                                                        </span>
+                                                                    )}
+
+                                                                    <div className="mt-3 text-[10px] font-black text-teal-400 uppercase tracking-widest group-hover:text-teal-600">
+                                                                        Tocar para explorar •
+                                                                    </div>
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
                                                 </div>
                                             )}
                                         </>
@@ -531,6 +646,48 @@ const ConceptosClaveBlock: React.FC<{
                     </div>
                 );
             })}
+            {selectedNodo && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+                    <div className="w-full max-w-md rounded-[2rem] bg-white shadow-2xl border-4 border-teal-100 p-6 relative animate-[fadeIn_.2s_ease-out]">
+                        <button
+                            type="button"
+                            onClick={() => setSelectedNodo(null)}
+                            className="absolute top-4 right-4 w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 font-black text-lg"
+                            aria-label="Cerrar"
+                        >
+                            ×
+                        </button>
+
+                        <div className="mb-4">
+                            <p className="text-[11px] uppercase tracking-[0.2em] font-black text-teal-500">
+                                Saber más
+                            </p>
+                            <h4 className="text-2xl font-black text-slate-800 mt-1">
+                                {selectedNodo.nombre}
+                            </h4>
+                        </div>
+
+                        <div className="rounded-2xl bg-teal-50 border border-teal-100 p-4">
+                            <p className="text-slate-700 font-medium leading-relaxed" style={{ fontSize }}>
+                                {selectedNodo.descripcion || 'Este elemento forma parte de este tema importante.'}
+                            </p>
+                        </div>
+
+                        <div className="mt-5 flex justify-center">
+                            <button
+                                type="button"
+                                onClick={() => setSelectedNodo(null)}
+                                className="px-5 py-2.5 rounded-full bg-teal-500 hover:bg-teal-600 text-white font-black shadow-sm transition-colors"
+                            >
+                                Entendido
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+
+
         </div>
     );
 };

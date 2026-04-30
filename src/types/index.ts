@@ -197,6 +197,15 @@ export interface VisualSugerido {
     justificacionPedagogica?: string;
 }
 
+export interface ApoyoVisualItem {
+    id?: string;
+    label: string;
+    title?: string;
+    description?: string;
+    shortLabel?: string;
+    meta?: string;
+}
+
 export interface IntroBloque {
     fraseEnganche: string;
     ejemploAncla: string;
@@ -208,6 +217,7 @@ export interface ApoyoVisualLeccion {
     tipo: 'formula' | 'flujo' | 'nodos' | 'linea_tiempo' | 'ciclo' | 'reparto';
     titulo: string;
     elementos: string[];
+    items?: ApoyoVisualItem[];
     asignatura: string;
 }
 

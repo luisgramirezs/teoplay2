@@ -69,7 +69,7 @@ function getApiKey(): string {
 function buildPrompt(perfil: PerfilNino): string {
     const nombre = perfil.nombre || 'el niño';
     const idioma = perfil.idioma === 'es' ? 'Español' : 'English';
-    const interes = interesLabels[perfil.interes] || perfil.interes;
+    //const interes = interesLabels[perfil.interes] || perfil.interes;
     const condicion = condicionLabels[perfil.condicion] || perfil.condicion;
     const asignatura = asignaturaLabels[perfil.asignatura] || perfil.asignatura;
     const numJuegos = perfil.edad <= 7 ? 2 : perfil.edad <= 10 ? 3 : 4;
@@ -91,8 +91,6 @@ function buildPrompt(perfil: PerfilNino): string {
         "lista": ["objeto real 1", "objeto real 2"],
         "justificacion": "Por qué estos materiales ayudan a comprender este tema"
       },
-
-
 
 
 
@@ -137,7 +135,7 @@ function buildPrompt(perfil: PerfilNino): string {
             "etiqueta": "Etapa 1 | Regla | Componente | Concepto central | vacío si no aplica",
             "funcion": "Qué es, para qué sirve o por qué es importante",
             "explicacionSimple": "Explicación clara, concreta y adaptada al niño",
-            "icono": "nombre válido de Lucide Icons en camelCase",
+            "icono": "nombre exacto de un icono permitido de Lucide React en PascalCase",
             "colorRamp": "blue | green | amber | purple | teal | coral | pink | gray"
           }
         ],
@@ -146,7 +144,7 @@ function buildPrompt(perfil: PerfilNino): string {
         "pasos": [""],
         "visualSugerido": {
           "tipo": "secuencia | diagrama | comparacion | formula | ninguna",
-          "icono": "nombre del icono Lucide en camelCase, por ejemplo: droplets, sun, flask, music, divide",
+          "icono": "Para icono usa siempre el nombre exacto de un icono permitido de Lucide React en PascalCase. Ejemplos: Droplets, Sun, Music, Divide, FlaskConical, Leaf, Calculator, BookOpen, ArrowRight. No inventes nombres ni uses camelCase.",
           "colorRamp": "blue | green | amber | purple | teal | coral | pink | gray",
           "descripcion": "Qué muestra el visual en una línea",
           "justificacionPedagogica": "Por qué este visual ayuda a comprender"
@@ -155,9 +153,6 @@ function buildPrompt(perfil: PerfilNino): string {
 
         "chequeoCobertura": [""],
         "analogia": "Analogía breve y útil en ${idioma}.",
-
-
-
 
 
         "ejemplos": [
@@ -213,6 +208,15 @@ function buildPrompt(perfil: PerfilNino): string {
           "tipo": "formula | flujo | nodos | linea_tiempo | ciclo | reparto",
           "titulo": "Título breve del diagrama",
           "elementos": ["elemento 1", "elemento 2", "elemento 3"],
+          "items": [
+            {
+              "label": "Texto visible del elemento en el diagrama",
+              "title": "Nombre breve del elemento",
+              "description": "Explicación pedagógica específica, clara y concreta de este elemento. No repetir solo el título. Explicar qué es, qué pasa aquí o por qué importa dentro del tema.",
+              "shortLabel": "Etiqueta breve opcional para mostrar dentro del visual",
+              "meta": "Dato corto opcional como fecha, categoría, etapa o valor"
+            }
+          ],
           "asignatura": "matematicas | ingles | lenguaje | ciencias | historia | sociales"
         },
         "resumen": "Idea final breve para recordar en ${idioma}."
@@ -254,12 +258,6 @@ function buildPrompt(perfil: PerfilNino): string {
             "colorRamp": "blue | green | amber | purple | teal | coral | pink | gray"
           }
         ],
-
-
-
-
-
-
 
 
         "pasos": [""],
@@ -324,6 +322,15 @@ function buildPrompt(perfil: PerfilNino): string {
           "tipo": "formula | flujo | nodos | linea_tiempo | ciclo | reparto",
           "titulo": "Título breve del diagrama",
           "elementos": ["elemento 1", "elemento 2", "elemento 3"],
+          "items": [
+            {
+              "label": "Texto visible del elemento en el diagrama",
+              "title": "Nombre breve del elemento",
+              "description": "Explicación pedagógica específica, clara y concreta de este elemento. No repetir solo el título. Explicar qué es, qué pasa aquí o por qué importa dentro del tema.",
+              "shortLabel": "Etiqueta breve opcional para mostrar dentro del visual",
+              "meta": "Dato corto opcional como fecha, categoría, etapa o valor"
+            }
+          ],
           "asignatura": "matematicas | ingles | lenguaje | ciencias | historia | sociales"
         },
         "resumen": "Idea final breve para recordar en ${idioma}."
@@ -431,6 +438,15 @@ function buildPrompt(perfil: PerfilNino): string {
           "tipo": "formula | flujo | nodos | linea_tiempo | ciclo | reparto",
           "titulo": "Título breve del diagrama",
           "elementos": ["elemento 1", "elemento 2", "elemento 3"],
+          "items": [
+            {
+              "label": "Texto visible del elemento en el diagrama",
+              "title": "Nombre breve del elemento",
+              "description": "Explicación pedagógica específica, clara y concreta de este elemento. No repetir solo el título. Explicar qué es, qué pasa aquí o por qué importa dentro del tema.",
+              "shortLabel": "Etiqueta breve opcional para mostrar dentro del visual",
+              "meta": "Dato corto opcional como fecha, categoría, etapa o valor"
+            }
+          ],
           "asignatura": "matematicas | ingles | lenguaje | ciencias | historia | sociales"
         },
         "resumen": "Idea final breve para recordar en ${idioma}."
@@ -460,7 +476,7 @@ function buildPrompt(perfil: PerfilNino): string {
         `Edad: ${perfil.edad} años`,
         `Grado: ${perfil.grado}`,
         `Condición: ${condicion}`,
-        `Interés motivacional: ${interes}`,
+        //`Interés motivacional: ${interes}`,
         `Asignatura: ${asignatura}`,
         `Tema: ${perfil.tema}`,
         `Idioma: ${idioma}`,
@@ -523,8 +539,10 @@ function buildPrompt(perfil: PerfilNino): string {
         '15b. Cada concepto clave debe incluir icono y colorRamp para que el frontend lo renderice con identidad visual propia.',
         '15c. Asigna un colorRamp diferente a cada concepto cuando el tema tenga etapas o partes distintas. Si los conceptos son del mismo tipo o nivel, pueden compartir colorRamp.',
         '15d. Usa etiqueta cuando el concepto tenga un orden claro (Etapa 1, Etapa 2), una categoría (Regla, Componente, Fórmula) o un rol especial (Concepto central). Si no aplica, deja etiqueta como cadena vacía.',
-        '15e. El icono de cada concepto debe representar visualmente su significado. No uses el mismo icono para todos. Elige desde Lucide Icons: sun, droplets, cloud, arrowDown, beaker, music, divide, bookOpen, calculator, leaf, flask, globe, heart, star, zap, layers, repeat, checkCircle, alertCircle, info.',
+        //'15e. El icono de cada concepto debe representar visualmente su significado. No uses el mismo icono para todos. Elige desde Lucide Icons: sun, droplets, cloud, arrowDown, beaker, music, divide, bookOpen, calculator, leaf, flask, globe, heart, star, zap, layers, repeat, checkCircle, alertCircle, info.',
+        '15e.El icono de cada concepto debe representar de forma visual, concreta y semántica el significado del concepto.No uses iconos decorativos ni demasiado genéricos si existe una opción más precisa.Prioriza el objeto, fenómeno, acción o referente real que ayude al niño a reconocer el concepto.Si el concepto es abstracto, usa el referente visual más cercano que facilite su comprensión.No repitas el mismo icono para todos los conceptos salvo que sea estrictamente necesario.',
         '15f. La explicacionSimple debe estar escrita directamente para el niño, no para un adulto. Usa frases cortas, una idea por oración, lenguaje concreto y sin tecnicismos no explicados previamente.',
+        '15g.Evita usar Lightbulb, Info o Search cuando exista un icono más semántico para el concepto.',
         '16. TEOplay le enseña directamente al niño. Usa lenguaje claro, cercano, concreto y guiado. No des por obvios pasos mentales ni razonamientos intermedios.',
         '17. El bloque ejemplos no es decorativo: debe consolidar el aprendizaje con una experiencia pedagógica concreta.',
         '18. Cada ejemplo debe ayudar a comprender, practicar, observar, manipular, aplicar, comparar, registrar, construir o contextualizar contenido ya enseñado.',
@@ -545,6 +563,20 @@ function buildPrompt(perfil: PerfilNino): string {
         '27. Los juegos no pueden evaluar contenido no enseñado, no pueden quedar incompletos y deben distribuirse entre varios contenidos cuando la lección abarque más de un elemento importante.',
         '28. Mantén toda la sesión ajustada al perfil neuroeducativo operativo del niño: explicación, ejemplos, visuales, juegos, mensajes, secuencia, carga cognitiva y nivel de apoyo.',
         //////
+
+        'Regla obligatoria para apoyoVisual:',
+            '- Además de "elementos", genera siempre "items" cuando el tipo de apoyo visual lo permita.',
+            '- Cada item debe corresponder a un elemento visible del diagrama.',
+            '- Cada item debe incluir una explicación pedagógica específica del elemento.',
+            '- Está prohibido repetir solo el título en "description".',
+            '- "description" debe explicar qué representa ese elemento, qué ocurre allí o por qué es importante dentro del tema.',
+            '- Si el apoyo visual es una línea de tiempo, cada item debe explicar el evento histórico concreto.',
+            '- Si es un ciclo, cada item debe explicar qué ocurre en esa etapa.',
+            '- Si es fórmula, cada item debe explicar qué representa esa parte.',
+            '- Si es reparto, cada item debe explicar qué muestra ese grupo o cantidad.',
+            '- Si es nodos o flujo, cada item debe explicar la función de esa parte dentro del conjunto.',
+            '- "elementos" debe seguir existiendo por compatibilidad con el frontend actual.',
+
         
         'Responde SOLO con este JSON válido, sin texto fuera:',
         'IMPORTANTE: Los arrays conceptosClave, pasos, chequeoCobertura, contenidosEnsenados y contenidosEvaluables deben incluir tantos elementos como el tema necesite. No los dejes artificialmente cortos.',
@@ -818,7 +850,7 @@ function buildDallePrompt(
         asignaturaInstruction,
         visualDescripcion ? `Useful visual guidance: ${visualDescripcion}.` : '',
         visualJustificacion ? `Pedagogical reason: ${visualJustificacion}.` : '',
-        interesInstruction,
+        //interesInstruction,
         estiloBase,
         'Use a plain or neutral background if needed.',
         'Keep the composition simple, readable and instruction-focused.',
@@ -903,9 +935,9 @@ export async function pedirExplicacionAlternativa(
 ): Promise<string> {
   const apiKey = getApiKey();
   const idiomaStr = perfil.idioma === 'es' ? 'español' : 'English';
-  const interes = interesLabels[perfil.interes] || perfil.interes;
+  //const interes = interesLabels[perfil.interes] || perfil.interes;
 
-  const prompt = `Explica "${perfil.tema}" de ${asignaturaLabels[perfil.asignatura] || perfil.asignatura} de forma ${intentoNumero === 1 ? 'más simple y concreta' : 'ultra-simple'}, usando ${interes} como analogía. Máximo 3 oraciones muy cortas. Condición del niño: ${condicionLabels[perfil.condicion] || perfil.condicion}. Edad: ${perfil.edad} años. Idioma: ${idiomaStr}. Solo el texto, sin formato ni JSON.`;
+  const prompt = `Explica "${perfil.tema}" de ${asignaturaLabels[perfil.asignatura] || perfil.asignatura} de forma ${intentoNumero === 1 ? 'más simple y concreta' : 'ultra-simple'}, ajustada según la condición del niño: ${condicionLabels[perfil.condicion] || perfil.condicion}. Edad: ${perfil.edad} años. Idioma: ${idiomaStr}. Solo el texto, sin formato ni JSON.`;
 
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
