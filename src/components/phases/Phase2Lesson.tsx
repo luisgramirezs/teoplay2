@@ -630,7 +630,7 @@ const ConceptosClaveBlock: React.FC<{
                                                                     )}
 
                                                                     <div className="mt-3 text-[10px] font-black text-teal-400 uppercase tracking-widest group-hover:text-teal-600">
-                                                                        Tocar para explorar •
+                                                                        Toca para explorar •
                                                                     </div>
                                                                 </button>
                                                             );
