@@ -176,6 +176,35 @@ const ReportScreen: React.FC<ReportScreenProps> = ({ data, onReset, onBack }) =>
         {/* Achievement scale */}
         <section className="bg-card rounded-2xl border border-border p-5">
           <h2 className="text-base font-bold text-foreground mb-4">Escala de logro</h2>
+                  {data.modulosCompletados?.length > 0 && (
+                      <section className="bg-card rounded-2xl border border-border p-5">
+                          <h2 className="text-base font-bold text-foreground mb-4">📚 Módulos explorados</h2>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                              {[
+                                  { id: 'intro', label: 'Introducción', emoji: '📖' },
+                                  { id: 'concept', label: 'Conceptos clave', emoji: '💡' },
+                                  { id: 'visual', label: 'Ejemplos visuales', emoji: '🎨' },
+                                  { id: 'video', label: 'Video del tema', emoji: '▶️' },
+                                  { id: 'activity', label: 'Juego interactivo', emoji: '🎮' },
+                                  { id: 'summary', label: 'Resumen y cierre', emoji: '⭐' },
+                              ].map(m => {
+                                  const completado = data.modulosCompletados?.includes(m.id);
+                                  return (
+                                      <div key={m.id} className={`flex items-center gap-2 p-3 rounded-xl border-2 ${completado ? 'border-emerald-300 bg-emerald-50' : 'border-slate-200 bg-slate-50 opacity-50'}`}>
+                                          <span className="text-lg">{completado ? '✅' : '⭕'}</span>
+                                          <div>
+                                              <p className="text-xs font-black text-slate-700">{m.emoji} {m.label}</p>
+                                              <p className="text-[10px] text-slate-400">{completado ? 'Completado' : 'No visitado'}</p>
+                                          </div>
+                                      </div>
+                                  );
+                              })}
+                          </div>
+                          <p className="text-xs text-slate-500 font-semibold mt-3">
+                              {data.modulosCompletados.length} de 6 módulos completados ({Math.round(data.modulosCompletados.length / 6 * 100)}%)
+                          </p>
+                      </section>
+                  )}
           <div className={`flex items-center justify-between p-4 rounded-xl border ${nivelConfig.bg} ${nivelConfig.border} mb-4`}>
             <div>
               <span className="text-lg mr-2">{nivelConfig.icon}</span>
@@ -183,6 +212,8 @@ const ReportScreen: React.FC<ReportScreenProps> = ({ data, onReset, onBack }) =>
             </div>
             <span className={`text-2xl font-black ${nivelConfig.color}`}>{pct}%</span>
           </div>
+
+
           {/* Bar */}
           <div className="w-full h-4 bg-muted rounded-full overflow-hidden">
             <div
@@ -195,7 +226,11 @@ const ReportScreen: React.FC<ReportScreenProps> = ({ data, onReset, onBack }) =>
             <span>50% — En proceso</span>
             <span>80%+ — Logrado</span>
           </div>
+
+
         </section>
+
+
 
         {/* Game details */}
         {data.juegos.length > 0 && (

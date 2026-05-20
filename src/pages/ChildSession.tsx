@@ -8,6 +8,7 @@ import Phase4FinalEmotion, { ClosureScreen } from '@/components/phases/Phase4Fin
 import { generarSesion } from '@/lib/api';
 import { Sparkles } from 'lucide-react';
 import { ArrowLeft } from 'lucide-react';
+import NeuroLessonPage, { MODULOS} from '@/neuro/pages/NeuroLessonPage';
 
 interface ChildSessionProps {
   perfil: PerfilNino;
@@ -67,6 +68,11 @@ const ChildSession: React.FC<ChildSessionProps> = ({ perfil, onComplete, onBack 
   const [subPhase, setSubPhase] = useState<SubPhase>('phase1_emotion');
   const [perfilConInteres, setPerfilConInteres] = useState<PerfilNino>(perfil);
   const [sesion, setSesion] = useState<SesionGenerada | null>(null);
+
+  const [moduloActivo, setModuloActivo] = useState<string | null>(null);
+  const [modulosCompletados, setModulosCompletados] = useState<string[]>([]);
+
+
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loadMsgIndex, setLoadMsgIndex] = useState(0);
   const [loadProgress, setLoadProgress] = useState(0);
@@ -92,6 +98,7 @@ const ChildSession: React.FC<ChildSessionProps> = ({ perfil, onComplete, onBack 
 
   // Apply condition class to body
   useEffect(() => {
+
     const condClass = `condicion-${perfil.condicion}`;
     document.body.classList.add('child-ui', condClass);
     if (perfil.condicion === 'dislexia') {
@@ -106,13 +113,17 @@ const ChildSession: React.FC<ChildSessionProps> = ({ perfil, onComplete, onBack 
   // Loading animation
   useEffect(() => {
     if (subPhase !== 'loading') return;
+
+    // Accedemos a los valores actuales
     const interesLabel = INTERESES[perfilConInteres.interes]?.label || '';
     const interesEmoji = INTERESES[perfilConInteres.interes]?.emoji || '';
+
     const msgs = LOADING_MSGS(nombre, interesEmoji, interesLabel, perfil.tema, perfil.idioma);
+
     const msgTimer = setInterval(() => setLoadMsgIndex(i => (i + 1) % msgs.length), 2400);
     const progTimer = setInterval(() => setLoadProgress(p => Math.min(p + 1.2, 92)), 200);
     return () => { clearInterval(msgTimer); clearInterval(progTimer); };
-  }, [subPhase]);
+  }, [subPhase, nombre, perfil.tema, perfil.idioma, perfilConInteres.interes]);
 
   const currentPhaseIndex = subPhaseToIndex[subPhase] ?? 0;
 
@@ -160,11 +171,21 @@ const ChildSession: React.FC<ChildSessionProps> = ({ perfil, onComplete, onBack 
     }
   };
 
-  // PHASE 2 — Lesson
-  const handlePhase2Complete = (tiempo: number) => {
-    setSessionData(s => ({ ...s, tiempoFase2: tiempo }));
-    setSubPhase('phase3');
-  };
+    const handlePhase2Complete = (tiempoFin: number) => {
+        // 1. Guardamos temporalmente las métricas de la lección en el estado
+        setSessionData(prev => ({
+            ...prev,
+            tiempoFase2: tiempoFin,
+            modulosCompletados: modulosCompletados,
+            nivelLogro: 'logrado',
+            porcentajeAciertos: 100,
+            juegos: []
+        }));
+
+        // 2. Avanzamos a la pregunta de la carita/emoción
+        setSubPhase('phase4');
+    };
+
 
   // PHASE 3 — Games
     const handlePhase3Complete = (juegos: JuegoResult[]) => {
@@ -194,17 +215,35 @@ const ChildSession: React.FC<ChildSessionProps> = ({ perfil, onComplete, onBack 
 
 
   // PHASE 4 — Final emotion
-  const handlePhase4Complete = (valor: number) => {
-    const emocionInicio = sessionData.emocionInicio.valor || 3;
-    const delta = valor - emocionInicio;
-    setSessionData(s => ({
-      ...s,
-      emocionFin: { valor, timestamp: Date.now() },
-      deltaEmocional: delta,
-      tiempoFin: Date.now(),
-    }));
-    setSubPhase('closure');
-  };
+    const handlePhase4Complete = (emocionFinValor: number) => {
+        const tiempoCierre = Date.now();
+        const emocionInicioValor = sessionData.emocionInicio?.valor || 3;
+        const delta = emocionFinValor - emocionInicioValor;
+
+        // 3. CONSTRUCCIÓN DEL OBJETO ABSOLUTO:
+        // Forzamos la inclusión de 'sesion' (como sesionGenerada) y 'perfil' 
+        // para asegurar que ReportScreen tenga acceso a los textos y configuraciones.
+        const finalSessionData: SessionData = {
+            ...sessionData,
+            tiempoFin: tiempoCierre,
+            modulosCompletados: modulosCompletados,
+            nivelLogro: 'logrado',
+            porcentajeAciertos: 100,
+            juegos: [],
+            emocionFin: {
+                valor: emocionFinValor,
+                timestamp: tiempoCierre
+            },
+            deltaEmocional: delta,
+
+            // ─── CAMPOS CRUCIALES PARA EL REPORTE ───
+            sesionGenerada: sesion, // Mapea el estado 'sesion' local al reporte
+            perfil: perfil          // Mapea la prop 'perfil' recibida del padre
+        };
+
+        // 4. Enviamos el paquete completo a Index.tsx para montar el ReportScreen sin pérdidas
+        onComplete(finalSessionData);
+    };
 
   const handleShowReport = () => {
     onComplete({ ...sessionData, tiempoFin: Date.now() });
@@ -374,12 +413,37 @@ const ChildSession: React.FC<ChildSessionProps> = ({ perfil, onComplete, onBack 
           />
         )}
 
-        {subPhase === 'phase2' && sesion && (
-          <Phase2Lesson
-            perfil={perfilConInteres}
-            sesion={sesion}
-            onComplete={handlePhase2Complete}
-          />
+        {subPhase === 'phase2' && sesion && !moduloActivo && (
+            <NeuroLessonPage
+                tema={perfilConInteres.tema}
+                asignatura={perfilConInteres.asignatura}
+                nombreNino={nombre}
+                completedModules={modulosCompletados}
+                onOpenModule={(moduleId) => setModuloActivo(moduleId)}
+                onBack={() => setSubPhase('phase1_interest')}
+                // ESTO CONECTA EL BOTÓN HACIA LOS JUEGOS
+                onContinue={() => handlePhase2Complete(Date.now())} 
+            />
+        )}
+
+        {subPhase === 'phase2' && sesion && moduloActivo && (
+            <Phase2Lesson
+                perfil={perfilConInteres}
+                sesion={sesion}
+                moduleId={moduloActivo}
+                onComplete={() => {
+                    // Solo actualizamos progreso y devolvemos al menú (NeuroLessonPage)
+                    setModulosCompletados(prev => [...new Set([...prev, moduloActivo])]);
+                    setModuloActivo(null); 
+                }}
+                onModuleComplete={() => {
+                    setModulosCompletados(prev => [...new Set([...prev, moduloActivo])]);
+                }}
+                onBack={() => {
+                    setModulosCompletados(prev => [...new Set([...prev, moduloActivo])]);
+                    setModuloActivo(null);
+                }}
+            />
         )}
 
         {subPhase === 'phase3' && sesion && (

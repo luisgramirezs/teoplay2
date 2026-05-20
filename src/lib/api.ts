@@ -1,9 +1,11 @@
 import { PerfilNino, SesionGenerada, ExplicacionBloque } from '@/types';
 import { buildOperationalProfile, renderOperationalProfileBlock } from '../utils/profilePrompt';
 
+const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
+
 
 // =====================
-// TIPOS WIKIMEDIA
+// TIPOS WIKIMEDIA (legacy — mantenidos por compatibilidad)
 // =====================
 
 interface WikimediaImageInfo {
@@ -69,7 +71,6 @@ function getApiKey(): string {
 function buildPrompt(perfil: PerfilNino): string {
     const nombre = perfil.nombre || 'el niño';
     const idioma = perfil.idioma === 'es' ? 'Español' : 'English';
-    //const interes = interesLabels[perfil.interes] || perfil.interes;
     const condicion = condicionLabels[perfil.condicion] || perfil.condicion;
     const asignatura = asignaturaLabels[perfil.asignatura] || perfil.asignatura;
     const numJuegos = perfil.edad <= 7 ? 2 : perfil.edad <= 10 ? 3 : 4;
@@ -79,7 +80,6 @@ function buildPrompt(perfil: PerfilNino): string {
 
     console.log('🟣 perfilOperativo:', perfilOperativo);
 
-    
     const perfilBloque = renderOperationalProfileBlock(nombre, perfilOperativo, condicion);
 
     const estructuraJson = `
@@ -91,366 +91,256 @@ function buildPrompt(perfil: PerfilNino): string {
         "lista": ["objeto real 1", "objeto real 2"],
         "justificacion": "Por qué estos materiales ayudan a comprender este tema"
       },
-
-
-
       "explicacion": {
         "objetivo": "Nivel 1: versión esencial en ${idioma}.",
-        "intro": {
-          "fraseEnganche": "Una sola frase que conecte el tema de forma concreta, cercana, sin tecnicismos.",
-          "ejemploAncla": "Un ejemplo brevísimo en una sola oración que muestre el tema en acción usando el contexto del interés del niño.",
-          "cuerpo": "Máximo 2 oraciones adicionales que presenten el tema. Sin saturar. Sin ideas compuestas. En ${idioma}."
-        },
-
-
+        "intro": { "fraseEnganche": "", "cuerpo": "" },
         "conceptosClave": [
           {
-            "formula": "Formula o estructura cuando aplique, ejemplo para operaciones matemáticas o estructuras de oraciones en inglés u otro idioma",
-            "elementos": "Desglose técnico obligatorio en formato 'Nombre: Definición corta'. CADA ELEMENTO DEBE IR EN UNA LÍNEA DISTINTA USANDO EL SALTO DE LÍNEA '\\n'. Reglas por asignatura: 1. Idiomas: Componentes de la estructura (Sujeto, Auxiliares, etc.) en el idioma de estudio. 2. Matemáticas: Variables y partes de la operación. 3. Historia: Factores clave. Formato: 'Nombre: Definición' (un par por renglón). Prohibido usar párrafos.",
-            " - Idiomas (REGLA OBLIGATORIA): Genera una lista completa. ESTÁ PROHIBIDO AGRUPAR O RESUMIR. Debes crear una línea por cada variación importante.",
-                    "-Ejemplo To Be: Debes generar 3 líneas distintas: una para 'I', otra para 'He/She/It' y otra para 'We/You/They'.",
-                    "-Ejemplo Verbo -ing: Genera líneas distintas para: verbos normales, verbos que terminan en -e, y verbos que doblan consonante.",
-                    "-Formato: 'Sujeto/Base : Auxiliar/Cambio + (Ejemplo corto)'. USA SIEMPRE EL SALTO DE LÍNEA '\n' AL FINAL DE CADA LÍNEA."" - Idiomas (REGLA OBLIGATORIA): Genera una lista completa. ESTÁ PROHIBIDO AGRUPAR O RESUMIR. Debes crear una línea por cada variación importante.",
-                    "-Ejemplo To Be: Debes generar 3 líneas distintas: una para 'I', otra para 'He/She/It' y otra para 'We/You/They'.",
-                    "-Ejemplo Verbo -ing: Genera líneas distintas para: verbos normales, verbos que terminan en -e, y verbos que doblan consonante.",
-                    "-Formato: 'Sujeto/Base : Auxiliar/Cambio + (Ejemplo corto)'. USA SIEMPRE EL SALTO DE LÍNEA '\n' AL FINAL DE CADA LÍNEA.",
-                "      -Matemáticas/Ciencias: Listar variables, partes de una operación o constantes (ej. Divisor, Radio, Masa).",
-                "      -Historia/Sociales: Listar Factores Clave (Antecedentes, Personajes, Lugar) que permiten entender el suceso.",
-                "      -Formato: Cada par debe ir en una línea nueva separado por dos puntos (:). Nunca agrupar en párrafos.",
-
-            "uso": "Guía de aplicación paso a paso. CADA PASO DEBE IR EN UNA LÍNEA NUEVA CON EL SALTO DE LÍNEA '\n'. Reglas por asignatura:",
-                "      -Idiomas: Reglas de transformación (ej: cuándo añadir -s, cómo cambiar el orden en preguntas).",
-                "      -Matemáticas/Ciencias: El orden de la operación o cómo despejar (Paso 1, Paso 2...).",
-                "      -Historia/Sociales: Cómo analizar el hecho o qué pasos seguir para identificar sus consecuencias.",
-                "      -Formato: Instrucciones cortas en modo imperativo (ej: "1. Identifica el sujeto \n 2. Agrega el auxiliar").",
-
-            "necesidad": "Contexto de uso y propósito real. CADA ESCENARIO DEBE IR EN UNA LÍNEA NUEVA CON EL SALTO DE LÍNEA '\n'. Reglas por asignatura:",
-                "      -Idiomas: Situaciones específicas (ej: "Para hablar de lo que haces ahora mismo") o palabras clave que delatan el tiempo (ej: "Si ves la palabra 'Now'").",
-                "      -Matemáticas: Cuándo aplicar la operación (ej: "Para repartir dulces en partes iguales").",
-                "      -Historia: Relevancia actual o por qué estudiar este hecho ayuda a entender el presente.",
-                "      -Formato: Frases cortas y empoderadoras que empiecen por "Úsalo para..." o "Identifícalo cuando...".",
-
-
-            "nombre": "Nombre del concepto",
-            "etiqueta": "Etapa 1 | Regla | Componente | Concepto central | vacío si no aplica",
-            "funcion": "Qué es, para qué sirve o por qué es importante",
-            "explicacionSimple": "Explicación clara, concreta y adaptada al niño",
-            "icono": "nombre exacto de un icono permitido de Lucide React en PascalCase",
-            "colorRamp": "blue | green | amber | purple | teal | coral | pink | gray"
+            "nombre": "",
+            "etiqueta": "",
+            "explicacionSimple": "",
+            "funcion": "",
+            "uso": "",
+            "necesidad": "",
+            "formula": "",
+            "elementos": "",
+            "componentes": "",
+            "miembros": "",
+            "ejemploPedagogico": "",
+            "icono": "",
+            "colorRamp": "gray"
           }
         ],
-
-
+ 
         "pasos": [""],
         "visualSugerido": {
-          "tipo": "secuencia | diagrama | comparacion | formula | ninguna",
-          "icono": "Para icono usa siempre el nombre exacto de un icono permitido de Lucide React en PascalCase. Ejemplos: Droplets, Sun, Music, Divide, FlaskConical, Leaf, Calculator, BookOpen, ArrowRight. No inventes nombres ni uses camelCase.",
-          "colorRamp": "blue | green | amber | purple | teal | coral | pink | gray",
-          "descripcion": "Qué muestra el visual en una línea",
-          "justificacionPedagogica": "Por qué este visual ayuda a comprender"
+          "tipo": "ninguna",
+          "icono": "",
+          "colorRamp": "gray",
+          "descripcion": "",
+          "justificacionPedagogica": ""
         },
-
-
         "chequeoCobertura": [""],
-        "analogia": "Analogía breve y útil en ${idioma}.",
-
-
+        "analogia": "",
         "ejemplos": [
           {
-            "enunciado": "Tienes 12 frijoles y 4 hojas. ¿Cuántos frijoles van en cada hoja si los repartes igual?",
-            "requiereProcedimiento": true,
-            "explicacionBreve": "Usar objetos reales permite que el niño comprenda la operación antes de escribirla.",
-            "pasosGuiados": [
-              {
-                "numeroPaso": 1,
-                "accionPrincipal": "Consigue los materiales físicos antes de empezar.",
-                "explicacion": "El niño necesita tener los objetos en la mano para entender con el cuerpo, no solo con la mente.",
-                "resultadoParcial": "El niño tiene los materiales listos frente a él.",
-                "vinculoConcepto": "Nombre del concepto clave al que conecta este paso.",
-                "exploracionConcreta": {
-                  "aplica": true,
-                  "materiales": ["12 frijoles", "4 hojas de papel"],
-                  "instrucciones": [
-                    "Cuenta los frijoles uno por uno hasta llegar a 12.",
-                    "Pon las 4 hojas separadas sobre la mesa."
-                  ],
-                  "conclusion": "El niño entiende que los frijoles son el total y las hojas son los grupos."
-                }
-              },
-              {
-                "numeroPaso": 2,
-                "accionPrincipal": "Reparte los frijoles uno a uno en cada hoja.",
-                "explicacion": "Repartir físicamente conecta la acción de dividir con el concepto de distribución igual.",
-                "resultadoParcial": "Cada hoja tiene la misma cantidad de frijoles.",
-                "vinculoConcepto": "Nombre del concepto clave al que conecta este paso.",
-                "exploracionConcreta": {
-                  "aplica": true,
-                  "materiales": ["12 frijoles", "4 hojas de papel"],
-                  "instrucciones": [
-                    "Pon 1 frijol en cada hoja.",
-                    "Repite hasta que no queden frijoles."
-                  ],
-                  "conclusion": "El niño ve que cada hoja recibió exactamente 3 frijoles."
-                }
-              }
-            ],
-            "visualSugerido": {
-              "tipo": "secuencia | diagrama | comparacion | formula | ninguna",
-              "icono": "nombre del icono Lucide en camelCase, por ejemplo: droplets, sun, flask, music, divide",
-              "colorRamp": "blue | green | amber | purple | teal | coral | pink | gray",
-              "descripcion": "Qué muestra el visual en una línea",
-              "justificacionPedagogica": "Por qué este visual ayuda a comprender"
-            },
-            "conclusionPedagogica": "Qué consolidó el niño con este ejemplo"
+            "enunciado": "",
+            "requiereProcedimiento":"",
+            "explicacionBreve": "",
+        "pasosGuiados": [
+          {
+            "numeroPaso": 1,
+            "accionPrincipal": "descripción clara del paso",
+            "explicacion": "por qué se hace este paso",
+            "resultadoParcial": "resultado numérico de este paso",
+            "vinculoConcepto": ""
           }
+          // TODOS los pasos hasta resolver completamente
         ],
-        "apoyoVisual": {
-          "tipo": "formula | flujo | nodos | linea_tiempo | ciclo | reparto",
-          "titulo": "Título breve del diagrama",
-          "elementos": ["elemento 1", "elemento 2", "elemento 3"],
-          "items": [
+        "conclusionPedagogica": "Resultado final: X = Y"
+
+
+
+        ejemplosVisuales: [
+          {
+            titulo: string,
+            autor: string,
+            descripcion: string,
+            tipo: string,
+            query: string;
+          }
+        ]
+
+
+        "apoyoGramatical": {
+          "titulo": "Nombre de la estructura gramatical",
+          "idioma": "inglés | francés | español",
+          "piezas": [
             {
-              "label": "Texto visible del elemento en el diagrama",
-              "title": "Nombre breve del elemento",
-              "description": "Explicación pedagógica específica, clara y concreta de este elemento. No repetir solo el título. Explicar qué es, qué pasa aquí o por qué importa dentro del tema.",
-              "shortLabel": "Etiqueta breve opcional para mostrar dentro del visual",
-              "meta": "Dato corto opcional como fecha, categoría, etapa o valor"
+              "rol": "Sujeto",
+              "valores": ["She", "He", "It"],
+              "etiqueta": "Personas que usan HAS",
+              "color": "orange"
+            },
+            {
+              "rol": "Auxiliar",
+              "valores": ["has", "have"],
+              "etiqueta": "has → She/He/It | have → I/You/We/They",
+              "color": "blue"
+            },
+            {
+              "rol": "Participio pasado",
+              "valores": ["eaten", "finished", "gone", "done", "seen"],
+              "etiqueta": "Verbo en su forma de participio pasado",
+              "color": "green"
             }
           ],
-          "asignatura": "matematicas | ingles | lenguaje | ciencias | historia | sociales"
+          "reglas": [
+            "She / He / It → usa HAS",
+            "I / You / We / They → usa HAVE",
+            "El verbo principal siempre va en participio pasado"
+          ],
+          "ejemplos": [
+            { "oracion": "She has eaten.", "traduccion": "Ella ha comido." },
+            { "oracion": "I have finished.", "traduccion": "Yo he terminado." },
+            { "oracion": "They have gone.", "traduccion": "Ellos se han ido." }
+          ],
+          "nota": "Usa HAS o HAVE según quién realiza la acción. El verbo principal siempre cambia a su forma especial (participio pasado)."
+        }
+
+        "apoyoVisual": {
+          tipo: 'formula' | 'flujo' | 'nodos' | 'linea_tiempo' | 'ciclo' | 'reparto'
+            | 'fraccion' | 'recta_numerica' | 'geometria' | 'agrupacion'
+            | 'fuerzas' | 'molecula' | 'reaccion';
+
+          "titulo": "",
+          "elementos": [],
+          "items": [],
+          "asignatura": ""
         },
-        "resumen": "Idea final breve para recordar en ${idioma}."
+        "resumen": ""
       },
+
+
       "explicacionAlternativa1": {
         "objetivo": "Nivel 2: versión desarrollada en ${idioma}.",
-        "intro": {
-          "fraseEnganche": "Una sola frase que conecte el tema con el interés motivacional del niño. Concreta, cercana, sin tecnicismos.",
-          "ejemploAncla": "Un ejemplo brevísimo en una sola oración que muestre el tema en acción usando el contexto del interés del niño.",
-          "cuerpo": "Máximo 2 oraciones adicionales que presenten el tema. Sin saturar. Sin ideas compuestas. En ${idioma}."
-        },
+        "intro": { "fraseEnganche": "", "cuerpo": "" },
         "conceptosClave": [
-          {
-            "formula": "Formula o estructura cuando aplique, ejemplo para operaciones matemáticas o estructuras de oraciones en inglés u otro idioma",
-            "elementos": "Desglose técnico obligatorio en formato 'Nombre: Definición corta'. CADA ELEMENTO DEBE IR EN UNA LÍNEA DISTINTA USANDO EL SALTO DE LÍNEA '\\n'. Reglas por asignatura: 1. Idiomas: Componentes de la estructura (Sujeto, Auxiliares, etc.) en el idioma de estudio. 2. Matemáticas: Variables y partes de la operación. 3. Historia: Factores clave. Formato: 'Nombre: Definición' (un par por renglón). Prohibido usar párrafos.",
-                "      -Idiomas: Listar TODOS los componentes de la estructura (Sujeto/Pronombres, Verbos Auxiliares, Conjugaciones, Complementos). Los nombres de los elementos y sus ejemplos DEBEN estar en el idioma que se estudia (ej. inglés).",
-                "      -Matemáticas/Ciencias: Listar variables, partes de una operación o constantes (ej. Divisor, Radio, Masa).",
-                "      -Historia/Sociales: Listar Factores Clave (Antecedentes, Personajes, Lugar) que permiten entender el suceso.",
-                "      -Formato: Cada par debe ir en una línea nueva separado por dos puntos (:). Nunca agrupar en párrafos.",
-
-            "uso": "Guía de aplicación paso a paso. CADA PASO DEBE IR EN UNA LÍNEA NUEVA CON EL SALTO DE LÍNEA '\n'. Reglas por asignatura:",
-                "      -Idiomas: Reglas de transformación (ej: cuándo añadir -s, cómo cambiar el orden en preguntas).",
-                "      -Matemáticas/Ciencias: El orden de la operación o cómo despejar (Paso 1, Paso 2...).",
-                "      -Historia/Sociales: Cómo analizar el hecho o qué pasos seguir para identificar sus consecuencias.",
-                "      -Formato: Instrucciones cortas en modo imperativo (ej: "1. Identifica el sujeto \n 2. Agrega el auxiliar").",
-
-            "necesidad": "Contexto de uso y propósito real. CADA ESCENARIO DEBE IR EN UNA LÍNEA NUEVA CON EL SALTO DE LÍNEA '\n'. Reglas por asignatura:",
-                "      -Idiomas: Situaciones específicas (ej: "Para hablar de lo que haces ahora mismo") o palabras clave que delatan el tiempo (ej: "Si ves la palabra 'Now'").",
-                "      -Matemáticas: Cuándo aplicar la operación (ej: "Para repartir dulces en partes iguales").",
-                "      -Historia: Relevancia actual o por qué estudiar este hecho ayuda a entender el presente.",
-                "      -Formato: Frases cortas y empoderadoras que empiecen por "Úsalo para..." o "Identifícalo cuando...".",
-
-
-            "nombre": "Nombre del concepto",
-            "etiqueta": "Etapa 1 | Regla | Componente | Concepto central | vacío si no aplica",
-            "funcion": "Qué es, para qué sirve o por qué es importante",
-            "explicacionSimple": "Explicación clara, concreta y adaptada al niño",
-            "icono": "nombre válido de Lucide Icons en camelCase",
-            "colorRamp": "blue | green | amber | purple | teal | coral | pink | gray"
+         {
+            "nombre": "",
+            "etiqueta": "",
+            "explicacionSimple": "",
+            "funcion": "",
+            "uso": "",
+            "necesidad": "",
+            "formula": "",
+            "elementos": "",
+            "componentes": "",
+            "miembros": "",
+            "ejemploPedagogico": "",
+            "icono": "",
+            "colorRamp": "gray"
           }
         ],
 
-
-        "pasos": [""],
-        "visualSugerido": {
-          "tipo": "secuencia | diagrama | comparacion | formula | ninguna",
-          "icono": "nombre del icono Lucide en camelCase, por ejemplo: droplets, sun, flask, music, divide",
-          "colorRamp": "blue | green | amber | purple | teal | coral | pink | gray",
-          "descripcion": "Qué muestra el visual en una línea",
-          "justificacionPedagogica": "Por qué este visual ayuda a comprender"
-        },
-        "chequeoCobertura": [""],
-        "analogia": "Analogía breve y útil en ${idioma}.",
-        "ejemplos": [
-          {
-            "enunciado": "Tienes 12 frijoles y 4 hojas. ¿Cuántos frijoles van en cada hoja si los repartes igual?",
-            "requiereProcedimiento": true,
-            "explicacionBreve": "Usar objetos reales permite que el niño comprenda la operación antes de escribirla.",
-            "pasosGuiados": [
-              {
-                "numeroPaso": 1,
-                "accionPrincipal": "Consigue los materiales físicos antes de empezar.",
-                "explicacion": "El niño necesita tener los objetos en la mano para entender con el cuerpo, no solo con la mente.",
-                "resultadoParcial": "El niño tiene los materiales listos frente a él.",
-                "vinculoConcepto": "Nombre del concepto clave al que conecta este paso.",
-                "exploracionConcreta": {
-                  "aplica": true,
-                  "materiales": ["12 frijoles", "4 hojas de papel"],
-                  "instrucciones": [
-                    "Cuenta los frijoles uno por uno hasta llegar a 12.",
-                    "Pon las 4 hojas separadas sobre la mesa."
-                  ],
-                  "conclusion": "El niño entiende que los frijoles son el total y las hojas son los grupos."
-                }
-              },
-              {
-                "numeroPaso": 2,
-                "accionPrincipal": "Reparte los frijoles uno a uno en cada hoja.",
-                "explicacion": "Repartir físicamente conecta la acción de dividir con el concepto de distribución igual.",
-                "resultadoParcial": "Cada hoja tiene la misma cantidad de frijoles.",
-                "vinculoConcepto": "Nombre del concepto clave al que conecta este paso.",
-                "exploracionConcreta": {
-                  "aplica": true,
-                  "materiales": ["12 frijoles", "4 hojas de papel"],
-                  "instrucciones": [
-                    "Pon 1 frijol en cada hoja.",
-                    "Repite hasta que no queden frijoles."
-                  ],
-                  "conclusion": "El niño ve que cada hoja recibió exactamente 3 frijoles."
-                }
-              }            ],
-            "visualSugerido": {
-              "tipo": "secuencia | diagrama | comparacion | formula | ninguna",
-              "icono": "nombre del icono Lucide en camelCase, por ejemplo: droplets, sun, flask, music, divide",
-              "colorRamp": "blue | green | amber | purple | teal | coral | pink | gray",
-              "descripcion": "Qué muestra el visual en una línea",
-              "justificacionPedagogica": "Por qué este visual ayuda a comprender"
-            },
-            "conclusionPedagogica": "Qué consolidó el niño con este ejemplo"
-          }
-        ],
-        "apoyoVisual": {
-          "tipo": "formula | flujo | nodos | linea_tiempo | ciclo | reparto",
-          "titulo": "Título breve del diagrama",
-          "elementos": ["elemento 1", "elemento 2", "elemento 3"],
-          "items": [
+        "pasos": [],
+        "visualSugerido": {},
+        "chequeoCobertura": [],
+        "analogia": "",
+        "ejemplos": [],
+        "apoyoGramatical": {
+          "titulo": "Nombre de la estructura gramatical",
+          "idioma": "inglés | francés | español",
+          "piezas": [
             {
-              "label": "Texto visible del elemento en el diagrama",
-              "title": "Nombre breve del elemento",
-              "description": "Explicación pedagógica específica, clara y concreta de este elemento. No repetir solo el título. Explicar qué es, qué pasa aquí o por qué importa dentro del tema.",
-              "shortLabel": "Etiqueta breve opcional para mostrar dentro del visual",
-              "meta": "Dato corto opcional como fecha, categoría, etapa o valor"
+              "rol": "Sujeto",
+              "valores": ["She", "He", "It"],
+              "etiqueta": "Personas que usan HAS",
+              "color": "orange"
+            },
+            {
+              "rol": "Auxiliar",
+              "valores": ["has", "have"],
+              "etiqueta": "has → She/He/It | have → I/You/We/They",
+              "color": "blue"
+            },
+            {
+              "rol": "Participio pasado",
+              "valores": ["eaten", "finished", "gone", "done", "seen"],
+              "etiqueta": "Verbo en su forma de participio pasado",
+              "color": "green"
             }
           ],
-          "asignatura": "matematicas | ingles | lenguaje | ciencias | historia | sociales"
-        },
-        "resumen": "Idea final breve para recordar en ${idioma}."
+          "reglas": [
+            "She / He / It → usa HAS",
+            "I / You / We / They → usa HAVE",
+            "El verbo principal siempre va en participio pasado"
+          ],
+          "ejemplos": [
+            { "oracion": "She has eaten.", "traduccion": "Ella ha comido." },
+            { "oracion": "I have finished.", "traduccion": "Yo he terminado." },
+            { "oracion": "They have gone.", "traduccion": "Ellos se han ido." }
+          ],
+          "nota": "Usa HAS o HAVE según quién realiza la acción. El verbo principal siempre cambia a su forma especial (participio pasado)."
+        }
+
+        "apoyoVisual": {},
+        "resumen": ""
       },
       "explicacionAlternativa2": {
         "objetivo": "Nivel 3: versión ampliada en ${idioma}.",
-        "intro": {
-          "fraseEnganche": "Una sola frase que conecte el tema con el interés motivacional del niño. Concreta, cercana, sin tecnicismos.",
-          "ejemploAncla": "Un ejemplo brevísimo en una sola oración que muestre el tema en acción usando el contexto del interés del niño.",
-          "cuerpo": "Máximo 2 oraciones adicionales que presenten el tema. Sin saturar. Sin ideas compuestas. En ${idioma}."
-        },
-
-
+        "intro": { "fraseEnganche": "", "cuerpo": "" },
         "conceptosClave": [
-          {
-            "formula": "Formula o estructura cuando aplique, ejemplo para operaciones matemáticas o estructuras de oraciones en inglés u otro idioma",
-            "elementos": "Desglose técnico obligatorio en formato 'Nombre: Definición corta'. CADA ELEMENTO DEBE IR EN UNA LÍNEA DISTINTA USANDO EL SALTO DE LÍNEA '\\n'. Reglas por asignatura: 1. Idiomas: Componentes de la estructura (Sujeto, Auxiliares, etc.) en el idioma de estudio. 2. Matemáticas: Variables y partes de la operación. 3. Historia: Factores clave. Formato: 'Nombre: Definición' (un par por renglón). Prohibido usar párrafos.",
-                "      -Idiomas: Listar TODOS los componentes de la estructura (Sujeto/Pronombres, Verbos Auxiliares, Conjugaciones, Complementos). Los nombres de los elementos y sus ejemplos DEBEN estar en el idioma que se estudia (ej. inglés).",
-                "      -Matemáticas/Ciencias: Listar variables, partes de una operación o constantes (ej. Divisor, Radio, Masa).",
-                "      -Historia/Sociales: Listar Factores Clave (Antecedentes, Personajes, Lugar) que permiten entender el suceso.",
-                "      -Formato: Cada par debe ir en una línea nueva separado por dos puntos (:). Nunca agrupar en párrafos.",
-
-            "uso": "Guía de aplicación paso a paso. CADA PASO DEBE IR EN UNA LÍNEA NUEVA CON EL SALTO DE LÍNEA '\n'. Reglas por asignatura:",
-                "      -Idiomas: Reglas de transformación (ej: cuándo añadir -s, cómo cambiar el orden en preguntas).",
-                "      -Matemáticas/Ciencias: El orden de la operación o cómo despejar (Paso 1, Paso 2...).",
-                "      -Historia/Sociales: Cómo analizar el hecho o qué pasos seguir para identificar sus consecuencias.",
-                "      -Formato: Instrucciones cortas en modo imperativo (ej: "1. Identifica el sujeto \n 2. Agrega el auxiliar").",
-
-            "necesidad": "Contexto de uso y propósito real. CADA ESCENARIO DEBE IR EN UNA LÍNEA NUEVA CON EL SALTO DE LÍNEA '\n'. Reglas por asignatura:",
-                "      -Idiomas: Situaciones específicas (ej: "Para hablar de lo que haces ahora mismo") o palabras clave que delatan el tiempo (ej: "Si ves la palabra 'Now'").",
-                "      -Matemáticas: Cuándo aplicar la operación (ej: "Para repartir dulces en partes iguales").",
-                "      -Historia: Relevancia actual o por qué estudiar este hecho ayuda a entender el presente.",
-                "      -Formato: Frases cortas y empoderadoras que empiecen por "Úsalo para..." o "Identifícalo cuando...".",
-
-
-            "nombre": "Nombre del concepto",
-            "etiqueta": "Etapa 1 | Regla | Componente | Concepto central | vacío si no aplica",
-            "funcion": "Qué es, para qué sirve o por qué es importante",
-            "explicacionSimple": "Explicación clara, concreta y adaptada al niño",
-            "icono": "nombre válido de Lucide Icons en camelCase",
-            "colorRamp": "blue | green | amber | purple | teal | coral | pink | gray"
+         {
+            "nombre": "",
+            "etiqueta": "",
+            "explicacionSimple": "",
+            "funcion": "",
+            "uso": "",
+            "necesidad": "",
+            "formula": "",
+            "elementos": "",
+            "componentes": "",
+            "miembros": "",
+            "ejemploPedagogico": "",
+            "icono": "",
+            "colorRamp": "gray"
           }
         ],
 
-
-        "pasos": [""],
-        "visualSugerido": {
-          "tipo": "secuencia | diagrama | comparacion | formula | ninguna",
-          "icono": "nombre del icono Lucide en camelCase, por ejemplo: droplets, sun, flask, music, divide",
-          "colorRamp": "blue | green | amber | purple | teal | coral | pink | gray",
-          "descripcion": "Qué muestra el visual en una línea",
-          "justificacionPedagogica": "Por qué este visual ayuda a comprender"
-        },
-        "chequeoCobertura": [""],
-        "analogia": "Analogía breve y útil en ${idioma}.",
-        "ejemplos": [
-          {
-            "enunciado": "Tienes 12 frijoles y 4 hojas. ¿Cuántos frijoles van en cada hoja si los repartes igual?",
-            "requiereProcedimiento": true,
-            "explicacionBreve": "Usar objetos reales permite que el niño comprenda la operación antes de escribirla.",
-            "pasosGuiados": [
-              {
-                "numeroPaso": 1,
-                "accionPrincipal": "Consigue los materiales físicos antes de empezar.",
-                "explicacion": "El niño necesita tener los objetos en la mano para entender con el cuerpo, no solo con la mente.",
-                "resultadoParcial": "El niño tiene los materiales listos frente a él.",
-                "vinculoConcepto": "Nombre del concepto clave al que conecta este paso.",
-                "exploracionConcreta": {
-                  "aplica": true,
-                  "materiales": ["12 frijoles", "4 hojas de papel"],
-                  "instrucciones": [
-                    "Cuenta los frijoles uno por uno hasta llegar a 12.",
-                    "Pon las 4 hojas separadas sobre la mesa."
-                  ],
-                  "conclusion": "El niño entiende que los frijoles son el total y las hojas son los grupos."
-                }
-              },
-              {
-                "numeroPaso": 2,
-                "accionPrincipal": "Reparte los frijoles uno a uno en cada hoja.",
-                "explicacion": "Repartir físicamente conecta la acción de dividir con el concepto de distribución igual.",
-                "resultadoParcial": "Cada hoja tiene la misma cantidad de frijoles.",
-                "vinculoConcepto": "Nombre del concepto clave al que conecta este paso.",
-                "exploracionConcreta": {
-                  "aplica": true,
-                  "materiales": ["12 frijoles", "4 hojas de papel"],
-                  "instrucciones": [
-                    "Pon 1 frijol en cada hoja.",
-                    "Repite hasta que no queden frijoles."
-                  ],
-                  "conclusion": "El niño ve que cada hoja recibió exactamente 3 frijoles."
-                }
-              }            ],
-            "visualSugerido": {
-              "tipo": "secuencia | diagrama | comparacion | formula | ninguna",
-              "icono": "nombre del icono Lucide en camelCase, por ejemplo: droplets, sun, flask, music, divide",
-              "colorRamp": "blue | green | amber | purple | teal | coral | pink | gray",
-              "descripcion": "Qué muestra el visual en una línea",
-              "justificacionPedagogica": "Por qué este visual ayuda a comprender"
-            },
-            "conclusionPedagogica": "Qué consolidó el niño con este ejemplo"
-          }
-        ],
-        "apoyoVisual": {
-          "tipo": "formula | flujo | nodos | linea_tiempo | ciclo | reparto",
-          "titulo": "Título breve del diagrama",
-          "elementos": ["elemento 1", "elemento 2", "elemento 3"],
-          "items": [
+        "pasos": [],
+        "visualSugerido": {},
+        "chequeoCobertura": [],
+        "analogia": "",
+        "ejemplos": [],
+        
+        "apoyoGramatical": {
+          "titulo": "Nombre de la estructura gramatical",
+          "idioma": "inglés | francés | español",
+          "piezas": [
             {
-              "label": "Texto visible del elemento en el diagrama",
-              "title": "Nombre breve del elemento",
-              "description": "Explicación pedagógica específica, clara y concreta de este elemento. No repetir solo el título. Explicar qué es, qué pasa aquí o por qué importa dentro del tema.",
-              "shortLabel": "Etiqueta breve opcional para mostrar dentro del visual",
-              "meta": "Dato corto opcional como fecha, categoría, etapa o valor"
+              "rol": "Sujeto",
+              "valores": ["She", "He", "It"],
+              "etiqueta": "Personas que usan HAS",
+              "color": "orange"
+            },
+            {
+              "rol": "Auxiliar",
+              "valores": ["has", "have"],
+              "etiqueta": "has → She/He/It | have → I/You/We/They",
+              "color": "blue"
+            },
+            {
+              "rol": "Participio pasado",
+              "valores": ["eaten", "finished", "gone", "done", "seen"],
+              "etiqueta": "Verbo en su forma de participio pasado",
+              "color": "green"
             }
           ],
-          "asignatura": "matematicas | ingles | lenguaje | ciencias | historia | sociales"
-        },
-        "resumen": "Idea final breve para recordar en ${idioma}."
+          "reglas": [
+            "She / He / It → usa HAS",
+            "I / You / We / They → usa HAVE",
+            "El verbo principal siempre va en participio pasado"
+          ],
+          "ejemplos": [
+            { "oracion": "She has eaten.", "traduccion": "Ella ha comido." },
+            { "oracion": "I have finished.", "traduccion": "Yo he terminado." },
+            { "oracion": "They have gone.", "traduccion": "Ellos se han ido." }
+          ],
+          "nota": "Usa HAS o HAVE según quién realiza la acción. El verbo principal siempre cambia a su forma especial (participio pasado)."
+        }
+
+        "apoyoVisual": {},
+        "resumen": ""
       },
+
+       "pertinencia": {
+          "importancia": "",
+          "utilidadVida": "",
+          "mundoReal": ""
+        }
+
+
       "mapaPedagogico": {
         "contenidosEnsenados": [""],
         "contenidosEvaluables": [""]
@@ -467,162 +357,140 @@ function buildPrompt(perfil: PerfilNino): string {
     }
     `.trim();
 
-
     const prompt = [
         perfilBloque,
         '',
-        'Genera una sesión de aprendizaje completa y adaptada.',
+        'Genera una sesión de aprendizaje completa, clara y adaptada al perfil del niño.',
         `Nombre: ${nombre}`,
         `Edad: ${perfil.edad} años`,
         `Grado: ${perfil.grado}`,
         `Condición: ${condicion}`,
-        //`Interés motivacional: ${interes}`,
         `Asignatura: ${asignatura}`,
         `Tema: ${perfil.tema}`,
         `Idioma: ${idioma}`,
         '',
         'INSTRUCCIONES PEDAGÓGICAS OBLIGATORIAS:',
-        
-        `1. Antes de escribir, identifica todo lo que el niño necesita aprender sobre "${perfil.tema}" para responder correctamente los juegos.`,
-        '2. La explicación principal debe enseñar exactamente ese contenido y los juegos solo pueden evaluar lo ya enseñado.',
-        '3. No introduzcas en ejemplos o juegos nombres, partes, autores, categorías, pasos o datos que no hayan sido explicados antes.',
-        '4. En TEOplay, adaptar no es quitar contenido esencial: es cambiar la forma de enseñarlo según el perfil neuroeducativo del niño.',
-        '5. No generes explicaciones escolares genéricas. Genera mediaciones pedagógicas claras, concretas, guiadas y de baja carga cognitiva.',
-        '6. conceptosClave, pasos y chequeoCobertura deben incluir todos los elementos esenciales que el tema necesite. No los reduzcas artificialmente.',
-        '7. Si el tema incluye listas, partes, autores, categorías, etapas, órganos, organelos, planetas, continentes, figuras, tipos o componentes esenciales, debes nombrarlos y explicarlos con cobertura suficiente para el nivel escolar.',
-        '8. Si luego un elemento específico aparece en ejemplos o juegos, ese elemento debe haber sido enseñado antes de forma explícita.',
-        '9. visualSugerido solo debe usarse si aporta comprensión real. Si no aporta, usa tipo "ninguna" y deja icono, colorRamp y descripcion vacíos. Nunca uses imágenes externas, URLs, DALL-E ni Wikimedia.',
-        '10. Tipos de visual permitidos: "secuencia" para procesos o ciclos con orden claro; "diagrama" para estructuras o relaciones entre partes; "comparacion" para contrastar dos elementos; "formula" para mostrar una regla o estructura gramatical o matemática; "ninguna" cuando no haya ganancia real de comprensión.',
-        '10b. Para icono usa siempre un nombre válido de Lucide Icons en camelCase (ejemplos: droplets, sun, music, divide, flask, leaf, calculator, bookOpen, arrowRight). El frontend lo renderizará directamente. No inventes nombres de iconos.',
-        '10c. Para colorRamp elige el color que mejor represente el contenido: blue para agua o ciencia, green para naturaleza, amber para calor o cocina, purple para gramática o lenguaje, teal para ciclos o biología, coral para matemáticas, gray para conceptos neutros.',
-        '10d. apoyoVisual es un campo OBLIGATORIO a nivel de explicacion, explicacionAlternativa1 y explicacionAlternativa2. NUNCA lo pongas dentro de conceptosClave.',
-        '10e. Tipos de apoyoVisual según asignatura y tipoLeccion:',
-        '    - matematicas procedimiento_matematico: usa "reparto" para divisiones con objetos. Usa "formula" para operaciones con fórmula fija (área, perímetro, ecuaciones).',
-        '    - matematicas clasificacion_conceptual: usa "nodos" donde el nodo central es la categoría principal y los hijos son los tipos con su característica clave.',
-        '    - ingles o lenguaje formula_gramatical: usa "formula" para estructura gramatical.',
-        '    - ingles o lenguaje clasificacion_conceptual: usa "nodos" para comparar tiempos verbales o categorías.',
-        '    - ciencias clasificacion_conceptual: usa "nodos" donde el nodo central es el concepto y los hijos son sus partes o tipos.',
-        '    - ciencias secuencia_biologica: usa "ciclo" para procesos con etapas ordenadas.',
-        '    - ciencias observacion_experimental: usa "flujo" para cadenas de causa-efecto.',
-        '    - historia o sociales: usa "linea_tiempo" con formato "fecha: evento corto".',
-        '    - descripcion_conceptual: usa "nodos" con el concepto central y sus atributos principales.',
-        '10f. Para el campo "elementos" de apoyoVisual sigue estas reglas:',
-        '    - tipo "formula": cada elemento sigue el formato "Nombre del componente: operador_o_símbolo : valor_o_ejemplo". El operador puede ser +, -, ×, ÷, =. Ejemplo: "Base: × : b", "Altura: ÷2 : h", "Área: = : A".',
-        '    - tipo "nodos": el primer elemento es el nodo central. Los demás son nodos hijo con formato "Nombre: descripción corta".',
-        '    - tipo "reparto": exactamente 3 strings numéricos: [total, grupos, porGrupo]. Ejemplo: ["12", "4", "3"].',
-        '    - tipo "ciclo": cada elemento es una etapa. Formato "Nombre de etapa".',
-        '    - tipo "flujo": cada elemento es un paso en orden. Formato "Acción o resultado".',
-        '    - tipo "linea_tiempo": formato "fecha o período: evento corto".',
-        '10g. Para "elementos" en tipo "nodos", si el tema incluye formas geométricas, partículas, organismos o elementos visualizables, agrega al final de cada elemento hijo el nombre del icono Lucide que mejor lo represente entre paréntesis. Ejemplo: "Triángulo equilátero: 3 lados iguales (triangle)", "Electrón: carga negativa (zap)", "Núcleo: centro del átomo (circle)". Si no hay icono apropiado, omite los paréntesis.',
+        `1. Antes de generar, identifica todo lo que el niño necesita aprender sobre "${perfil.tema}".`,
+        `2. Descompón el tema en sus componentes, partes, etapas, miembros o elementos esenciales.`,
+        `3. En "conceptosClave" debes incluir TODAS las partes fundamentales del tema. No devuelvas un solo concepto general si el tema puede dividirse pedagógicamente.`,
+        `4. Cada objeto de "conceptosClave" debe representar una unidad enseñable, clara y visual.`,
+        `5. Si el tema es una secuencia o ciclo, incluye cada etapa importante por separado.`,
+        `6. Si el tema es una clasificación o estructura, incluye cada componente principal por separado.`,
+        `7. Si el tema es una fórmula o procedimiento, incluye cada elemento indispensable por separado.`,
+        `8. No omitas partes esenciales por simplificar demasiado.`,
+        `9. SIEMPRE usa los "componentes", "miembros", "elementos" y "formula" de forma completa.`,
+        `10. Ejemplos de completitud esperada:`,
+        `   - "ciclo del agua" -> evaporación, condensación, precipitación, acumulación.`,
+        `   - "sistema solar" -> Sol y todos los planetas principales; si aplica, también lunas, asteroides y cometas.`,
+        `   - "suma de fracciones" -> numerador, denominador, denominador común, fracciones equivalentes, suma y simplificación si aplica.`,
+        `   - "presente continuo" -> sujeto, verbo to be, verbo principal + ing, complemento o contexto.`,
+        `   - "La gran Colombia " -> Todos los paises que fueron miembros, periodo de existencia, presidentes.`,
+        `11. No simplifiques en exceso si el perfil permite mayor profundidad.`,
+        `12. Genera lecciones estructuradas con andamiaje y adapta la carga cognitiva.`,
+        `13. visualSugerido solo debe usarse si aporta comprensión real.`,
+        `14. apoyoVisual es OBLIGATORIO a nivel de explicacion, explicacionAlternativa1 y explicacionAlternativa2. Nunca dentro de conceptosClave.`,
+        `14b. "explicacionAlternativa1" debe tener los MISMOS conceptosClave que "explicacion" pero con explicacionSimple más detallada, más ejemploPedagogico. NUNCA vacío.`,
+        `14c. "explicacionAlternativa2" debe tener los MISMOS conceptosClave que "explicacion" pero con máximo detalle, casos de uso reales, conexiones con otros temas. NUNCA vacío.`,
+        `14d. Los tres niveles (explicacion, explicacionAlternativa1, explicacionAlternativa2) DEBEN tener conceptosClave completos. Está prohibido devolver conceptosClave vacío en cualquiera de los tres.`,
+        `14e. Para asignatura matemáticas o física o química: usa preferentemente tipos "fraccion", "recta_numerica", "geometria", "agrupacion", "fuerzas", "molecula" o "reaccion" según el tema.`,
+        `14f. Para asignatura artes o sociales: apoyoVisual puede omitirse (tipo "ninguna") porque se usan imágenes reales de Wikimedia.`,
+        `14g. Para asignatura ciencias: usa tipos de ciclo, flujo o nodos para procesos; y deja que Wikimedia aporte la imagen real complementaria.`,
+        `15. Genera EXACTAMENTE ${numJuegos} juegos.`,
+        `16. Los juegos no pueden evaluar contenido que no haya sido enseñado.`,
+        `17. "mapaPedagogico.contenidosEnsenados" debe reflejar exactamente lo enseñado en conceptosClave, pasos, ejemplos y apoyoVisual.`,
+        `18. "ejemplosVisuales" DEBE contener entre 3 y 5 obras, artefactos o elementos visuales REALES Y ESPECÍFICOS del tema "${perfil.tema}" en la asignatura "${asignatura}".`,
+        `19. Cada "titulo" debe ser el nombre EXACTO y conocido de una obra, escultura, manuscrito, pintura, artefacto o monumento real — como aparece en Wikipedia o Wikimedia Commons.`,
+        `20. El campo "query" debe ser ese mismo nombre exacto, preferiblemente en el idioma en que está indexado en Wikimedia (inglés o español según corresponda).`,
+        `21. NUNCA uses títulos genéricos como "Arte prehispánico I" o queries como "arte barroco pintura famosa". Siempre nombre específico.`,
+        `22. Ejemplos para arte prehispánico: "Calendario Azteca", "Sacerdote huasteco del dios del viento", "Disco de la Muerte Maya", "Vasija Nazca", "Estela de Copán".`,
+        `23. Ejemplos para arte barroco: "Las Meninas Velázquez", "La ronda nocturna Rembrandt", "Éxtasis de Santa Teresa Bernini".`,
+        `24. Si el tema es científico o histórico, usa imágenes de fenómenos, mapas históricos, fotografías de experimentos o elementos reales buscables en Wikimedia.`,
+        `25. "ejemplosVisuales" SOLO debe generarse si la asignatura es: artes, sociales, historia o ciencias. Para matemáticas, inglés, francés, lenguaje, física, química, ed_física y tecnología: devuelve "ejemplosVisuales": [] (arreglo vacío).`,
+        `26. Para asignatura inglés o francés o lenguaje con temas gramaticales: usa tipo "estructura_oracion" en apoyoVisual, NO "formula".`,
+        `27. "apoyoGramatical" es OBLIGATORIO si la asignatura es inglés, francés, español o lenguaje Y el tema es una estructura gramatical (tiempo verbal, tipo de oración, conjugación, etc.).`,
+        `28. Para "apoyoGramatical.piezas": incluye TODAS las partes de la estructura (sujeto, auxiliar, verbo principal, complemento, etc.) con sus valores reales del idioma.`,
+        `29. "piezas[].valores" debe contener ejemplos concretos y reales del idioma — no descripciones abstractas.`,
+        `30. "piezas[].etiqueta" debe explicar CUÁNDO o POR QUÉ se usa esa pieza — no solo nombrarla.`,
+        `31. "apoyoGramatical.reglas" debe contener máximo 4 reglas claras, cortas y en el idioma de la lección.`,
+        `32. "apoyoGramatical.ejemplos" debe contener entre 3 y 5 oraciones completas reales con su traducción.`,
+        `33. "piezas[].color" debe rotar entre: "orange", "blue", "green", "purple", "pink", "teal" — uno distinto por pieza.`,
+        `34. Si la asignatura NO es de idioma: devuelve "apoyoGramatical": null.`,
+        `35. "ejemplosVisuales" SOLO para asignaturas: artes, sociales, historia, ciencias. Para el resto: "ejemplosVisuales": [].`,
+        `35. "ejemplosVisuales" es OBLIGATORIO y SIEMPRE debe tener entre 3 y 5 elementos para asignaturas: artes, sociales, historia, ciencias. NUNCA devolver array vacío para estas asignaturas.`,
+        `35b. Cada elemento de "ejemplosVisuales" DEBE tener "titulo", "autor", "descripcion", "tipo" y "query" con valores reales — nunca strings vacíos.`,
+        `35c. El "query" debe ser el nombre exacto buscable en Wikimedia Commons — específico, no genérico.`,
+        `36. "pertinencia" va al nivel RAÍZ del JSON, no dentro de explicacion ni explicacionAlternativa. Es un campo único para toda la sesión.`,
+        `37. "pertinencia.importancia": 2 frases simples sobre por qué este tema importa, para la edad del niño.`,
+        `38. "pertinencia.utilidadVida": 2 frases concretas de cómo le sirve en su vida cotidiana.`,
+        `39. "pertinencia.mundoReal": 1-2 ejemplos observables del tema en el mundo real.`,
+        `40. Las tres respuestas de "pertinencia" usan lenguaje simple, positivo y motivador. Sin tecnicismos.`,
+        `41. "pasosGuiados" en ejemplos de matemáticas, física y química DEBE contener TODOS los pasos necesarios para resolver el problema completamente, hasta obtener el resultado final.`,
+        `42. NUNCA dejar un ejemplo matemático sin resolver. El último paso siempre debe mostrar el resultado final en "resultadoParcial".`,
+        `43. Para multiplicación: incluir cada producto parcial por separado, luego la suma de productos parciales, luego el resultado final.`,
+        `44. Para división: incluir cada paso de la división larga hasta obtener cociente y residuo.`,
+        `45. Para fracciones: incluir simplificación si aplica.`,
+        `46. "conclusionPedagogica" en ejemplos matemáticos SIEMPRE debe indicar el resultado final con el signo = y el valor. Ejemplo: "1234 × 5678 = 7,006,652"`,
+        `47. Para fracciones usa tipo "fraccion". Para división larga usa tipo "reparto". NUNCA mezclar los dos.`,
+        `48. El tipo "fraccion" solo muestra representaciones visuales de fracciones (círculos o rectángulos partidos). Nunca conceptos de división.`,
 
-
-        '11. Antes de generar la lección, determina el tipoLeccion según el tema:',
-        '    - procedimiento_matematico: el tema requiere seguir pasos de cálculo (divisiones, fracciones, ecuaciones).',
-        '    - observacion_experimental: el tema se comprende mejor observando o manipulando fenómenos físicos (ciclo del agua, estados de la materia, fotosíntesis).',
-        '    - formula_gramatical: el tema es una regla de lenguaje con estructura fija (presente progresivo, pasado simple, tipos de oraciones).',
-        '    - clasificacion_conceptual: el tema organiza elementos en categorías o grupos (tipos de animales, sistemas del cuerpo, partes de una célula).',
-        '    - secuencia_biologica: el tema es un proceso biológico con etapas ordenadas (digestión, reproducción, ciclo celular).',
-        '    - descripcion_conceptual: el tema es un conjunto de ideas o definiciones sin procedimiento ni secuencia fija (valores, biomas, culturas).',
-        '12. El tipoLeccion determina cómo se construye el bloque de ejemplo:',
-        '    - procedimiento_matematico: requiereProcedimiento = true siempre. Los pasos siguen la operación. exploracionConcreta usa objetos contables del entorno.',
-        '    - observacion_experimental: requiereProcedimiento = true. Los pasos son de observación guiada. exploracionConcreta usa materiales del hogar para reproducir el fenómeno.',
-        '    - formula_gramatical: requiereProcedimiento = true. Los pasos construyen la estructura lingüística. exploracionConcreta usa el cuerpo, acciones físicas o escritura.',
-        '    - clasificacion_conceptual: requiereProcedimiento = false. El ejemplo muestra cómo clasificar con claridad. Sin pasos guiados.',
-        '    - secuencia_biologica: requiereProcedimiento = true. Los pasos siguen las etapas del proceso. exploracionConcreta usa dibujo, recorte o manipulación.',
-        '    - descripcion_conceptual: requiereProcedimiento = false. El ejemplo contextualiza el concepto. Sin pasos guiados.',
-        '13. La intro de cada nivel debe tener exactamente tres partes: fraseEnganche, ejemploAncla y cuerpo.',
-        '14. fraseEnganche debe usar el interés motivacional del niño para conectar emocionalmente con el tema. No es decorativa: es el puente entre lo que el niño ya ama y lo que va a aprender.',
-        '14b. ejemploAncla debe mostrar el tema funcionando en una sola oración, usando el contexto del interés del niño cuando sea posible. Es el primer contacto concreto con el contenido.',
-        '14c. cuerpo no puede superar 2 oraciones. Cada oración debe tener una sola idea. Sin explicaciones largas, sin listas, sin tecnicismos en esta parte.',
-        '14d. La intro no enseña: prepara al niño para aprender. Todo el contenido real va en conceptosClave y ejemplos.',
-        '15. Las 3 explicaciones deben mantener el mismo foco conceptual: Nivel 1 esencial, Nivel 2 desarrollado, Nivel 3 ampliado. Cambia profundidad y andamiaje, no el tema.',
-        '15b. Cada concepto clave debe incluir icono y colorRamp para que el frontend lo renderice con identidad visual propia.',
-        '15c. Asigna un colorRamp diferente a cada concepto cuando el tema tenga etapas o partes distintas. Si los conceptos son del mismo tipo o nivel, pueden compartir colorRamp.',
-        '15d. Usa etiqueta cuando el concepto tenga un orden claro (Etapa 1, Etapa 2), una categoría (Regla, Componente, Fórmula) o un rol especial (Concepto central). Si no aplica, deja etiqueta como cadena vacía.',
-        //'15e. El icono de cada concepto debe representar visualmente su significado. No uses el mismo icono para todos. Elige desde Lucide Icons: sun, droplets, cloud, arrowDown, beaker, music, divide, bookOpen, calculator, leaf, flask, globe, heart, star, zap, layers, repeat, checkCircle, alertCircle, info.',
-        '15e.El icono de cada concepto debe representar de forma visual, concreta y semántica el significado del concepto.No uses iconos decorativos ni demasiado genéricos si existe una opción más precisa.Prioriza el objeto, fenómeno, acción o referente real que ayude al niño a reconocer el concepto.Si el concepto es abstracto, usa el referente visual más cercano que facilite su comprensión.No repitas el mismo icono para todos los conceptos salvo que sea estrictamente necesario.',
-        '15f. La explicacionSimple debe estar escrita directamente para el niño, no para un adulto. Usa frases cortas, una idea por oración, lenguaje concreto y sin tecnicismos no explicados previamente.',
-        '15g.Evita usar Lightbulb, Info o Search cuando exista un icono más semántico para el concepto.',
-        '16. TEOplay le enseña directamente al niño. Usa lenguaje claro, cercano, concreto y guiado. No des por obvios pasos mentales ni razonamientos intermedios.',
-        '17. El bloque ejemplos no es decorativo: debe consolidar el aprendizaje con una experiencia pedagógica concreta.',
-        '18. Cada ejemplo debe ayudar a comprender, practicar, observar, manipular, aplicar, comparar, registrar, construir o contextualizar contenido ya enseñado.',
-        '19. Usa requiereProcedimiento = true cuando el tema necesite que el niño siga una secuencia guiada para comprender (operaciones matemáticas, experimentos, construcción de oraciones, procesos con pasos). Si es false, pasosGuiados debe ser exactamente [].',
-        '19b. Cada paso guiado debe contener exactamente una acción principal. Si un paso necesita dos acciones, divídelo en dos pasos separados.',
-        '19c. accionPrincipal no puede superar una oración. explicacion no puede superar dos oraciones. resultadoParcial no puede superar una oración. Sin ideas compuestas en ninguno de estos campos.',
-        '19d. vinculoConcepto es obligatorio. Cada paso debe conectar explícitamente con un concepto ya enseñado en conceptosClave. No puede quedar vacío.',
-        '19e. Las instrucciones dentro de exploracionConcreta deben ser acciones físicas simples, una por ítem, sin explicaciones adicionales dentro de la instrucción misma. La explicación va en el campo explicacion del paso, no dentro de la instrucción física.',
-        '19f. La conclusion de exploracionConcreta debe describir en una oración qué comprensión concreta obtuvo el niño al manipular los materiales. No es un resumen del paso: es el insight físico que se lleva.',
-        '19g. La carga cognitiva total de cada paso debe ser mínima. Si el perfil del niño indica baja tolerancia a instrucciones largas, prioriza frases de 5 a 8 palabras en accionPrincipal e instrucciones.',
-        '20. Si requiereProcedimiento = true, antes de escribir los pasos evalúa: ¿qué experiencia del mundo físico permite que el niño comprenda este concepto con las manos? Elige materiales concretos, accesibles y seguros del entorno del niño (cocina, casa, patio, sala de clases). Diseña cada paso alrededor de esa experiencia real.',
-        '21. exploracionConcreta debe existir en cada pasoGuiado. Si el paso tiene acción física posible, completa todos sus campos: aplica:true, materiales (lista de objetos reales), instrucciones (pasos físicos simples), conclusion (qué entendió el niño al hacerlo). Si el paso es puramente mental o de observación sin manipulación, usa {"aplica": false, "materiales": [], "instrucciones": [], "conclusion": ""}.',
-        '22. Los materiales de exploracionConcreta deben ser coherentes con el perfil del niño: sus intereses, su entorno habitual y su condición. No uses materiales abstractos, tecnológicos o inaccesibles.',
-        '23. visualSugerido debe existir siempre en cada ejemplo. Si no aporta comprensión real, usa tipo = "ninguna".',
-        '24. Los ejemplos de los tres niveles deben reforzar los mismos conceptos centrales. Solo cambia andamiaje, claridad, profundidad y desarrollo del razonamiento.',
-        `25. Debes generar EXACTAMENTE ${numJuegos} juegos.`,
-        '26. Elige tipos de juego según el contenido enseñado. Cada juego debe estar completo, alineado con la explicación principal y con estructura válida para renderizarse.',
-        '27. Los juegos no pueden evaluar contenido no enseñado, no pueden quedar incompletos y deben distribuirse entre varios contenidos cuando la lección abarque más de un elemento importante.',
-        '28. Mantén toda la sesión ajustada al perfil neuroeducativo operativo del niño: explicación, ejemplos, visuales, juegos, mensajes, secuencia, carga cognitiva y nivel de apoyo.',
-        //////
-
-        'Regla obligatoria para apoyoVisual:',
-            '- Además de "elementos", genera siempre "items" cuando el tipo de apoyo visual lo permita.',
-            '- Cada item debe corresponder a un elemento visible del diagrama.',
-            '- Cada item debe incluir una explicación pedagógica específica del elemento.',
-            '- Está prohibido repetir solo el título en "description".',
-            '- "description" debe explicar qué representa ese elemento, qué ocurre allí o por qué es importante dentro del tema.',
-            '- Si el apoyo visual es una línea de tiempo, cada item debe explicar el evento histórico concreto.',
-            '- Si es un ciclo, cada item debe explicar qué ocurre en esa etapa.',
-            '- Si es fórmula, cada item debe explicar qué representa esa parte.',
-            '- Si es reparto, cada item debe explicar qué muestra ese grupo o cantidad.',
-            '- Si es nodos o flujo, cada item debe explicar la función de esa parte dentro del conjunto.',
-            '- "elementos" debe seguir existiendo por compatibilidad con el frontend actual.',
-
-        
+        '',
+        'REGLAS ESPECÍFICAS PARA "conceptosClave":',
+        `- Si el tema tiene partes visibles o nombrables, debes listarlas por separado.`,
+        `- Si el tema tiene miembros de un conjunto, debes incluirlos completos cuando sean pedagógicamente necesarios.`,
+        `- Si el tema tiene etapas, debes incluir la secuencia completa.`,
+        `- Si el tema tiene una estructura, debes mostrar esa estructura completa.`,
+        `- Evita conceptos vacíos, genéricos o redundantes.`,
+        `- Cada concepto debe tener como mínimo: "nombre", "explicacionSimple", "icono" y una pista estructural útil entre "formula", "elementos", "componentes", "miembros", "uso" o "necesidad".`,
+        '- Cada "conceptoClave" debe incluir "ejemploPedagogico":',
+        '- Debe ser un ejemplo breve, concreto y útil para aterrizar el concepto.',
+        '- Debe ser un ejemplo académico, concreto y aclaratorio del concepto.',
+        '- No debe ser analogía ni metáfora.',
+        '- No debe usar intereses del niño dentro de este campo, salvo que el tema lo requiera realmente.',
+        '- Debe ayudar a estudiar el concepto con claridad y sin confusión.',
+        '- No debe repetir la definición.',
+        '- Debe ayudar al niño a visualizar o aplicar el concepto en contexto.',
+        '- Si el concepto es lingüístico, usar ejemplos reales del idioma y su significado.',
+        '- Si el concepto es científico, dar un dato o caso concreto que ayude a identificarlo.',
+        '- Si el concepto es matemático, usar una situación simple con cantidades reales.',
+        '- Si el concepto es una etapa de proceso, mostrar qué sucede en esa etapa con un caso entendible.',
+        'Ejemplos de "ejemploPedagogico":',
+        '- Sujeto -> "I = yo, you = tú, she = ella. Son quienes realizan la acción."',
+        '- Verbo to be -> "I am, he is, they are. Cambia según quién hace la acción."',
+        '- Sol -> "Es la estrella principal del sistema solar y nos da luz y calor."',
+        '- Tierra -> "Es el planeta donde vivimos y tiene aire, agua y vida."',
+        '- Júpiter -> "Es un gigante gaseoso y el planeta más grande del sistema solar."',
+        '- Dividendo -> "Si repartes 12 dulces entre 4 amigos, 12 es el dividendo."',
+        '- Evaporación -> "Cuando el sol calienta el agua del mar, parte sube como vapor."',
+        '',
         'Responde SOLO con este JSON válido, sin texto fuera:',
-        'IMPORTANTE: Los arrays conceptosClave, pasos, chequeoCobertura, contenidosEnsenados y contenidosEvaluables deben incluir tantos elementos como el tema necesite. No los dejes artificialmente cortos.',
-        'IMPORTANTE: Si el tema incluye elementos con nombre propio que luego puedan aparecer en ejemplos o juegos, esos elementos deben estar presentes y explicados en conceptosClave o en la explicación principal.',
-        'IMPORTANTE: Si una categoría principal del tema contiene elementos identificables y enseñables, no la dejes resumida como grupo general; nombra sus elementos principales.',
-        'IMPORTANTE: Si el tema es un sistema, conjunto o lista cerrada de elementos esenciales, la explicación debe incluir todos esos elementos y no una selección parcial.',
-        `IMPORTANTE: Debes generar EXACTAMENTE ${numJuegos} juegos en el array "juegos".`,
-        'IMPORTANTE: Cada juego debe venir completo según su tipo y con contenido suficiente para evaluar aprendizaje real.',
-        'IMPORTANTE: No dejes los juegos mínimos, vacíos o demasiado resumidos.',
-        'IMPORTANTE: Cada juego debe respetar exactamente la estructura del tipo elegido, incluyendo todos sus campos obligatorios.',
-        'IMPORTANTE: Si eliges tipo B debes incluir preguntas; si eliges tipo C debes incluir tarjetas; si eliges tipo A o D debes incluir items; si eliges tipo E debes incluir actividad y su validación.',
         estructuraJson,
+        '',
         'ESTRUCTURAS OBLIGATORIAS DE JUEGOS:',
-        //`TIPO A: { "tipo": "A", "instruccion": "...", "categoria1": { "nombre": "...", "icono": "star" }, "categoria2": { "nombre": "...", "icono": "circle" }, "items": [ { "texto": "...", "icono": "zap", "categoriaCorrecta": 1 } ] }`,
         `TIPO B: { "tipo": "B", "instruccion": "...", "preguntas": [ { "pregunta": "...", "opciones": [ { "texto": "...", "correcta": true }, { "texto": "...", "correcta": false }, { "texto": "...", "correcta": false } ] } ] }`,
-        //`TIPO C: { "tipo": "C", "instruccion": "...", "tarjetas": [ { "pregunta": "...", "respuesta": "...", "pista": "...", "alternativas": [] } ] }`,
         `TIPO D: { "tipo": "D", "instruccion": "...", "items": [ { "texto": "...", "icono": "star", "esIntruso": false }, { "texto": "...", "icono": "cloud", "esIntruso": true } ] }`,
         `TIPO E: { "tipo": "E", "instruccion": "...", "actividad": "...", "tipoValidacion": "exacta | ia | confirmacion", "respuestaEsperada": "", "criterios": "", "mensajeMotor": "..." }`,
+
     ].join('\n');
 
 
-    console.log('🟣 perfilBloque length:', perfilBloque.length);
-    console.log('🟣 prompt total length:', prompt.length);
-    console.log('🟡 buildPrompt preview:', prompt.slice(0, 2500));
-
     return prompt;
-
-
 }
 
 
-
-
-
 /** Genera la sesión de texto con GPT-4o */
-async function generarSesionTexto(perfil: PerfilNino, apiKey: string): Promise<SesionGenerada> {
+/** Genera la sesión completa: texto JSON + imagen infográfica pedagógica autónoma de DALL-E */
+export async function generarSesion(perfil: PerfilNino): Promise<SesionGenerada> {
+    const apiKey = getApiKey();
     const prompt = buildPrompt(perfil);
 
     console.log('🟡 buildPrompt length:', prompt.length);
-    console.log('🟡 buildPrompt preview:', prompt.slice(0, 1500));
 
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    //const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    const res = await fetch('http://localhost:8080/api/chat', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`,
+            //'Authorization': `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
             model: 'gpt-4o',
@@ -645,20 +513,26 @@ async function generarSesionTexto(perfil: PerfilNino, apiKey: string): Promise<S
     const data = await res.json();
     const rawContent = data.choices?.[0]?.message?.content || '{}';
 
-    console.log('🟢 rawContent preview:', rawContent.slice(0, 1500));
-
-    // Log temporal para verificar apoyoVisual
+    // Log temporal para verificar infografiaPedagogicaUrl
     try {
         const parsed = JSON.parse(rawContent);
-        console.log('🔵 apoyoVisual nivel 1:', JSON.stringify(parsed?.explicacion?.apoyoVisual));
-        console.log('🔵 apoyoVisual nivel 2:', JSON.stringify(parsed?.explicacionAlternativa1?.apoyoVisual));
-        console.log('🔵 apoyoVisual nivel 3:', JSON.stringify(parsed?.explicacionAlternativa2?.apoyoVisual));
+        console.log('🔵 infografiaPedagogicaUrl:', parsed?.infografiaPedagogicaUrl);
     } catch (e) { console.log('❌ parse error'); }
 
-
-
     try {
-        return JSON.parse(rawContent) as SesionGenerada;
+        const sesion = JSON.parse(rawContent) as SesionGenerada;
+        console.log("🟢 ejemplosVisuales:", sesion.ejemplosVisuales);
+
+        // Guardar en localStorage
+        guardarSesionLocal({
+            nombre: perfil.nombre, edad: perfil.edad, grado: perfil.grado, condicion: perfil.condicion,
+            asignatura: perfil.asignatura, tema: perfil.tema, interes: perfil.interes,
+            aciertos: 0, errores: 0, duracion: 0, emocionDelta: 0,
+            infografiaPedagogicaUrl: sesion.infografiaPedagogicaUrl,
+        });
+
+        console.log('🎮 juegos generados:', sesion.juegos);
+        return sesion;
     } catch (error) {
         console.error('🔴 JSON parse error:', error);
         console.error('🔴 rawContent completo:', rawContent);
@@ -666,301 +540,36 @@ async function generarSesionTexto(perfil: PerfilNino, apiKey: string): Promise<S
     }
 }
 
-/** Busca imagen en Wikipedia para temas científicos — precisa y libre de derechos */
-/** Traducción simple ES → EN (puedes mejorarla luego con IA si quieres) */
-async function traducirTema(tema: string, apiKey: string): Promise<string> {
-    try {
-        const res = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`,
-            },
-            body: JSON.stringify({
-                model: 'gpt-4o-mini',
-                max_tokens: 20,
-                messages: [{
-                    role: 'user',
-                    content: `Translate this educational topic to English. Reply with ONLY the translation, nothing else: "${tema}"`
-                }],
-            }),
-        });
-        const data = await res.json();
-        
-        return data.choices?.[0]?.message?.content?.trim().replace(/"/g, '') || tema;
-    } catch {
-        return tema;
-
-    }
-}
-
-/** Construye query pedagógica */
-async function construirQueryCientifica(tema: string, apiKey: string): Promise<string> {
-    const temaEn = await traducirTema(tema, apiKey);
-    console.log("🌐 Tema traducido:", temaEn);
-    return `${temaEn} diagram`;
-}
-
-
-/** Busca imagen en Wikimedia Commons con URL de thumbnail para evitar CORS */
-async function obtenerImagenCientifica(tema: string, apiKey: string): Promise<string | null> {
-    console.log("🔬 Buscando imagen científica para:", tema);
-    try {
-        const query = await construirQueryCientifica(tema, apiKey);
-        
-        console.log("🔍 Query Wikimedia:", query);
-        // Usamos iiurlwidth para obtener thumbnail — esto evita el problema de CORS
-        const url = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrnamespace=6&gsrsearch=${encodeURIComponent(query)}&gsrlimit=20&prop=imageinfo&iiprop=url|mime|size&iiurlwidth=800&format=json&origin=*`;
-        const res = await fetch(url);
-        const data = await res.json() as WikimediaApiResponse;
-
-        if (!data.query?.pages) return null;
-
-        const pages = Object.values(data.query.pages);
-        console.log("📦 Raw pages:", JSON.stringify(pages.slice(0, 2)));
-
-        // Usamos thumburl en lugar de url directa
-        const candidatos = pages
-            .map(p => {
-                const title = p.title.toLowerCase();
-                const info = p.imageinfo?.[0];
-                const thumburl = info?.thumburl; // ← esta es la clave
-                const mime = info?.mime;
-
-                if (!thumburl) return null;
-                console.log("📄 mime:", mime, "| thumburl:", thumburl?.slice(0, 60));
-
-                
-                if (!['image/svg+xml', 'image/png', 'image/jpeg'].includes(mime ?? '')) return null;
-
-                let score = 0;
-
-                // POSITIVO
-                if (title.includes("diagram")) score += 2;
-                if (title.includes("labeled")) score += 3;
-                if (title.includes("structure")) score += 5; // ← sube a 5
-                if (title.includes("svg")) score += 2;
-                if (title.includes("scheme")) score += 2;
-                if (title.includes("education")) score += 6;
-                if (title.includes("illustration")) score += 2;
-                if (title.includes("color")) score += 3;
-                if (title.includes("colour")) score += 3;
-                if (title.includes("-en")) score += 3; // ← nuevo: prefiere versión en inglés etiquetada
-
-
-                // NEGATIVO
-                if (title.includes("histology")) score -= 3;
-                if (title.includes("microscopy")) score -= 3;
-                if (title.includes("blank")) score -= 3;
-                if (title.includes("unlabeled")) score -= 3;
-                if (title.includes("simple")) score -= 4; // ← penaliza diagramas simples/minimalistas
-                if (title.includes("numbers")) score -= 4; // ← penaliza los de solo números sin etiquetas
-                if (title.includes("turgor")) score -= 5; // ← muy específico
-
-                return { url: thumburl, score, title };
-            })
-            .filter((p): p is RankedImage => p !== null)
-            .sort((a, b) => b.score - a.score);
-
-        console.log("Top imágenes Wikimedia:", candidatos.slice(0, 3));
-        return candidatos[0]?.url ?? null;
-
-    } catch (e) {
-        console.error("Error buscando imagen científica:", e);
-        return null;
-    }
-}
-
-
-
-
-/** Construye prompt DALL-E pedagógico por asignatura y condición */
-function buildDallePrompt(
+export async function pedirExplicacionAlternativa(
     perfil: PerfilNino,
-    visual?: ExplicacionBloque['visualSugerido']
-): string {
-    const tema = perfil.tema;
-    const edad = perfil.edad;
-    //const interes = interesLabels[perfil.interes] || perfil.interes;
-    const condicion = perfil.condicion;
-    const asignatura = perfil.asignatura;
-
-    const visualTipo = visual?.tipo || 'ninguna';
-    const visualDescripcion = visual?.descripcion?.trim() || '';
-    const visualJustificacion = visual?.justificacionPedagogica?.trim() || '';
-
-    const noText = 'ABSOLUTELY NO TEXT, NO LETTERS, NO WORDS, NO NUMBERS, NO LABELS anywhere in the image.';
-    const noDecor = 'No decorative backgrounds, no random objects, no fantasy fillers, no atmospheric embellishment, no irrelevant elements.';
-    const educationalOnly = 'This must look like a school support visual, not like decorative children art. Every visible element must improve understanding of the topic.';
-
-    const estiloBase =
-        condicion === 'tea'
-            ? 'clean flat educational illustration, minimal visual clutter, soft muted colors, highly predictable composition, few clearly separated elements'
-            : condicion === 'down'
-                ? 'bold flat educational illustration, very large simple shapes, bright friendly colors, high contrast, clear figure-ground separation'
-                : condicion === 'dislexia'
-                    ? 'flat educational illustration, high contrast, bold outlines, visually distinct elements, uncluttered composition'
-                    : condicion === 'tdah'
-                        ? 'clear educational illustration, visually engaging but not overloaded, strong focal hierarchy, vivid but organized colors'
-                        : 'flat educational illustration, clean composition, clear elements, simple academic style';
-
-    const tipoInstruction =
-        visualTipo === 'diagrama'
-            ? 'Create a structured educational diagram. Show the essential parts, categories, positions or relationships in a visually organized way.'
-            : visualTipo === 'secuencia'
-                ? 'Create a visual sequence. Show the steps, stages or transformations in a clear order that can be understood without text.'
-                : visualTipo === 'comparacion'
-                    ? 'Create a side-by-side educational comparison. Make the contrast between the two concepts or groups visually clear.'
-                    : visualTipo === 'formula'
-                        ? 'Create a clean visual representation of the grammatical or mathematical rule, showing its structure clearly.'
-                        : 'Create only the minimum visual support strictly needed for comprehension.';
-
-    const asignaturaInstruction =
-        asignatura === 'ciencias'
-            ? 'For science topics, prioritize structure, system, process, parts or spatial relationships.'
-            : asignatura === 'ingles'
-                ? 'For English topics, prioritize use in context, action, daily situations or communicative meaning rather than abstract symbolic art.'
-                : asignatura === 'lenguaje'
-                    ? 'For language topics, avoid generic literary scenes. Use visual support only if it clarifies contrast, structure, form or communicative context.'
-                    : asignatura === 'matematicas'
-                        ? 'For math topics, use concrete, countable or visibly grouped elements only when they truly help understand the concept.'
-                        : asignatura === 'historia'
-                            ? 'For history topics, prioritize contextual accuracy, relevant setting, objects or relationships, avoiding cinematic or decorative style.'
-                            : asignatura === 'sociales'
-                                ? 'For social studies topics, prioritize systems, roles, context, relationships or comparisons.'
-                                : asignatura === 'arte'
-                                    ? 'For art topics, prioritize technique, material, form or visual contrast needed for instruction.'
-                                    : asignatura === 'ed_fisica'
-                                        ? 'For physical education topics, prioritize posture, movement, sequence or action clarity.'
-                                        : 'Prioritize conceptual clarity over aesthetics.';
-
-    const interesInstruction =
-        visualTipo === 'secuencia' || visualTipo === 'diagrama'
-            ? `Use the child's neuroeducational profile and condition "${condicion}" only if it helps the topic logically and does not distract from the academic goal.`
-            : `Do not force the child's neuroeducational profile "${condicion}" into the image unless it clearly improves understanding.`;
-
-    const partes = [
-        noText,
-        educationalOnly,
-        noDecor,
-        `Topic: "${tema}".`,
-        `Child age: ${edad}.`,
-        `Visual support type: ${visualTipo}.`,
-        tipoInstruction,
-        asignaturaInstruction,
-        visualDescripcion ? `Useful visual guidance: ${visualDescripcion}.` : '',
-        visualJustificacion ? `Pedagogical reason: ${visualJustificacion}.` : '',
-        //interesInstruction,
-        estiloBase,
-        'Use a plain or neutral background if needed.',
-        'Keep the composition simple, readable and instruction-focused.',
-    ].filter(Boolean);
-
-    return partes.join(' ');
-}
-
-/** Genera imagen DALL-E 3 pedagógica para todos menos ciencias*/
-async function generarImagenLeccion(
-    perfil: PerfilNino,
-    apiKey: string,
-    visual?: ExplicacionBloque['visualSugerido']
-): Promise<string | null> {
-    const prompt = buildDallePrompt(perfil, visual);
-
-    try {
-        const res = await fetch('https://api.openai.com/v1/images/generations', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`,
-            },
-            body: JSON.stringify({
-                model: 'dall-e-3',
-                prompt,
-                n: 1,
-                size: '1024x1024',
-                quality: 'standard',
-            }),
-        });
-
-        if (!res.ok) {
-            const errText = await res.text();
-            console.error('🔴 Error generando imagen:', errText);
-            return null;
-        }
-
-        const data = await res.json();
-        return data.data?.[0]?.url ?? null;
-    } catch (error) {
-        console.error('🔴 Excepción generando imagen:', error);
-        return null;
-    }
-}
-/** Genera la sesión completa: solo texto — imágenes externas desactivadas */
-export async function generarSesion(perfil: PerfilNino): Promise<SesionGenerada> {
+    intentoNumero: number
+): Promise<string> {
     const apiKey = getApiKey();
+    const idiomaStr = perfil.idioma === 'es' ? 'español' : 'English';
 
-    // 1. Generar sesión de texto
-    const sesion = await generarSesionTexto(perfil, apiKey);
+    const prompt = `Explica "${perfil.tema}" de ${asignaturaLabels[perfil.asignatura] || perfil.asignatura} de forma ${intentoNumero === 1 ? 'más simple y concreta' : 'ultra-simple'}, ajustada según la condición del niño: ${condicionLabels[perfil.condicion] || perfil.condicion}. Edad: ${perfil.edad} años. Idioma: ${idiomaStr}. Solo el texto, sin formato ni JSON.`;
 
-    // 2. Imágenes externas desactivadas — el sistema usa iconos y visuales propios
-    // DALL-E y Wikimedia no se usan. imagenUrl queda undefined siempre.
-
-    // 3. Guardar en localStorage
-    guardarSesionLocal({
-        nombre: perfil.nombre,
-        edad: perfil.edad,
-        grado: perfil.grado,
-        condicion: perfil.condicion,
-        asignatura: perfil.asignatura,
-        tema: perfil.tema,
-        interes: perfil.interes,
-        aciertos: 0,
-        errores: 0,
-        duracion: 0,
-        emocionDelta: 0,
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+            model: 'gpt-4o',
+            max_tokens: 300,
+            messages: [{ role: 'user', content: prompt }],
+        }),
     });
 
-    console.log('🎮 juegos generados:', sesion.juegos);
+    if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Error de OpenAI (${res.status}): ${errText}`);
+    }
 
-    // 4. Devolver sesión sin imagenUrl
-    return {
-        ...sesion,
-        imagenUrl: undefined,
-    };
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content?.trim() || '';
 }
-export async function pedirExplicacionAlternativa(
-  perfil: PerfilNino,
-  intentoNumero: number
-): Promise<string> {
-  const apiKey = getApiKey();
-  const idiomaStr = perfil.idioma === 'es' ? 'español' : 'English';
-  //const interes = interesLabels[perfil.interes] || perfil.interes;
-
-  const prompt = `Explica "${perfil.tema}" de ${asignaturaLabels[perfil.asignatura] || perfil.asignatura} de forma ${intentoNumero === 1 ? 'más simple y concreta' : 'ultra-simple'}, ajustada según la condición del niño: ${condicionLabels[perfil.condicion] || perfil.condicion}. Edad: ${perfil.edad} años. Idioma: ${idiomaStr}. Solo el texto, sin formato ni JSON.`;
-
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o',
-      max_tokens: 300,
-      messages: [{ role: 'user', content: prompt }],
-    }),
-  });
-
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`Error de OpenAI (${res.status}): ${errText}`);
-  }
-
-  const data = await res.json();
-  return data.choices?.[0]?.message?.content?.trim() || '';
-}
-
 /** Función de guardado local de lecciones localstorage */
 function guardarSesionLocal(session: any) {
     console.log("🔥 GUARDANDO SESION", session);
@@ -990,4 +599,173 @@ export function obtenerSesiones() {
         return [];
     }
 }
+
+
+/**
+ * Genera una imagen específica con DALL-E 3 bajo demanda (On-the-fly)
+ */
+export async function generarImagenDalle(prompt: string): Promise<string> {
+    const apiKey = getApiKey(); // Reutiliza tu función de validación de Key
+
+    const res = await fetch('https://api.openai.com/v1/images/generations', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+            model: "dall-e-3",
+            prompt: prompt,
+            n: 1,
+            size: "1024x1024",
+            quality: "standard"
+        }),
+    });
+
+    if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Error de DALL-E (${res.status}): ${errText}`);
+    }
+
+    const data = await res.json();
+    return data.data[0].url;
+}
+//Función para contexto pedagógico de apoyo visual en GPT
+export async function generarContenidoPedagogico(tema: string, idioma: string) {
+    try {
+        const prompt = `
+Eres un experto en educación infantil.
+
+Genera contenido pedagógico claro y simple para niños.
+
+TEMA: ${tema}
+IDIOMA: ${idioma}
+
+Devuelve SOLO un JSON válido con esta estructura:
+
+{
+  "titulo": "",
+  "definicion": "",
+  "conceptos": ["", "", "", ""],
+  "ejemplo": "",
+  "resumen": ""
+}
+
+REGLAS:
+- Todo en ${idioma}
+- Lenguaje simple
+- Frases cortas
+- Sin párrafos largos
+`;
+
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`,
+            },
+            body: JSON.stringify({
+                model: "gpt-4o-mini",
+                messages: [
+                    { role: "system", content: "Eres un generador de contenido educativo." },
+                    { role: "user", content: prompt }
+                ],
+                temperature: 0.3
+            })
+        });
+
+        const data = await response.json();
+
+        const texto = data.choices?.[0]?.message?.content;
+
+        if (!texto) throw new Error("Respuesta vacía de OpenAI");
+
+        // 🔧 Limpieza por si viene con ```json
+        const limpio = texto.replace(/```json|```/g, "").trim();
+
+        return JSON.parse(limpio);
+
+    } catch (error) {
+        console.error("Error generando contenido pedagógico:", error);
+        return null;
+    }
+}
+
+// ===============================
+// WIKIMEDIA IMAGE SEARCH
+// ===============================
+
+export async function buscarImagenWikimedia(titulo: string): Promise<string | null> {
+
+    try {
+
+        const query = encodeURIComponent(titulo);
+
+        const url =
+            `https://commons.wikimedia.org/w/api.php` +
+            `?action=query` +
+            `&generator=search` +
+            `&gsrsearch=${query}` +
+            `&gsrnamespace=6` +
+            `&gsrlimit=1` +
+            `&prop=imageinfo` +
+            `&iiprop=url` +
+            `&iiurlwidth=1000` +
+            `&format=json` +
+            `&origin=*`;
+
+        const res = await fetch(url);
+
+        const data = await res.json();
+
+        console.log("WIKIMEDIA RAW:", data);
+
+        const pages = data?.query?.pages;
+
+        if (!pages) return null;
+
+        const firstKey = Object.keys(pages)[0];
+
+        const firstPage = pages[firstKey];
+
+        // 👇 usamos thumburl optimizada
+        const imageUrl =
+            firstPage?.imageinfo?.[0]?.thumburl ||
+            firstPage?.imageinfo?.[0]?.url;
+
+        return imageUrl || null;
+
+    } catch (error) {
+
+        console.error("Error Wikimedia:", error);
+
+        return null;
+    }
+}
+
+// ===============================
+// WIKIMEDIA IMAGE SEARCH CONCEPTOS
+// ===============================
+
+
+export async function buscarImagenConcepto(query: string): Promise<string | null> {
+    try {
+        const url = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(query)}&gsrnamespace=6&gsrlimit=10&prop=imageinfo&iiprop=url|mime&iiurlwidth=1000&format=json&origin=*`;
+        const res = await fetch(url);
+        const data = await res.json();
+        const pages = data?.query?.pages;
+        if (!pages) return null;
+        const imagen = (Object.values(pages) as any[])
+            .filter(p => {
+                const mime = p?.imageinfo?.[0]?.mime ?? '';
+                const u = (p?.imageinfo?.[0]?.thumburl ?? '').toLowerCase();
+                return (mime.startsWith('image/jpeg') || mime.startsWith('image/png') || mime.startsWith('image/webp'))
+                    && !u.includes('icon') && !u.includes('logo') && !u.includes('flag');
+            })
+            .map(p => p?.imageinfo?.[0]?.thumburl || p?.imageinfo?.[0]?.url)
+            .filter(Boolean);
+        return imagen[0] || null;
+    } catch { return null; }
+}
+
 

@@ -179,14 +179,18 @@ export interface ConceptoClave {
     nombre: string;
     formula: string;
     elementos: string;
+    componentes: string;
+    miembros: string;
     uso: string;
     necesidad: string;
+    ejemploPedagogico: string;
     apoyoVisual?: string;
     etiqueta?: string;
     funcion?: string;
     explicacionSimple: string;
     icono?: string;
     colorRamp?: 'blue' | 'green' | 'amber' | 'purple' | 'teal' | 'coral' | 'pink' | 'gray';
+    apoyoGramatical?: any;
 }
 
 export interface VisualSugerido {
@@ -196,6 +200,18 @@ export interface VisualSugerido {
     descripcion: string;
     justificacionPedagogica?: string;
 }
+
+
+const COLORES_VALIDOS: VisualSugerido['colorRamp'][] = [
+    'blue', 'green', 'amber', 'purple', 'teal', 'coral', 'pink', 'gray'
+];
+
+export const validarColor = (color: unknown): VisualSugerido['colorRamp'] => {
+    if (typeof color === 'string' && COLORES_VALIDOS.includes(color as any)) {
+        return color as VisualSugerido['colorRamp'];
+    }
+    return 'gray'; // Fallback seguro
+};
 
 export interface ApoyoVisualItem {
     id?: string;
@@ -214,11 +230,21 @@ export interface IntroBloque {
 
 
 export interface ApoyoVisualLeccion {
-    tipo: 'formula' | 'flujo' | 'nodos' | 'linea_tiempo' | 'ciclo' | 'reparto';
+    tipo: 'formula' | 'flujo' | 'nodos' | 'linea_tiempo' | 'ciclo' | 'reparto' | 'comparacion';
     titulo: string;
+    instruccionVisual: string; // Nueva: Cómo debe el niño "leer" el apoyo (ej: "Sigue las flechas azules")
     elementos: string[];
-    items?: ApoyoVisualItem[];
-    asignatura: string;
+    // Expandimos ApoyoVisualItem para dar contexto real
+    items?: {
+        id: string;
+        label: string; // El texto que se ve
+        subLabel?: string; // Explicación brevísima debajo
+        tipoElemento?: 'paso' | 'concepto' | 'resultado' | 'accion';
+        vinculo?: string; // ID del elemento con el que conecta
+
+    }[];
+    asignatura?: string;
+    justificacionCalidad: string; // Obligamos a la IA a explicar por qué esto NO es decorativo
 }
 
 export interface ExplicacionBloque {
@@ -233,7 +259,17 @@ export interface ExplicacionBloque {
     visualSugerido?: VisualSugerido;
     chequeoCobertura?: string[];
     justificacionPedagogica?: string;
+    apoyoGramatical?: ApoyoGramatical | null;
+
 }
+
+export interface Pertinencia {
+    importancia: string;
+    utilidadVida: string;
+    mundoReal: string;
+}
+
+
 
 // ── Reforzamiento híbrido (digital + físico) ──────────────────────────────────
 
@@ -270,24 +306,36 @@ export interface MaterialesLeccion {
 
 
 export interface SesionGenerada {
-  tipoLeccion?: 'procedimiento_matematico' | 'observacion_experimental' | 'formula_gramatical' | 'clasificacion_conceptual' | 'secuencia_biologica' | 'descripcion_conceptual';
-  materiales?: MaterialesLeccion;
-  numeroJuegos: number;
-  explicacion: ExplicacionBloque | string;
-  explicacionAlternativa1: ExplicacionBloque | string;
-  explicacionAlternativa2: ExplicacionBloque | string;
-  reforzamiento: Reforzamiento;
-  juegos: Juego[];
-  mensajesMotivacionales: string[];
-  mensajeCierre: string;
-  recomendaciones: string[];
-  imagenUrl?: string;
-  imagenPedagogicaUrl?: string;
-  mapaPedagogico?: {
-    contenidosEnsenados: string[];
-    contenidosEvaluables: string[];
-    restriccionesDeEvaluacion: string[];
-  };
+    // ... campos existentes (tipoLeccion, materiales, numeroJuegos, explicacion, etc.) ...
+    tipoLeccion?: 'procedimiento_matematico' | 'observacion_experimental' | 'formula_gramatical' | 'clasificacion_conceptual' | 'secuencia_biologica' | 'descripcion_conceptual';
+    materiales?: MaterialesLeccion;
+    numeroJuegos: number;
+    explicacion: ExplicacionBloque | string;
+    explicacionAlternativa1: ExplicacionBloque | string;
+    explicacionAlternativa2: ExplicacionBloque | string;
+    reforzamiento: Reforzamiento;
+    juegos: Juego[];
+    mensajesMotivacionales: string[];
+    mensajeCierre: string;
+    recomendaciones: string[];
+    infografiaPedagogicaUrl?: string;
+    infografiaUrl?: string;
+    ejemplosVisuales: string;
+    apoyoGramatical?: ApoyoGramatical | null;
+    pertinencia?: Pertinencia;
+
+
+    // ── PATCH ÚNICO: Cartel Infográfico Pedagógico Autónomo ─────────────────────
+    // Se remueven 'imagenUrl' y 'imagenPedagogicaUrl'.
+    // Ahora se usa 'infografiaPedagogicaUrl' para el cartel completo generado por ChatGPT.
+    //infografiaPedagogicaUrl?: string; // Cartel infográfico completo (dall-e)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    mapaPedagogico?: {
+        contenidosEnsenados: string[];
+        contenidosEvaluables: string[];
+        restriccionesDeEvaluacion: string[];
+    };
 }
 
 export interface JuegoResult {
@@ -312,10 +360,12 @@ export interface SessionData {
   juegos: JuegoResult[];
   porcentajeAciertos: number | null;
   nivelLogro: 'inicio' | 'proceso' | 'logrado' | null;
+  modulosCompletados?: string[];
   mapaPedagogico?: {
       contenidosEnsenados: string[];
       contenidosEvaluables: string[];
       restriccionesDeEvaluacion: string[];
+  
   };
   
 }
@@ -371,3 +421,24 @@ export const EMOCIONES = [
 export const PERFIL_STORAGE_KEY = 'teoplay_perfil';
 export const PERFILES_STORAGE_KEY = 'teoplay_perfiles';
 export const PERFIL_ACTIVO_KEY = 'teoplay_perfil_activo';
+
+export interface PiezaGramatical {
+    rol: string;
+    valores: string[];
+    etiqueta: string;
+    color: 'orange' | 'blue' | 'green' | 'purple' | 'pink' | 'teal';
+}
+
+export interface EjemploGramatical {
+    oracion: string;
+    traduccion: string;
+}
+
+export interface ApoyoGramatical {
+    titulo: string;
+    idioma: string;
+    piezas: PiezaGramatical[];
+    reglas: string[];
+    ejemplos: EjemploGramatical[];
+    nota?: string;
+}
