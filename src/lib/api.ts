@@ -1,7 +1,7 @@
 import { PerfilNino, SesionGenerada, ExplicacionBloque } from '@/types';
 import { buildOperationalProfile, renderOperationalProfileBlock } from '../utils/profilePrompt';
 
-const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
+
 
 
 // =====================
@@ -480,17 +480,18 @@ function buildPrompt(perfil: PerfilNino): string {
 /** Genera la sesión de texto con GPT-4o */
 /** Genera la sesión completa: texto JSON + imagen infográfica pedagógica autónoma de DALL-E */
 export async function generarSesion(perfil: PerfilNino): Promise<SesionGenerada> {
-    const apiKey = getApiKey();
+    
     const prompt = buildPrompt(perfil);
 
     console.log('🟡 buildPrompt length:', prompt.length);
 
-    //const res = await fetch('https://api.openai.com/v1/chat/completions', {
-    const res = await fetch('http://localhost:8080/api/chat', {
+  
+    const API_URL = import.meta.env.VITE_BACKEND_URL;
+    const res = await fetch(`${API_URL}/api/chat`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            //'Authorization': `Bearer ${apiKey}`,
+            
         },
         body: JSON.stringify({
             model: 'gpt-4o',
@@ -544,16 +545,16 @@ export async function pedirExplicacionAlternativa(
     perfil: PerfilNino,
     intentoNumero: number
 ): Promise<string> {
-    const apiKey = getApiKey();
+    
     const idiomaStr = perfil.idioma === 'es' ? 'español' : 'English';
 
     const prompt = `Explica "${perfil.tema}" de ${asignaturaLabels[perfil.asignatura] || perfil.asignatura} de forma ${intentoNumero === 1 ? 'más simple y concreta' : 'ultra-simple'}, ajustada según la condición del niño: ${condicionLabels[perfil.condicion] || perfil.condicion}. Edad: ${perfil.edad} años. Idioma: ${idiomaStr}. Solo el texto, sin formato ni JSON.`;
-
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    const API_URL = import.meta.env.VITE_BACKEND_URL;
+    const res = await fetch(`${API_URL}/api/chat`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`,
+            
         },
         body: JSON.stringify({
             model: 'gpt-4o',
@@ -605,13 +606,13 @@ export function obtenerSesiones() {
  * Genera una imagen específica con DALL-E 3 bajo demanda (On-the-fly)
  */
 export async function generarImagenDalle(prompt: string): Promise<string> {
-    const apiKey = getApiKey(); // Reutiliza tu función de validación de Key
+    
 
     const res = await fetch('https://api.openai.com/v1/images/generations', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`,
+           
         },
         body: JSON.stringify({
             model: "dall-e-3",
@@ -657,12 +658,12 @@ REGLAS:
 - Frases cortas
 - Sin párrafos largos
 `;
-
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        const API_URL = import.meta.env.VITE_BACKEND_URL;
+        const response = await fetch(`${API_URL}/api/chat`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`,
+                
             },
             body: JSON.stringify({
                 model: "gpt-4o-mini",

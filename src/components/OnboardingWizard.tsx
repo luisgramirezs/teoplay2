@@ -186,11 +186,12 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     setError(null);
     try {
       const prompt = buildPerfilPrompt(datosPerfil, respuestas, textoInforme || undefined);
-      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      const API_URL = import.meta.env.VITE_BACKEND_URL;
+        const res = await fetch(`${API_URL}/api/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
+         
         },
         body: JSON.stringify({
           model: 'gpt-4o',

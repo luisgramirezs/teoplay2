@@ -67,8 +67,7 @@ const GameTypeE: React.FC<GameTypeEProps> = ({
             ? 'text-xl'
             : 'text-base';
 
-    const apiKey =
-        import.meta.env.VITE_OPENAI_API_KEY;
+
 
     /**
      * VALIDACIÓN SEMÁNTICA FLEXIBLE
@@ -83,17 +82,13 @@ const GameTypeE: React.FC<GameTypeEProps> = ({
 
         try {
 
-            const res = await fetch(
-                'https://api.openai.com/v1/chat/completions',
-                {
-                    method: 'POST',
+            const API_URL = import.meta.env.VITE_BACKEND_URL;
 
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization':
-                            `Bearer ${apiKey}`,
-                    },
-
+            const res = await fetch(`${API_URL}/api/chat`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
                     body: JSON.stringify({
 
                         model: 'gpt-4o-mini',
