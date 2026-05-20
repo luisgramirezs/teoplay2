@@ -6,10 +6,7 @@ const OpenAI = require('openai');
 
 const app = express();
 
-app.use(cors({
-    origin: 'https://teoplay2.onrender.com'
-}));
-
+app.use(cors());
 app.use(express.json());
 
 const client = new OpenAI({
