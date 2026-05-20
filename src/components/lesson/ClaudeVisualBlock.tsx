@@ -235,11 +235,10 @@ async function generarSVG(
 ): Promise<string> {
   const paleta = PALETAS_CONDICION[condicion] ?? PALETAS_CONDICION.general;
 
-
-
-
+  
     // 1. Apunta automáticamente a Render en producción o a localhost si estás desarrollando
-    const API_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
+    
+    const API_URL = import.meta.env.VITE_BACKEND_URL;
 
     // 2. Hacemos la petición a TU propio servidor (él es quien tiene la clave segura en Render)
     const response = await fetch(`${API_URL}/api/chat`, {
@@ -247,17 +246,16 @@ async function generarSVG(
         headers: {
             'Content-Type': 'application/json',
         },
-
-    body: JSON.stringify({
-      model: 'gpt-4o',
-      max_tokens: 3000,
-      temperature: 0.3, // Más determinista → menos intermitencia
-      messages: [
-        { role: 'system', content: buildSystemPrompt() },
-        { role: 'user', content: buildUserPrompt(apoyoVisual, condicion, paleta) },
-      ],
-    }),
-  });
+        body: JSON.stringify({
+            model: 'gpt-4o',
+            max_tokens: 3000,
+            temperature: 0.3,
+            messages: [
+                { role: 'system', content: buildSystemPrompt() },
+                { role: 'user', content: buildUserPrompt(apoyoVisual, condicion, paleta) },
+            ],
+        }),
+    });
 
   if (!response.ok) {
     const err = await response.text();
