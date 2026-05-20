@@ -236,26 +236,69 @@ async function generarSVG(
   const paleta = PALETAS_CONDICION[condicion] ?? PALETAS_CONDICION.general;
 
   
-    // 1. Apunta automáticamente a Render en producción o a localhost si estás desarrollando
-    
+    // ─── Llamada a la API ─────────────────────────────────────────────────────────
+
     const API_URL = import.meta.env.VITE_BACKEND_URL;
 
-    // 2. Hacemos la petición a TU propio servidor (él es quien tiene la clave segura en Render)
-    const response = await fetch(`${API_URL}/api/chat`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            model: 'gpt-4o',
-            max_tokens: 3000,
-            temperature: 0.3,
-            messages: [
-                { role: 'system', content: buildSystemPrompt() },
-                { role: 'user', content: buildUserPrompt(apoyoVisual, condicion, paleta) },
-            ],
-        }),
-    });
+    const controller = new AbortController();
+
+    const timeout = setTimeout(() => {
+        controller.abort();
+    }, 90000);
+
+    let response: Response;
+
+    try {
+
+        response = await fetch(`${API_URL}/api/chat`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                model: 'gpt-4o',
+                max_tokens: 3000,
+                temperature: 0.3,
+                messages: [
+                    { role: 'system', content: buildSystemPrompt() },
+                    { role: 'user', content: buildUserPrompt(apoyoVisual, condicion, paleta) },
+                ],
+            }),
+            signal: controller.signal,
+        });
+
+    } catch (err: any) {
+
+        if (
+            err.name === 'AbortError' ||
+            err.message?.includes('Failed to fetch')
+        ) {
+
+            await new Promise(resolve => setTimeout(resolve, 3000));
+
+            response = await fetch(`${API_URL}/api/chat`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    model: 'gpt-4o',
+                    max_tokens: 3000,
+                    temperature: 0.3,
+                    messages: [
+                        { role: 'system', content: buildSystemPrompt() },
+                        { role: 'user', content: buildUserPrompt(apoyoVisual, condicion, paleta) },
+                    ],
+                }),
+            });
+
+        } else {
+            throw err;
+        }
+
+    } finally {
+        clearTimeout(timeout);
+    }
 
   if (!response.ok) {
     const err = await response.text();
