@@ -238,21 +238,15 @@ async function generarSVG(
 
 
 
-    //Producción:
+    // 1. Apunta automáticamente a Render en producción o a localhost si estás desarrollando
+    const API_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
 
-  //const response = await fetch('https://api.openai.com/v1/chat/completions', {
-  //  method: 'POST',
-  //  headers: {
-  //    'Content-Type': 'application/json',
- //     'Authorization': `Bearer ${key}`,
- //   },
-
-    // DESARROLLO:
-    const response = await fetch('http://localhost:8080/api/chat', {
+    // 2. Hacemos la petición a TU propio servidor (él es quien tiene la clave segura en Render)
+    const response = await fetch(`${API_URL}/api/chat`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-    },
+        },
 
     body: JSON.stringify({
       model: 'gpt-4o',
