@@ -37,6 +37,19 @@ export async function guardarStudent(perfil: PerfilCompleto, userId: string): Pr
     updatedAt: serverTimestamp(),
   });
 
+  // Crear el studentLink del creador (familia, con permisos completos)
+  const linkId = `${perfil.id}_${userId}`;
+  await setDoc(doc(db, 'studentLinks', linkId), {
+    studentId: perfil.id,
+    userId,
+    role: 'familia',
+    status: 'activo',
+    invitedBy: userId,
+    canEdit: true,
+    canInvite: true,
+    createdAt: serverTimestamp(),
+  });
+
   // Si tiene perfil neuroeducativo, guardar también en el histórico
   if (perfil.perfilNeuroeducativo) {
     await guardarHistoricoPerfil(perfil.id, perfil.perfilNeuroeducativo, 1, 'onboarding');
