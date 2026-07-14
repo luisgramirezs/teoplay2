@@ -1179,7 +1179,7 @@ const ReforzamientoBlock: React.FC<{
 interface Phase2LessonProps {
     perfil: PerfilNino;
     sesion: SesionGenerada;
-    onComplete: (tiempo: number) => void;
+    onComplete: (tiempo: number, simplificaciones: number) => void;
     onBack?: () => void;
     moduleId?: string;       
     onModuleComplete?: () => void; 
@@ -1282,7 +1282,7 @@ const Phase2Lesson: React.FC<Phase2LessonProps> = ({ perfil, sesion, onComplete,
 
     const finalizarFase = () => {
         window.speechSynthesis?.cancel();
-        onComplete(Math.round((Date.now() - startTime.current) / 1000));
+        onComplete(Math.round((Date.now() - startTime.current) / 1000), explicacionIndex);
     };
 
 

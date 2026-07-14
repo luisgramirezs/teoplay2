@@ -276,8 +276,8 @@ o
 
         onComplete({
             tipo: 'E',
-            aciertos: 100,
-            errores: 0,
+            aciertos: 1,
+            errores,
             intentos
         });
     };

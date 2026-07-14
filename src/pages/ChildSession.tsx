@@ -71,6 +71,7 @@ const ChildSession: React.FC<ChildSessionProps> = ({ perfil, onComplete, onBack 
 
   const [moduloActivo, setModuloActivo] = useState<string | null>(null);
   const [modulosCompletados, setModulosCompletados] = useState<string[]>([]);
+  const [simplificacionesAcumuladas, setSimplificacionesAcumuladas] = useState(0);
 
 
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -179,6 +180,7 @@ const ChildSession: React.FC<ChildSessionProps> = ({ perfil, onComplete, onBack 
             modulosCompletados: modulosCompletados,
             nivelLogro: 'logrado',
             porcentajeAciertos: 100,
+            simplificaciones: simplificacionesAcumuladas,
             juegos: []
         }));
 
@@ -431,10 +433,11 @@ const ChildSession: React.FC<ChildSessionProps> = ({ perfil, onComplete, onBack 
                 perfil={perfilConInteres}
                 sesion={sesion}
                 moduleId={moduloActivo}
-                onComplete={() => {
-                    // Solo actualizamos progreso y devolvemos al menú (NeuroLessonPage)
+                onComplete={(_tiempo, simplificaciones) => {
+                    // Acumulamos "Saber más" de este módulo, actualizamos progreso y devolvemos al menú (NeuroLessonPage)
+                    setSimplificacionesAcumuladas(prev => prev + simplificaciones);
                     setModulosCompletados(prev => [...new Set([...prev, moduloActivo])]);
-                    setModuloActivo(null); 
+                    setModuloActivo(null);
                 }}
                 onModuleComplete={() => {
                     setModulosCompletados(prev => [...new Set([...prev, moduloActivo])]);

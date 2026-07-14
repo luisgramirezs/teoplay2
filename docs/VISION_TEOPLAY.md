@@ -163,6 +163,104 @@ diseñarse desde ahora como una **capa de conocimiento consultable** — no solo
 registros para mostrar en un dashboard — para que sirva igual de bien a una interfaz
 humana y a un chatbot basado en LLM sin rediseñar el modelo más adelante.
 
+Ese chatbot sería un asesor de primer nivel exclusivo del niño consultado (no un
+chat genérico tipo ChatGPT): responde solo con base en el perfil neuroeducativo
+del estudiante en cuestión, y tiene límites explícitos — **no da diagnósticos, no
+indica ni sugiere medicación**. Su función es orientar con recomendaciones
+prácticas de primer nivel (rutinas, estrategias de apoyo), no sustituir criterio
+profesional.
+
+**Matiz importante para el diseño de las 6 dimensiones (aplica ya, no solo al
+futuro chatbot):** el dato subyacente de cada dimensión es el mismo para todos
+los actores, pero la forma de comunicarlo debe adaptarse a quién lo consulta —
+no es lo mismo explicarle a una familia cómo va su hijo que explicárselo a un
+fonoaudiólogo, un terapeuta ocupacional o un docente. Mismo contenido, distinto
+lenguaje/tono/nivel técnico según la audiencia. Esto probablemente implique
+generar (o adaptar vía IA) el resumen de cada dimensión en el momento de la
+consulta según el rol de quien pregunta, en vez de guardar un texto separado y
+pre-redactado por cada rol (evita el costo de mantener versiones sincronizadas).
+
+**Pieza pendiente identificada (no implementada, capturar para fase futura):**
+hoy la subida de informe/PDF solo ocurre una vez, durante el onboarding inicial.
+Pero informes reales como el PIAR (actualizado típicamente cada bimestre) o
+reportes de seguimiento terapéutico (cada ~3 meses) cambian con el tiempo. Falta
+un mecanismo para que la familia pueda subir informes actualizados después del
+onboarding, en cualquier momento, como otra fuente que enriquezca el perfil
+vivo — hoy no existe ningún punto de la app para hacer esto fuera del wizard
+inicial. Evaluar cómo encaja esto con el mecanismo de "calcular al consultar"
+ya definido (un informe nuevo cuenta como evidencia nueva, igual que una
+observación de un especialista).
+
+**Requisito confirmado para el módulo de dimensiones — exportar a PDF:** el
+módulo debe incluir un botón para descargar el perfil neuroeducativo completo
+en PDF, organizado por dimensión (resumen general + resumen de cada una de las
+6 dimensiones con su estado actual). Utilidad concreta: una familia puede
+generarlo y compartirlo con un especialista nuevo para que vea de un vistazo
+el valor de la plataforma antes de integrarse a ella. Nota técnica: ya existe
+un exportador de PDF en el proyecto (`pdfExport.ts`), pero está enfocado en el
+reporte de una sesión individual — habrá que construir una variante nueva
+para el perfil por dimensiones, no reutilizar el existente tal cual.
+
+**Tres refinamientos adicionales confirmados para el módulo de dimensiones:**
+
+1. **Indicador de progreso (no calificación):** mostrar un porcentaje/indicador
+   cuantitativo únicamente en las dimensiones donde ya existe un dato real y
+   con sentido (Aprendizaje académico vía precisión de sesiones; Regulación
+   emocional vía trayectoria emocional) — no inventar un número en dimensiones
+   sin métrica cuantitativa real (Comunicación, Autonomía, Salud). Principio de
+   encuadre obligatorio: el número nunca se presenta como nota/calificación —
+   siempre se acompaña de una redacción que lo enmarca como evolución/ajuste de
+   estrategia, nunca como juicio sobre la capacidad del niño (ej. un valor bajo
+   se explica como "hay que ajustar las estrategias aplicadas", no como "le va
+   mal").
+
+2. **Recomendaciones integradas por dimensión:** en vez de una lista de
+   recomendaciones genérica y separada (como existe hoy en
+   `SesionGenerada.recomendaciones`/`PerfilNeuroeducativo.recomendaciones`),
+   cada tarjeta de dimensión debe incluir su propia recomendación puntual y
+   accionable, generada junto con su resumen — no un texto genérico flotando
+   aparte.
+
+3. **Canal de aprendizaje predominante (estilo DUA):** indicar si se percibe
+   una preferencia por canal visual, auditivo o kinestésico. **Aún no
+   confirmado si hay señal aprovechable hoy** — pendiente de que Claude Code
+   revise si el desempeño ya varía de forma aprovechable entre los 5 tipos de
+   juego existentes (clasificación, opción múltiple, memoria, intruso,
+   producción) antes de comprometerse a esta pieza como "barata"; si no hay
+   señal explotable, requeriría instrumentar algo nuevo, a evaluar aparte.
+
+**Estructura final consolidada del módulo de dimensiones:**
+
+- **Centro/principal:** las 6 tarjetas de dimensión (resumen narrativo +
+  recomendación puntual integrada donde aplique).
+- **Panel aparte, pequeño (no saturar):** 3 indicadores categóricos, simples
+  de entender —
+  - **Emoción predominante:** dos fuentes complementarias — cuantitativa
+    (ya existe: emoción antes/después de cada sesión de lección) y
+    cualitativa (lo que un actor describe en su retroalimentación, ej.
+    "estuvo alterado por cambios de rutina") — ambas alimentan la misma
+    dimensión sin competir.
+  - **Nivel de comprensión:** Alto/Medio/Bajo (candidato: ya existe
+    `dashboardMetrics.nivelAprendizaje`, verificar si aplica directo o
+    necesita ajuste para representar un período, no solo una sesión).
+  - **Autonomía:** derivada de señales de sesión (las dos señales de bajo
+    costo ya identificadas: `pedirExplicacionAlternativa`, finalización de
+    juego abierto) + el onboarding ya reformulado.
+  - Análisis cruzado por asignatura/estrategia pedagógica (como existía en
+    la versión institucional anterior) queda explícitamente pospuesto para
+    una fase futura — no es parte de este alcance.
+- **Barra de acciones, condicionada por rol:**
+  - Flexibilizar clase — familia y docente.
+  - Ficha de retroalimentación — todos los actores vinculados.
+  - Subir informe — todos los actores vinculados (no restringido solo a
+    familia): un informe subido es simplemente otro tipo de evidencia, igual
+    que una observación de texto libre, y dispara el mismo mecanismo de
+    "hay algo nuevo, recalcular al consultar". Esto evita el cuello de
+    botella de que todo informe deba pasar primero por la familia (ej. el
+    terapeuta sube directo su informe de seguimiento trimestral, el colegio
+    sube directo el PIAR actualizado).
+  - Descargar perfil en PDF — todos los actores vinculados.
+
 ## 12. Dimensiones del Perfil Neuroeducativo
 
 El perfil organiza el conocimiento del estudiante en seis dimensiones. Cada una
@@ -417,7 +515,95 @@ para permitir que el especialista, sin link previo, actualice un documento
 que ya existe pero que no le pertenece todavía — esto es lo primero a
 diseñar en la próxima sesión).
 
-## 19. Forma de trabajo acordada
+## 20. Diseño visual de referencia para el módulo de dimensiones
+
+Luis compartió un mockup de referencia (layout tipo dashboard con sidebar,
+tarjetas de dimensión con ícono/color propio, barras de progreso, y paneles
+laterales de información general/actividad reciente/recomendaciones). **El
+concepto visual y la estética se adoptan como referencia real de diseño** —
+tarjetas por dimensión con color e ícono distintivo, jerarquía clara de
+información, tono amigable. **El contenido y la funcionalidad se ajustan al
+alcance ya acordado en las secciones 18-19**, no al mockup literal:
+
+- Las 6 tarjetas de dimensión sí, con el estilo visual del mockup (color/ícono
+  propio, resumen narrativo).
+- Las barras de porcentaje del mockup se muestran **solo** en las dimensiones
+  donde existe una métrica cuantitativa real (Aprendizaje académico, Regulación
+  emocional) — no en las 6 por igual, y siempre encuadradas como progreso/
+  ajuste de estrategia, nunca como calificación.
+- El panel "Recomendaciones destacadas" del mockup (lista aparte) se reemplaza
+  por una recomendación integrada dentro de cada tarjeta de dimensión, no un
+  panel separado.
+- El panel "Actividad reciente" del mockup es una buena idea a evaluar más
+  adelante, alimentado por observaciones/informes reales subidos — no es parte
+  del alcance inmediato.
+- Módulos del sidebar del mockup que no existen ni están planeados (Reportes,
+  Comunicaciones, Documentos, Configuración como secciones separadas) no forman
+  parte de este alcance — quedan fuera por ahora.
+- El botón "Agregar nueva observación" del mockup sí se adopta, junto con
+  "Flexibilizar clase", "Subir informe" y "Descargar perfil en PDF" (ver
+  sección 18 para las reglas de qué rol ve cada botón).
+
+## 21. Módulo de dimensiones — diseño final aprobado, listo para implementar
+
+**Es la pantalla principal** a la que llega cualquier usuario (familia,
+docente, terapeuta) al validarse en TEOplay.
+
+**Estructura:**
+- Encabezado: foto/nombre/edad/grado/condición del niño + fecha de última
+  actualización general.
+- Centro: 6 tarjetas de dimensión (color/ícono propio por dimensión), cada una
+  con resumen narrativo + recomendación puntual **adaptada al actor
+  conectado** (mismo dato de fondo, distinto enfoque/lenguaje si es
+  familia/casa, docente/colegio o terapeuta/terapia — mismo mecanismo de
+  "resumen canónico + lente por rol al consultar" ya acordado en la sección 20).
+  Solo las dimensiones 1 (Aprendizaje) y 3 (Regulación emocional) muestran un
+  indicador de progreso tipo barra, siempre encuadrado como evolución/ajuste
+  de estrategia, nunca como calificación.
+- **Clic en una tarjeta → modal con el detalle completo de esa dimensión**,
+  mostrando al final la fecha exacta en que esa dimensión específica fue
+  actualizada por última vez (cada dimensión tiene su propio timestamp, no
+  solo uno general del perfil).
+- Panel lateral, 3 indicadores simples: emoción predominante (reutilizando el
+  widget "Trayectoria emocional" ya existente en el dashboard), nivel de
+  comprensión Alto/Medio/Bajo (reutilizando `nivelAprendizaje` ya existente),
+  autonomía (derivada de simplificaciones + señales de sesión ya
+  identificadas).
+- **Cápsula de recomendaciones consolidadas**, debajo de los 3 indicadores en
+  el mismo panel lateral: resumen de 2-3 recomendaciones tomadas de las
+  dimensiones, tituladas según el rol conectado ("Recomendaciones para la
+  familia" / "para el colegio" / "para la terapia") — mismas recomendaciones
+  que ya aparecen dentro de cada tarjeta, solo consolidadas para acceso rápido.
+- Barra de acciones inferior, condicionada por rol:
+
+  | Acción | Familia | Docente | Terapeuta |
+  |---|---|---|---|
+  | Flexibilizar clase | ✅ | ✅ | ❌ |
+  | Ficha de retroalimentación | ✅ | ✅ | ✅ |
+  | Subir informe | ✅ | ✅ | ✅ |
+  | Descargar perfil en PDF | ✅ | ✅ | ✅ |
+  | Invitar especialista | ✅ | ❌ | ❌ |
+
+**Mecanismo de actualización:** cálculo bajo demanda al abrir el módulo — se
+revisa si hay evidencia nueva desde la última vez (sesión, observación,
+informe) y solo entonces se recalculan las dimensiones afectadas. No existe
+motor de servidor automático (no hay backend propio).
+
+**Explícitamente fuera de alcance de esta primera versión (documentado, no
+descartado):**
+- Canal de aprendizaje predominante estilo DUA (visual/auditivo/kinestésico),
+  incluida la variante de que podría variar por asignatura — pospuesto por
+  complejidad, a evaluar en fase futura.
+- Panel de "Actividad reciente" tipo feed.
+- Análisis cruzado por asignatura/estrategia pedagógica (como en la versión
+  institucional anterior).
+- Chatbot asesor del niño (ver sección 20).
+
+
+
+## 22. Forma de trabajo acordada
+
+
 
 - Sesiones de ~60 minutos, cada una con un entregable concreto.
 - Evolución incremental: preservar estabilidad, no reingeniería.
