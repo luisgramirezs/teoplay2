@@ -39,26 +39,26 @@ export interface PerfilCompleto extends PerfilPersistente {
 const PREGUNTAS = [
   {
     id: 'habilidades' as keyof RespuestasOnboarding,
-    pregunta: '¿Qué habilidades o fortalezas destacas en el niño/a?',
-    placeholder: 'Ej: Es muy creativo, tiene buena memoria visual, le encantan los números...',
+    pregunta: '¿Qué le gusta hacer, en qué destaca y qué lo motiva?',
+    placeholder: 'Ej: Le encantan los dinosaurios y los números, tiene buena memoria visual, se motiva con elogios y pequeños logros...',
     opcional: false,
   },
   {
     id: 'retos' as keyof RespuestasOnboarding,
-    pregunta: '¿En qué áreas o situaciones presenta mayores dificultades?',
-    placeholder: 'Ej: Le cuesta mantener el foco, tiene dificultad con la lectura, se frustra fácilmente...',
+    pregunta: '¿Cómo se comunica y se relaciona con otros, y en qué le cuesta más avanzar (en el colegio o en casa)?',
+    placeholder: 'Ej: Le cuesta iniciar conversaciones o hacer amigos, prefiere jugar solo, no siempre entiende bromas o instrucciones largas, también le cuesta mantener el foco en tareas escolares...',
     opcional: false,
   },
   {
     id: 'comportamiento' as keyof RespuestasOnboarding,
-    pregunta: '¿Cómo describes su comportamiento y rutina en casa?',
-    placeholder: 'Ej: Es tranquilo en casa pero se altera con cambios de rutina, duerme bien, come bien...',
+    pregunta: '¿Podrías contarnos un poco sobre su día a día?',
+    placeholder: 'Ej: qué tan independiente es en sus actividades diarias, cómo maneja la frustración, cómo reacciona ante cambios de rutina...',
     opcional: false,
   },
   {
     id: 'observaciones' as keyof RespuestasOnboarding,
     pregunta: '¿Hay algo más que quieras que TEOplay sepa sobre él/ella?',
-    placeholder: 'Cualquier detalle adicional que consideres importante (opcional)...',
+    placeholder: 'Ej: cómo se calma cuando se frustra, sensibilidades sensoriales (ruido, luz, texturas), diagnósticos o terapias en curso, cualquier otro detalle importante (opcional)...',
     opcional: true,
   },
 ];
@@ -83,13 +83,13 @@ DATOS DEL NIÑO:
 
 INFORMACIÓN APORTADA POR LA FAMILIA:
 - Habilidades y fortalezas: ${respuestas.habilidades}
-- Áreas de dificultad: ${respuestas.retos}
-- Comportamiento y rutina: ${respuestas.comportamiento}
+- Comunicación, interacción social y dificultades de aprendizaje: ${respuestas.retos}
+- Autonomía y funcionamiento cotidiano: ${respuestas.comportamiento}
 ${respuestas.observaciones ? `- Observaciones adicionales: ${respuestas.observaciones}` : ''}
 
 ${textoInforme ? `INFORME CLÍNICO O ACADÉMICO ADJUNTO:\n${textoInforme}` : ''}
 
-REGLA DE ORO: Integra TODA la información disponible. Cada dato es evidencia del perfil.
+REGLA DE ORO: Integra TODA la información disponible. Presta especial atención a señales de comunicación/interacción social y de autonomía en el día a día, ya que suelen quedar subrepresentadas si no se buscan activamente. Cada dato es evidencia del perfil.
 
 Responde SOLO con este JSON (sin texto fuera, sin markdown):
 {

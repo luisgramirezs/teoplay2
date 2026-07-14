@@ -1,5 +1,6 @@
 // src/pages/Index.tsx
 import React, { useState, useEffect } from 'react';
+import { KeyRound, Sparkles, ChevronRight } from 'lucide-react';
 import { PerfilNino, SesionGenerada, SessionData, AppScreen } from '@/types';
 import { PERFIL_ACTIVO_KEY } from '@/types';
 import ConfigScreen from '@/pages/ConfigScreen';
@@ -12,7 +13,8 @@ import { mapSessionToDashboard } from '@/lib/dashboardMapper';
 import { getDashboardMetrics } from '@/lib/dashboardMetrics';
 import { onAuthChange, logoutUsuario, getRolUsuario } from '@/lib/authService';
 import { TipoUsuario } from '@/components/OnboardingWizard';
-import { guardarStudent, getStudentsByUser } from '@/lib/studentsService';
+import { guardarStudent, getStudentsByUser, getStudentsLinkedToUser } from '@/lib/studentsService';
+import { canjearInvitacion } from '@/lib/studentLinksService';
 import { guardarSession } from '@/lib/sessionsService';
 import { User } from 'firebase/auth';
 
@@ -98,6 +100,90 @@ const SplashScreen: React.FC = () => {
     );
 };
 
+// ── Pantalla de canje de código de invitación (especialistas) ─────────────────
+
+const CanjearInvitacionScreen: React.FC<{
+    userId: string;
+    onSuccess: (perfiles: PerfilCompleto[]) => void;
+}> = ({ userId, onSuccess }) => {
+    const [codigo, setCodigo]   = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError]     = useState<string | null>(null);
+
+    const inputClass = 'w-full px-4 py-3 bg-white border-2 border-border rounded-xl text-sm font-semibold text-foreground focus:outline-none focus:border-primary transition-colors';
+    const labelClass = 'block text-sm font-bold text-foreground/80 mb-1';
+
+    const handleValidar = async () => {
+        setError(null);
+        if (!codigo.trim()) { setError('Ingresa el código de invitación.'); return; }
+
+        setLoading(true);
+        try {
+            await canjearInvitacion(codigo.trim(), userId);
+            const perfiles = await getStudentsLinkedToUser(userId);
+            onSuccess(perfiles);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Ocurrió un error. Intenta de nuevo.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="min-h-screen bg-background flex items-center justify-center p-4">
+            <div className="w-full max-w-md">
+                <div className="flex flex-col items-center mb-8">
+                    <img src="/logo.png" alt="TEOplay" className="h-[180px] object-contain mb-2" />
+                    <p className="font-[Fredoka] text-lg text-orange-500 font-semibold tracking-wide">
+                        Tecnología de asistencia educativa
+                    </p>
+                </div>
+
+                <div className="bg-white rounded-2xl border border-border shadow-sm p-6 space-y-4">
+                    <div className="text-center">
+                        <h2 className="font-black text-foreground text-lg">Código de invitación</h2>
+                        <p className="text-sm text-muted-foreground font-semibold mt-1">
+                            Ingresa el código que te compartió la familia para vincularte al niño(a).
+                        </p>
+                    </div>
+
+                    <div>
+                        <label className={labelClass}>Código</label>
+                        <div className="relative">
+                            <KeyRound className="absolute left-3 top-3.5 w-4 h-4 text-muted-foreground" />
+                            <input
+                                type="text"
+                                value={codigo}
+                                onChange={e => setCodigo(e.target.value.toUpperCase())}
+                                placeholder="TEO-XXXX-YYYY"
+                                className={`${inputClass} pl-9 uppercase`}
+                            />
+                        </div>
+                        {error && (
+                            <p className="text-xs text-destructive font-bold mt-2">{error}</p>
+                        )}
+                    </div>
+
+                    <button
+                        onClick={handleValidar}
+                        disabled={loading}
+                        className="w-full flex items-center justify-center gap-2 bg-primary text-white font-black py-3.5 rounded-2xl disabled:opacity-60 cursor-pointer shadow-md"
+                    >
+                        {loading ? (
+                            <Sparkles className="w-5 h-5 animate-pulse" />
+                        ) : (
+                            <>
+                                Validar código
+                                <ChevronRight className="w-5 h-5" />
+                            </>
+                        )}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // ── Componente principal ──────────────────────────────────────────────────────
 
 const Index: React.FC = () => {
@@ -127,10 +213,20 @@ const Index: React.FC = () => {
     // Cargar perfiles desde Firestore cuando el usuario se autentica
     useEffect(() => {
         if (!authUser) return;
-        getRolUsuario(authUser.uid).then(rol => setRolUsuario(rol));
-        getStudentsByUser(authUser.uid).then(students => {
-            setPerfiles(students);
-            setScreen(students.length === 0 ? 'onboarding' : 'config');
+        getRolUsuario(authUser.uid).then(rol => {
+            setRolUsuario(rol);
+
+            if (rol === 'docente' || rol === 'terapeuta') {
+                getStudentsLinkedToUser(authUser.uid).then(students => {
+                    setPerfiles(students);
+                    setScreen(students.length === 0 ? 'canjear-invitacion' : 'config');
+                });
+            } else {
+                getStudentsByUser(authUser.uid).then(students => {
+                    setPerfiles(students);
+                    setScreen(students.length === 0 ? 'onboarding' : 'config');
+                });
+            }
         });
     }, [authUser]);
 
@@ -208,6 +304,15 @@ const Index: React.FC = () => {
                     tipoUsuarioAuth={rolUsuario}
                 />
             )}
+            {screen === 'canjear-invitacion' && (
+                <CanjearInvitacionScreen
+                    userId={authUser.uid}
+                    onSuccess={(students) => {
+                        setPerfiles(students);
+                        setScreen('config');
+                    }}
+                />
+            )}
             {screen === 'config' && (
                 <ConfigScreen
                     onGenerate={handleGenerate}
@@ -215,6 +320,7 @@ const Index: React.FC = () => {
                     perfiles={perfiles}
                     onPerfilesChange={setPerfiles}
                     userId={authUser.uid}
+                    rolUsuario={rolUsuario}
                 />
             )}
             {screen === 'session' && perfil && (

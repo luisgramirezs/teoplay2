@@ -8,44 +8,92 @@ service cloud.firestore {
 
     match /studentLinks/{linkId} {
       allow read: if request.auth != null && (
-        resource.data.userId == request.auth.uid ||
+        resource == null ||
+        resource.data.status == 'invitado' ||
+        ('userId' in resource.data && resource.data.userId == request.auth.uid) ||
         (exists(/databases/$(database)/documents/studentLinks/$(resource.data.studentId + '_' + request.auth.uid))
          && get(/databases/$(database)/documents/studentLinks/$(resource.data.studentId + '_' + request.auth.uid)).data.status == 'activo')
       );
 
       allow create: if request.auth != null
-        && linkId == request.resource.data.studentId + '_' + request.resource.data.userId
-        && request.resource.data.invitedBy == request.auth.uid
         && (
-          (request.resource.data.userId == request.auth.uid
+          (
+            request.resource.data.invitedBy == request.auth.uid
+            && 'userId' in request.resource.data
+            && linkId == request.resource.data.studentId + '_' + request.resource.data.userId
+            && request.resource.data.userId == request.auth.uid
             && request.resource.data.role == 'familia'
-            && get(/databases/$(database)/documents/alumnos/$(request.resource.data.studentId)).data.userId == request.auth.uid)
+            && get(/databases/$(database)/documents/alumnos/$(request.resource.data.studentId)).data.userId == request.auth.uid
+          )
           ||
-          (exists(/databases/$(database)/documents/studentLinks/$(request.resource.data.studentId + '_' + request.auth.uid))
-            && get(/databases/$(database)/documents/studentLinks/$(request.resource.data.studentId + '_' + request.auth.uid)).data.status == 'activo')
+          (
+            request.resource.data.invitedBy == request.auth.uid
+            && !('userId' in request.resource.data)
+            && request.resource.data.status == 'invitado'
+            && (request.resource.data.role == 'docente' || request.resource.data.role == 'terapeuta')
+            && request.resource.data.canEdit == false
+            && request.resource.data.canInvite == false
+            && exists(/databases/$(database)/documents/studentLinks/$(request.resource.data.studentId + '_' + request.auth.uid))
+            && get(/databases/$(database)/documents/studentLinks/$(request.resource.data.studentId + '_' + request.auth.uid)).data.status == 'activo'
+            && get(/databases/$(database)/documents/studentLinks/$(request.resource.data.studentId + '_' + request.auth.uid)).data.role == 'familia'
+          )
+          ||
+          (
+            'userId' in request.resource.data
+            && request.resource.data.userId == request.auth.uid
+            && linkId == request.resource.data.studentId + '_' + request.resource.data.userId
+            && (request.resource.data.role == 'docente' || request.resource.data.role == 'terapeuta')
+            && request.resource.data.status == 'activo'
+            && 'sourceInvitationId' in request.resource.data
+            && get(/databases/$(database)/documents/studentLinks/$(request.resource.data.sourceInvitationId)).data.status == 'invitado'
+            && get(/databases/$(database)/documents/studentLinks/$(request.resource.data.sourceInvitationId)).data.studentId == request.resource.data.studentId
+            && get(/databases/$(database)/documents/studentLinks/$(request.resource.data.sourceInvitationId)).data.role == request.resource.data.role
+            && request.resource.data.invitedBy == get(/databases/$(database)/documents/studentLinks/$(request.resource.data.sourceInvitationId)).data.invitedBy
+            && request.resource.data.canEdit == get(/databases/$(database)/documents/studentLinks/$(request.resource.data.sourceInvitationId)).data.canEdit
+            && request.resource.data.canInvite == get(/databases/$(database)/documents/studentLinks/$(request.resource.data.sourceInvitationId)).data.canInvite
+          )
         );
 
       allow update: if request.auth != null
-        && (resource.data.userId == request.auth.uid || resource.data.invitedBy == request.auth.uid)
-        && request.resource.data.studentId == resource.data.studentId
-        && request.resource.data.userId == resource.data.userId;
+        && (
+          (
+            (('userId' in resource.data && resource.data.userId == request.auth.uid) || resource.data.invitedBy == request.auth.uid)
+            && request.resource.data.studentId == resource.data.studentId
+            && (!('userId' in resource.data) || request.resource.data.userId == resource.data.userId)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+          )
+          ||
+          (
+            resource.data.status == 'invitado'
+            && !('userId' in resource.data)
+            && (!('expiresAt' in resource.data) || resource.data.expiresAt > request.time)
+            && request.resource.data.status == 'consumido'
+            && request.resource.data.claimedBy == request.auth.uid
+            && request.resource.data.studentId == resource.data.studentId
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'claimedBy', 'claimedAt'])
+          )
+        );
 
       allow delete: if false;
     }
 
     match /alumnos/{studentId} {
       allow read: if request.auth != null && (
+        resource == null ||
         resource.data.userId == request.auth.uid ||
         (exists(/databases/$(database)/documents/studentLinks/$(studentId + '_' + request.auth.uid))
          && get(/databases/$(database)/documents/studentLinks/$(studentId + '_' + request.auth.uid)).data.status == 'activo')
       );
 
-      allow write: if request.auth != null && (
+      allow update: if request.auth != null && (
+        resource == null ||
         resource.data.userId == request.auth.uid ||
         (exists(/databases/$(database)/documents/studentLinks/$(studentId + '_' + request.auth.uid))
          && get(/databases/$(database)/documents/studentLinks/$(studentId + '_' + request.auth.uid)).data.status == 'activo'
          && get(/databases/$(database)/documents/studentLinks/$(studentId + '_' + request.auth.uid)).data.role == 'familia')
       );
+
+      allow delete: if false;
 
       allow create: if request.auth != null
         && request.resource.data.userId == request.auth.uid;
@@ -60,11 +108,11 @@ service cloud.firestore {
 
     match /student_profiles_history/{histId} {
       allow read, update, delete: if request.auth != null
-        && resource.data.studentId != null
+        && 'studentId' in resource.data
         && get(/databases/$(database)/documents/alumnos/$(resource.data.studentId)).data.userId == request.auth.uid;
 
       allow create: if request.auth != null
-        && request.resource.data.studentId != null
+        && 'studentId' in request.resource.data
         && get(/databases/$(database)/documents/alumnos/$(request.resource.data.studentId)).data.userId == request.auth.uid;
     }
   }

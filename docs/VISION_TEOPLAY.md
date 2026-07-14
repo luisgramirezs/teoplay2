@@ -320,7 +320,104 @@ trazabilidad a la fuente.
 
 ---
 
-## 16. Forma de trabajo acordada
+## 17. Patrones reutilizables de la versión institucional anterior
+
+TEOplay tuvo una versión anterior orientada a colegios (super-admin → rector →
+docentes) que no prosperó comercialmente, pero dejó piezas de diseño ya validadas
+en producción real que son directamente relevantes para esta evolución. No se
+trata de ideas nuevas — son patrones que ya funcionaron una vez y conviene adaptar
+en vez de rediseñar desde cero:
+
+1. **Códigos de invitación** (`codigos_invitacion`, ya existe en Firestore): el
+   super-admin generaba un código para que un rector se validara la primera vez.
+   Patrón reutilizable para: la familia genera un código de invitación con un rol
+   específico (docente/terapeuta), y el especialista lo canjea para vincularse
+   directo a un alumno vía `studentLinks` — mismo mecanismo, jerarquía más simple
+   (sin rector de por medio).
+
+2. **Observación docente estructurada con patrones**: en la versión institucional,
+   los docentes registraban actividades realizadas (qué, para qué asignatura) y
+   observaciones de **emoción, comprensión y autonomía**, que alimentaban el
+   perfil del niño. Esto es, en esencia, el mismo modelo de `observations` +
+   clasificación por dimensión que se diseñó en la sección 13-15 — ya fue
+   validado en un contexto real. Vale la pena revisar cómo estaba modelado ese
+   módulo antes de diseñar `observations` desde cero.
+
+3. **Transferencias** (`transferencias`, ya existe en Firestore): al cambiar un
+   niño de colegio, se generaba un código de transferencia que revocaba el
+   acceso del colegio anterior y otorgaba acceso al nuevo, preservando el
+   contexto acumulado. Es el mismo problema de fondo que revocar/transferir un
+   `studentLinks` (ej. cuando cambia de terapeuta) — mismo patrón, aplicado hoy
+   a un caso más simple (familia-especialista en vez de colegio-colegio).
+
+4. **Módulo de formación docente** (infografías + video por condición): no es
+   parte del alcance inmediato de esta evolución (perfil colaborativo), pero
+   queda registrado como pieza existente y reutilizable para una fase futura,
+   si se retoma el interés institucional.
+
+**Antes de implementar cualquier pieza nueva relacionada con invitación,
+observaciones o transferencia de acceso, revisar primero cómo está construida
+la versión institucional equivalente — es más rápido adaptar que rediseñar.**
+
+## 18. Flujo de invitación familia → especialista (acordado, listo para implementar)
+
+**Principio rector:** la familia siempre es dueña de los datos. El especialista
+invitado nunca tiene más control que consulta + aporte de observaciones sobre
+UN niño específico — nunca acceso general a todos los hijos de una familia, y
+nunca la posibilidad de auto-registrarse como dueño de un niño.
+
+**Flujo paso a paso:**
+
+1. La familia entra al módulo del niño específico (no un módulo general — si
+   tiene varios hijos, elige cuál) y pulsa "Invitar especialista", eligiendo el
+   rol (docente/terapeuta).
+2. TEOplay genera un código de un solo uso (formato tipo `TEO-XXXX-YYYY`) y
+   crea de inmediato el `studentLinks` correspondiente con `status: 'invitado'`,
+   ya atado a ese `studentId` y ese `role` — sin `userId` todavía, porque no se
+   sabe aún quién lo canjeará.
+3. La familia comparte el código por el medio que prefiera (WhatsApp, correo,
+   etc.) — TEOplay NO envía el código automáticamente en esta primera versión;
+   no hace falta automatizar ese paso todavía.
+4. El especialista se registra o inicia sesión en TEOplay, y en un campo de
+   "Tengo un código de invitación" lo ingresa.
+5. TEOplay busca el `studentLinks` con ese código, valida que esté `invitado`
+   (no usado ni vencido), y lo actualiza: asigna el `userId` real del
+   especialista y cambia `status` a `activo`. El código queda invalidado
+   (uso único).
+6. Desde ese momento, el especialista ve únicamente ese niño, con permisos de
+   colaborador (ver perfil completo en las 6 dimensiones, generar lecciones,
+   aportar observaciones) — sin poder editar datos del niño ni invitar a nadie
+   más (ver tabla de permisos en sección 13).
+
+**Gestión del vínculo por parte de la familia:**
+- La familia puede **desvincular** a un especialista en cualquier momento
+  (cambia `status` a `revocado`) — pierde acceso de inmediato.
+- La familia puede **invitar a un especialista nuevo** para reemplazar al
+  anterior (nuevo código, nuevo `studentLinks`) — es simplemente una nueva
+  invitación, no requiere un mecanismo especial de "transferencia".
+
+**Explícitamente fuera de alcance por ahora (anotado para revisar más
+adelante, no antes):** un especialista actuando como usuario principal /
+dueño de los datos de un niño (ej. terapeuta registrando directamente a un
+niño sin que la familia lo haya hecho primero). Se descarta por ahora porque
+introduce un problema real de consentimiento y control de datos sensibles de
+menores que merece su propio diseño con calma — no se resuelve de paso.
+
+**Nota técnica de implementación (hallazgo de la exploración de TEOplay_IA):**
+el `create` de `studentLinks` en las reglas actuales exige que quien crea el
+documento ya tenga un link activo sobre ese `studentId` — por eso es la
+familia (que ya tiene su link activo) quien crea el `studentLinks` en estado
+`invitado` en el paso 2, y el canje del código en el paso 5 es un `update`
+sobre ese documento ya existente (asignar `userId` + cambiar `status`), no un
+`create` nuevo. Esto evita tener que resolver el canje con Cloud Functions o
+privilegios elevados — se mantiene como escritura directa del cliente,
+cubierta por las reglas ya existentes de `allow update` en `studentLinks`
+(revisar si esa regla ya permite esta actualización o si necesita ajustarse
+para permitir que el especialista, sin link previo, actualice un documento
+que ya existe pero que no le pertenece todavía — esto es lo primero a
+diseñar en la próxima sesión).
+
+## 19. Forma de trabajo acordada
 
 - Sesiones de ~60 minutos, cada una con un entregable concreto.
 - Evolución incremental: preservar estabilidad, no reingeniería.

@@ -3,11 +3,14 @@ import {
   collection,
   doc,
   setDoc,
+  getDoc,
   getDocs,
   updateDoc,
   query,
   where,
   serverTimestamp,
+  DocumentSnapshot,
+  DocumentData,
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { PerfilCompleto, PerfilNeuroeducativo } from '@/components/OnboardingWizard';
@@ -56,29 +59,61 @@ export async function guardarStudent(perfil: PerfilCompleto, userId: string): Pr
   }
 }
 
-// ── Obtener todos los alumnos de un usuario ───────────────────────────────────
+// ── Mapeo compartido: documento de `alumnos` → PerfilCompleto ─────────────────
+
+function mapAlumnoDocToPerfil(d: DocumentSnapshot<DocumentData>): PerfilCompleto {
+  const data = d.data()!;
+  // Usar d.id (ID del documento Firestore) como fuente de verdad
+  // data.id puede ser undefined si el alumno fue creado antes de esta versión
+  const id = data.id ?? d.id;
+  return {
+    id,
+    nombre: data.nombre,
+    edad: data.edad,
+    grado: data.grado,
+    condicion: data.condicion,
+    tipoUsuario: data.tipoUsuario ?? 'padre',
+    respuestas: data.respuestas,
+    perfilNeuroeducativo: data.perfilNeuroeducativo,
+    fechaCreacion: data.createdAt?.toMillis?.() ?? data.createdAt ?? Date.now(),
+  } as PerfilCompleto;
+}
+
+// ── Obtener todos los alumnos de un usuario (dueño) ────────────────────────────
 
 export async function getStudentsByUser(userId: string): Promise<PerfilCompleto[]> {
   const q = query(collection(db, 'alumnos'), where('userId', '==', userId));
   const snap = await getDocs(q);
+  return snap.docs.map(mapAlumnoDocToPerfil);
+}
 
-  return snap.docs.map(d => {
-    const data = d.data();
-    // Usar d.id (ID del documento Firestore) como fuente de verdad
-    // data.id puede ser undefined si el alumno fue creado antes de esta versión
-    const id = data.id ?? d.id;
-    return {
-      id,
-      nombre: data.nombre,
-      edad: data.edad,
-      grado: data.grado,
-      condicion: data.condicion,
-      tipoUsuario: data.tipoUsuario ?? 'padre',
-      respuestas: data.respuestas,
-      perfilNeuroeducativo: data.perfilNeuroeducativo,
-      fechaCreacion: data.createdAt?.toMillis?.() ?? data.createdAt ?? Date.now(),
-    } as PerfilCompleto;
-  });
+// ── Obtener alumnos vinculados a un usuario (especialista con studentLinks activo) ─
+
+export async function getStudentsLinkedToUser(userId: string): Promise<PerfilCompleto[]> {
+  const q = query(
+    collection(db, 'studentLinks'),
+    where('userId', '==', userId),
+    where('status', '==', 'activo')
+  );
+  const linksSnap = await getDocs(q);
+
+  const studentIds = linksSnap.docs
+    .map(d => d.data().studentId as string | undefined)
+    .filter((id): id is string => !!id);
+
+  if (studentIds.length === 0) return [];
+
+  const alumnoSnaps = await Promise.all(
+    studentIds.map(studentId => getDoc(doc(db, 'alumnos', studentId)))
+  );
+
+  const perfiles: PerfilCompleto[] = [];
+  for (const snap of alumnoSnaps) {
+    if (snap.exists()) {
+      perfiles.push(mapAlumnoDocToPerfil(snap));
+    }
+  }
+  return perfiles;
 }
 
 // ── Actualizar perfil neuroeducativo (guarda histórico automáticamente) ────────

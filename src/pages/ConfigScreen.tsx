@@ -1,13 +1,14 @@
 // src/pages/ConfigScreen.tsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, User, BookOpen, Pencil, X, CheckCircle, PlusCircle, BarChart2 } from 'lucide-react';
+import { Sparkles, User, BookOpen, Pencil, X, CheckCircle, PlusCircle, BarChart2, UserPlus, Copy, Check } from 'lucide-react';
 import {
     PerfilNino, PerfilPersistente, Condicion, Asignatura, Idioma,
     CONDICIONES, ASIGNATURAS, GRADOS, PERFIL_ACTIVO_KEY,
 } from '@/types';
-import { PerfilCompleto } from '@/components/OnboardingWizard';
+import { PerfilCompleto, TipoUsuario } from '@/components/OnboardingWizard';
 import { actualizarPerfilNeuroeducativo } from '@/lib/studentsService';
+import { crearInvitacion } from '@/lib/studentLinksService';
 
 interface ConfigScreenProps {
     onGenerate: (perfil: PerfilNino) => void;
@@ -16,6 +17,7 @@ interface ConfigScreenProps {
     perfiles: PerfilCompleto[];
     onPerfilesChange: (perfiles: PerfilCompleto[]) => void;
     userId: string;
+    rolUsuario: TipoUsuario;
 }
 
 // ── Edit Profile Modal ───────────────────────────────────────────────────────
@@ -95,6 +97,119 @@ const EditProfileModal: React.FC<{
     );
 };
 
+// ── Invite Specialist Modal ──────────────────────────────────────────────────
+const InviteSpecialistModal: React.FC<{
+    studentId: string;
+    userId: string;
+    onClose: () => void;
+}> = ({ studentId, userId, onClose }) => {
+    const [rol, setRol] = useState<'docente' | 'terapeuta'>('docente');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [codigo, setCodigo] = useState<string | null>(null);
+    const [copiado, setCopiado] = useState(false);
+    const copiadoTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // Limpiar el timeout pendiente si el modal se desmonta antes de los 2s
+    React.useEffect(() => {
+        return () => {
+            if (copiadoTimeoutRef.current) clearTimeout(copiadoTimeoutRef.current);
+        };
+    }, []);
+
+    const handleGenerar = async () => {
+        setError(null);
+        setLoading(true);
+        try {
+            const nuevoCodigo = await crearInvitacion(studentId, userId, rol);
+            setCodigo(nuevoCodigo);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Ocurrió un error. Intenta de nuevo.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleCopiar = async () => {
+        if (!codigo) return;
+        await navigator.clipboard.writeText(codigo);
+        setCopiado(true);
+        if (copiadoTimeoutRef.current) clearTimeout(copiadoTimeoutRef.current);
+        copiadoTimeoutRef.current = setTimeout(() => setCopiado(false), 2000);
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-border sticky top-0 bg-white rounded-t-2xl">
+                    <div className="flex items-center gap-2">
+                        <UserPlus className="w-5 h-5 text-primary" />
+                        <h2 className="font-black text-foreground text-lg">Invitar especialista</h2>
+                    </div>
+                    <button onClick={onClose} className="p-2 rounded-xl hover:bg-muted transition-colors cursor-pointer">
+                        <X className="w-5 h-5 text-muted-foreground" />
+                    </button>
+                </div>
+
+                <div className="p-6 space-y-4">
+                    {!codigo ? (
+                        <>
+                            <div>
+                                <label className="block text-sm font-bold text-foreground/80 mb-2">Rol del especialista</label>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {(['docente', 'terapeuta'] as const).map(r => (
+                                        <button
+                                            key={r}
+                                            type="button"
+                                            onClick={() => setRol(r)}
+                                            className={`p-3 rounded-xl border-2 text-center font-bold text-sm transition-all cursor-pointer ${
+                                                rol === r ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:border-primary/40'
+                                            }`}
+                                        >
+                                            {r === 'docente' ? 'Docente' : 'Terapeuta'}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {error && (
+                                <p className="text-xs text-destructive font-bold text-center">{error}</p>
+                            )}
+
+                            <button
+                                onClick={handleGenerar}
+                                disabled={loading}
+                                className="w-full flex items-center justify-center gap-2 bg-primary text-white font-black py-3.5 rounded-2xl disabled:opacity-60 cursor-pointer shadow-md"
+                            >
+                                {loading ? <Sparkles className="w-5 h-5 animate-pulse" /> : 'Generar invitación'}
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <div className="text-center py-2">
+                                <p className="text-sm text-muted-foreground font-semibold mb-2">Código generado</p>
+                                <p className="text-3xl font-black text-primary tracking-wider">{codigo}</p>
+                            </div>
+
+                            <button
+                                onClick={handleCopiar}
+                                className="w-full flex items-center justify-center gap-2 border-2 border-primary/40 text-primary font-black py-3 rounded-xl hover:bg-primary/5 transition-colors cursor-pointer"
+                            >
+                                {copiado ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                                {copiado ? '¡Copiado!' : 'Copiar código'}
+                            </button>
+
+                            <p className="text-xs text-muted-foreground text-center leading-relaxed">
+                                Comparte este código con el especialista por WhatsApp o correo. Es de un solo uso.
+                            </p>
+                        </>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // ── Main ConfigScreen ────────────────────────────────────────────────────────
 const ConfigScreen: React.FC<ConfigScreenProps> = ({
     onGenerate,
@@ -102,6 +217,7 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({
     perfiles,
     onPerfilesChange,
     userId,
+    rolUsuario,
 }) => {
     const navigate = useNavigate();
 
@@ -112,6 +228,7 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({
     });
 
     const [showEditModal, setShowEditModal] = useState(false);
+    const [showInviteModal, setShowInviteModal] = useState(false);
     const [asignatura, setAsignatura] = useState<Asignatura>('matematicas');
     const [tema, setTema] = useState('');
     const [idioma, setIdioma] = useState<Idioma>('es');
@@ -245,6 +362,16 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({
                                         <Pencil className="w-4 h-4" />
                                         Editar
                                     </button>
+                                    {rolUsuario === 'padre' && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowInviteModal(true)}
+                                            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border-2 border-border text-xs font-black text-muted-foreground hover:border-primary hover:text-primary transition-all cursor-pointer"
+                                        >
+                                            <UserPlus className="w-4 h-4" />
+                                            Invitar especialista
+                                        </button>
+                                    )}
                                 </div>
                             </div>
 
@@ -383,6 +510,14 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({
                     perfil={perfilActivo}
                     onSave={handleGuardarEdicion}
                     onClose={() => setShowEditModal(false)}
+                />
+            )}
+            {/* Invite specialist modal */}
+            {showInviteModal && perfilActivo && (
+                <InviteSpecialistModal
+                    studentId={perfilActivo.id}
+                    userId={userId}
+                    onClose={() => setShowInviteModal(false)}
                 />
             )}
         </div>
