@@ -56,11 +56,10 @@ export async function guardarSession(
 // Sin orderBy: evita requerir índice compuesto en Firestore.
 // El ordenamiento lo hace getDashboardMetrics en el cliente.
 
-export async function getSessionsByStudent(studentId: string, userId: string): Promise<any[]> {
+export async function getSessionsByStudent(studentId: string): Promise<any[]> {
   const q = query(
     collection(db, 'sessions'),
-    where('studentId', '==', studentId),
-    where('userId', '==', userId)
+    where('studentId', '==', studentId)
   );
   const snap = await getDocs(q);
   return snap.docs.map(d => d.data());

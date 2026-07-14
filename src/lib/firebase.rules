@@ -100,10 +100,22 @@ service cloud.firestore {
     }
 
     match /sessions/{sessionId} {
-      allow read, write: if request.auth != null
+      allow read: if request.auth != null && (
+        resource.data.userId == request.auth.uid ||
+        (exists(/databases/$(database)/documents/studentLinks/$(resource.data.studentId + '_' + request.auth.uid))
+         && get(/databases/$(database)/documents/studentLinks/$(resource.data.studentId + '_' + request.auth.uid)).data.status == 'activo')
+      );
+
+      allow create: if request.auth != null && (
+        request.resource.data.userId == request.auth.uid ||
+        (exists(/databases/$(database)/documents/studentLinks/$(request.resource.data.studentId + '_' + request.auth.uid))
+         && get(/databases/$(database)/documents/studentLinks/$(request.resource.data.studentId + '_' + request.auth.uid)).data.status == 'activo'
+         && (get(/databases/$(database)/documents/studentLinks/$(request.resource.data.studentId + '_' + request.auth.uid)).data.role == 'familia'
+             || get(/databases/$(database)/documents/studentLinks/$(request.resource.data.studentId + '_' + request.auth.uid)).data.role == 'docente'))
+      );
+
+      allow update, delete: if request.auth != null
         && resource.data.userId == request.auth.uid;
-      allow create: if request.auth != null
-        && request.resource.data.userId == request.auth.uid;
     }
 
     match /student_profiles_history/{histId} {

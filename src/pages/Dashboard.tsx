@@ -6,10 +6,11 @@ import {
   ChevronDown, X, PlayCircle
 } from 'lucide-react';
 import { getDashboardMetrics } from '@/lib/dashboardMetrics';
-import { onAuthChange } from '@/lib/authService';
-import { getStudentsByUser } from '@/lib/studentsService';
+import { onAuthChange, getRolUsuario } from '@/lib/authService';
+import { getStudentsByUser, getStudentsLinkedToUser } from '@/lib/studentsService';
 import { getSessionsByStudent } from '@/lib/sessionsService';
 import { ASIGNATURAS, EMOCIONES, CONDICIONES, INTERESES } from '@/types';
+import { TipoUsuario } from '@/components/OnboardingWizard';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers de fechas
@@ -250,6 +251,7 @@ export default function Dashboard() {
   const [todasSesiones, setTodasSesiones] = useState<any[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState<string>('');
   const [userId, setUserId] = useState<string>('');
+  const [rolUsuario, setRolUsuario] = useState<TipoUsuario>('padre');
 
   // ── Filtro de fechas ──
   const [filtroFecha, setFiltroFecha] = useState<FiltroFecha>('mes');
@@ -266,7 +268,11 @@ export default function Dashboard() {
       if (!user) return;
       try {
         setUserId(user.uid);
-        const students = await getStudentsByUser(user.uid);
+        const rol = await getRolUsuario(user.uid);
+        setRolUsuario(rol);
+        const students = rol === 'docente' || rol === 'terapeuta'
+          ? await getStudentsLinkedToUser(user.uid)
+          : await getStudentsByUser(user.uid);
         setPerfiles(students);
         if (students.length > 0) {
             setSelectedStudentId(students[0].id);
@@ -281,7 +287,7 @@ export default function Dashboard() {
   useEffect(() => {
       if (!selectedStudentId) return;
     setAsignaturaDetalle(null);
-      getSessionsByStudent(selectedStudentId, userId)
+      getSessionsByStudent(selectedStudentId)
       .then(sesiones => setTodasSesiones(sesiones))
       .catch(e => console.error('Error cargando sesiones:', e));
   }, [selectedStudentId, userId]);
