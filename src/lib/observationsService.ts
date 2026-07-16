@@ -83,7 +83,10 @@ async function clasificarObservacion(
       }),
     });
 
-    const data = await res.json();
+    const rawResponseText = await res.text();
+    // TEMP - solo para depurar clasificación fallida, quitar después
+    console.log('[clasificarObservacion] res.status:', res.status, 'body:', rawResponseText);
+    const data = JSON.parse(rawResponseText);
     const raw = data.choices?.[0]?.message?.content || '{}';
     const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
     const dimensiones = Array.isArray(parsed.dimensiones) ? parsed.dimensiones : [];
@@ -94,7 +97,9 @@ async function clasificarObservacion(
     );
 
     return validas.length > 0 ? validas : null;
-  } catch {
+  } catch (err) {
+    // TEMP - solo para depurar clasificación fallida, quitar después
+    console.error('[clasificarObservacion] error real capturado:', err);
     return null;
   }
 }
