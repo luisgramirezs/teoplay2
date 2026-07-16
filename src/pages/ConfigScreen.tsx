@@ -1,7 +1,7 @@
 // src/pages/ConfigScreen.tsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, User, BookOpen, Pencil, X, CheckCircle, PlusCircle, BarChart2, UserPlus, Copy, Check } from 'lucide-react';
+import { Sparkles, User, BookOpen, Pencil, X, CheckCircle, PlusCircle, BarChart2, UserPlus, Copy, Check, ClipboardList } from 'lucide-react';
 import {
     PerfilNino, PerfilPersistente, Condicion, Asignatura, Idioma,
     CONDICIONES, ASIGNATURAS, GRADOS, PERFIL_ACTIVO_KEY,
@@ -9,6 +9,7 @@ import {
 import { PerfilCompleto, TipoUsuario } from '@/components/OnboardingWizard';
 import { actualizarPerfilNeuroeducativo } from '@/lib/studentsService';
 import { crearInvitacion } from '@/lib/studentLinksService';
+import ObservationForm from '@/components/ObservationForm';
 
 interface ConfigScreenProps {
     onGenerate: (perfil: PerfilNino) => void;
@@ -229,6 +230,7 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({
 
     const [showEditModal, setShowEditModal] = useState(false);
     const [showInviteModal, setShowInviteModal] = useState(false);
+    const [showObservationModal, setShowObservationModal] = useState(false);
     const [asignatura, setAsignatura] = useState<Asignatura>('matematicas');
     const [tema, setTema] = useState('');
     const [idioma, setIdioma] = useState<Idioma>('es');
@@ -361,6 +363,14 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({
                                     >
                                         <Pencil className="w-4 h-4" />
                                         Editar
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowObservationModal(true)}
+                                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl border-2 border-border text-xs font-black text-muted-foreground hover:border-primary hover:text-primary transition-all cursor-pointer"
+                                    >
+                                        <ClipboardList className="w-4 h-4" />
+                                        Ficha de retroalimentación
                                     </button>
                                     {rolUsuario === 'padre' && (
                                         <button
@@ -518,6 +528,15 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({
                     studentId={perfilActivo.id}
                     userId={userId}
                     onClose={() => setShowInviteModal(false)}
+                />
+            )}
+            {/* Observation form modal */}
+            {showObservationModal && perfilActivo && (
+                <ObservationForm
+                    studentId={perfilActivo.id}
+                    userId={userId}
+                    rolUsuario={rolUsuario}
+                    onClose={() => setShowObservationModal(false)}
                 />
             )}
         </div>
