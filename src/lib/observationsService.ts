@@ -1,5 +1,5 @@
 // src/lib/observationsService.ts
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, setDoc, getDocs, query, where, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { db } from './firebase';
 
 // ── Tipos ───────────────────────────────────────────────────────────────────
@@ -15,6 +15,20 @@ export type DimensionKey =
 export type ActorRole = 'familia' | 'docente' | 'terapeuta';
 export type Relevancia = 'alta' | 'media' | 'baja';
 export type ClassificationStatus = 'completo' | 'fallback';
+
+export interface Observacion {
+  id: string;
+  studentId: string;
+  authorId: string;
+  authorRole: ActorRole;
+  fecha: number;
+  relevancia: Relevancia;
+  dimensionSugerida: DimensionKey | null;
+  freeText: string;
+  classifiedDimensions: DimensionKey[];
+  classificationStatus: ClassificationStatus;
+  createdAt: Timestamp | null;
+}
 
 const DIMENSIONES_VALIDAS: DimensionKey[] = [
   'aprendizajeYDesempeno',
@@ -136,4 +150,17 @@ export async function crearObservacion(
   });
 
   return id;
+}
+
+// ── Obtener observaciones de un alumno ────────────────────────────────────────
+// Sin orderBy: evita requerir índice compuesto en Firestore, igual que
+// getSessionsByStudent en sessionsService.ts.
+
+export async function getObservationsByStudent(studentId: string): Promise<Observacion[]> {
+  const q = query(
+    collection(db, 'observations'),
+    where('studentId', '==', studentId)
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map(d => d.data() as Observacion);
 }

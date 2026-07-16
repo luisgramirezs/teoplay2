@@ -145,5 +145,21 @@ service cloud.firestore {
 
       allow update, delete: if false;
     }
+
+    match /neuroeducationalProfiles/{studentId} {
+      allow read: if request.auth != null && (
+        get(/databases/$(database)/documents/alumnos/$(studentId)).data.userId == request.auth.uid ||
+        (exists(/databases/$(database)/documents/studentLinks/$(studentId + '_' + request.auth.uid))
+         && get(/databases/$(database)/documents/studentLinks/$(studentId + '_' + request.auth.uid)).data.status == 'activo')
+      );
+
+      allow create, update: if request.auth != null && (
+        get(/databases/$(database)/documents/alumnos/$(studentId)).data.userId == request.auth.uid ||
+        (exists(/databases/$(database)/documents/studentLinks/$(studentId + '_' + request.auth.uid))
+         && get(/databases/$(database)/documents/studentLinks/$(studentId + '_' + request.auth.uid)).data.status == 'activo')
+      );
+
+      allow delete: if false;
+    }
   }
 }
