@@ -161,8 +161,8 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
     if (!file) return;
     setArchivoNombre(file.name);
     try {
-      const { getDocument, GlobalWorkerOptions } = await import('pdfjs-dist');
-      GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
+      const { getDocument, GlobalWorkerOptions, version } = await import('pdfjs-dist');
+      GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${version}/pdf.worker.min.mjs`;
       const arrayBuffer = await file.arrayBuffer();
       const pdf = await getDocument({ data: arrayBuffer }).promise;
       let texto = '';

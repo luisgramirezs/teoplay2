@@ -70,8 +70,8 @@ const ObservationForm: React.FC<ObservationFormProps> = ({ studentId, userId, ro
         setAvisoExtraccion(null);
         setExtrayendo(true);
         try {
-            const { getDocument, GlobalWorkerOptions } = await import('pdfjs-dist');
-            GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
+            const { getDocument, GlobalWorkerOptions, version } = await import('pdfjs-dist');
+            GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${version}/pdf.worker.min.mjs`;
             const arrayBuffer = await file.arrayBuffer();
             const pdf = await getDocument({ data: arrayBuffer }).promise;
             let texto = '';
@@ -84,9 +84,7 @@ const ObservationForm: React.FC<ObservationFormProps> = ({ studentId, userId, ro
                 ).join(' ') + '\n';
             }
             setTextoInforme(texto.slice(0, 8000));
-        } catch (err) {
-            // TEMPORAL: depuración de extracción PDF
-            console.error('Error extrayendo texto del PDF:', err);
+        } catch {
             setTextoInforme(null);
             setAvisoExtraccion('No se pudo leer el PDF. Puedes continuar con el texto que ya escribiste.');
         } finally {
