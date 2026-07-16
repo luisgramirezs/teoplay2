@@ -1,6 +1,6 @@
 // src/components/ObservationForm.tsx
-import React, { useState } from 'react';
-import { X, Sparkles, CheckCircle, ClipboardList } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { X, Sparkles, CheckCircle, ClipboardList, Upload, FileText } from 'lucide-react';
 import { crearObservacion, ActorRole, DimensionKey, Relevancia } from '@/lib/observationsService';
 import { TipoUsuario } from '@/components/OnboardingWizard';
 
@@ -53,9 +53,44 @@ const ObservationForm: React.FC<ObservationFormProps> = ({ studentId, userId, ro
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
+    const [archivoNombre, setArchivoNombre] = useState<string | null>(null);
+    const [textoInforme, setTextoInforme] = useState<string | null>(null);
+    const [extrayendo, setExtrayendo] = useState(false);
+    const [avisoExtraccion, setAvisoExtraccion] = useState<string | null>(null);
+    const fileRef = useRef<HTMLInputElement>(null);
 
     const inputClass = 'w-full px-4 py-3 bg-white border-2 border-border rounded-xl text-sm font-semibold text-foreground focus:outline-none focus:border-primary transition-colors';
     const labelClass = 'block text-sm font-bold text-foreground/80 mb-2';
+
+    // Mismo patrón de extracción que OnboardingWizard.handleArchivo — no se guarda el archivo, solo se lee su texto.
+    const handleArchivo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setArchivoNombre(file.name);
+        setAvisoExtraccion(null);
+        setExtrayendo(true);
+        try {
+            const { getDocument, GlobalWorkerOptions } = await import('pdfjs-dist');
+            GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await getDocument({ data: arrayBuffer }).promise;
+            let texto = '';
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const content = await page.getTextContent();
+                texto += content.items.map((item: unknown) =>
+                    (typeof item === 'object' && item !== null && 'str' in item
+                        ? (item as { str: string }).str : '')
+                ).join(' ') + '\n';
+            }
+            setTextoInforme(texto.slice(0, 8000));
+        } catch {
+            setTextoInforme(null);
+            setAvisoExtraccion('No se pudo leer el PDF. Puedes continuar con el texto que ya escribiste.');
+        } finally {
+            setExtrayendo(false);
+        }
+    };
 
     const handleGuardar = async () => {
         if (!freeText.trim()) {
@@ -65,6 +100,9 @@ const ObservationForm: React.FC<ObservationFormProps> = ({ studentId, userId, ro
         setError(null);
         setLoading(true);
         try {
+            const textoFinal = textoInforme
+                ? `${freeText.trim()}\n\n--- Informe adjunto ---\n${textoInforme}`
+                : freeText.trim();
             await crearObservacion(
                 studentId,
                 userId,
@@ -72,7 +110,7 @@ const ObservationForm: React.FC<ObservationFormProps> = ({ studentId, userId, ro
                 relevancia,
                 dimensionSugerida,
                 new Date(fecha).getTime(),
-                freeText.trim()
+                textoFinal
             );
             setSuccess(true);
         } catch (err) {
@@ -156,6 +194,45 @@ const ObservationForm: React.FC<ObservationFormProps> = ({ studentId, userId, ro
                                 />
                             </div>
 
+                            {/* Informe PDF opcional */}
+                            <div>
+                                <label className={labelClass}>Adjuntar informe PDF — opcional</label>
+                                <input
+                                    ref={fileRef}
+                                    type="file"
+                                    accept=".pdf"
+                                    className="hidden"
+                                    onChange={handleArchivo}
+                                />
+                                {!archivoNombre ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => fileRef.current?.click()}
+                                        className="w-full flex items-center justify-center gap-2 p-4 border-2 border-dashed border-border rounded-xl hover:border-primary/40 hover:bg-primary/5 transition-all cursor-pointer"
+                                    >
+                                        <Upload className="w-4 h-4 text-muted-foreground" />
+                                        <span className="text-sm font-bold text-muted-foreground">Subir informe PDF</span>
+                                    </button>
+                                ) : (
+                                    <div className="flex items-center gap-3 p-3 bg-teo-green/10 border border-teo-green/30 rounded-xl">
+                                        <FileText className="w-5 h-5 text-teo-green flex-shrink-0" />
+                                        <p className="text-sm font-bold text-foreground flex-1 truncate">
+                                            {extrayendo ? 'Extrayendo texto...' : archivoNombre}
+                                        </p>
+                                        <button
+                                            type="button"
+                                            onClick={() => { setArchivoNombre(null); setTextoInforme(null); setAvisoExtraccion(null); }}
+                                            className="p-1 rounded-lg hover:bg-muted cursor-pointer"
+                                        >
+                                            <X className="w-4 h-4 text-muted-foreground" />
+                                        </button>
+                                    </div>
+                                )}
+                                {avisoExtraccion && (
+                                    <p className="text-xs text-muted-foreground font-semibold mt-2">{avisoExtraccion}</p>
+                                )}
+                            </div>
+
                             {error && (
                                 <p className="text-xs text-destructive font-bold text-center">{error}</p>
                             )}
@@ -164,7 +241,7 @@ const ObservationForm: React.FC<ObservationFormProps> = ({ studentId, userId, ro
                         <div className="px-6 pb-6">
                             <button
                                 onClick={handleGuardar}
-                                disabled={loading}
+                                disabled={loading || extrayendo}
                                 className="w-full flex items-center justify-center gap-2 bg-primary text-white font-black py-3.5 rounded-2xl disabled:opacity-60 cursor-pointer shadow-md"
                             >
                                 {loading ? (
