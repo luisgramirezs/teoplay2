@@ -4,6 +4,7 @@ import { KeyRound, Sparkles, ChevronRight } from 'lucide-react';
 import { PerfilNino, SesionGenerada, SessionData, AppScreen } from '@/types';
 import { PERFIL_ACTIVO_KEY } from '@/types';
 import ConfigScreen from '@/pages/ConfigScreen';
+import DimensionsScreen from '@/pages/DimensionsScreen';
 import ChildSession from '@/pages/ChildSession';
 import ReportScreen from '@/pages/ReportScreen';
 import LoginScreen from '@/pages/LoginScreen';
@@ -219,12 +220,12 @@ const Index: React.FC = () => {
             if (rol === 'docente' || rol === 'terapeuta') {
                 getStudentsLinkedToUser(authUser.uid).then(students => {
                     setPerfiles(students);
-                    setScreen(students.length === 0 ? 'canjear-invitacion' : 'config');
+                    setScreen(students.length === 0 ? 'canjear-invitacion' : 'dimensions');
                 });
             } else {
                 getStudentsByUser(authUser.uid).then(students => {
                     setPerfiles(students);
-                    setScreen(students.length === 0 ? 'onboarding' : 'config');
+                    setScreen(students.length === 0 ? 'onboarding' : 'dimensions');
                 });
             }
         });
@@ -235,7 +236,7 @@ const Index: React.FC = () => {
         await guardarStudent(perfilCompleto, authUser.uid);
         localStorage.setItem(PERFIL_ACTIVO_KEY, perfilCompleto.id);
         setPerfiles(prev => [...prev, perfilCompleto]);
-        setScreen('config');
+        setScreen('dimensions');
     };
 
     const handleGenerate = (p: PerfilNino) => {
@@ -256,7 +257,7 @@ const Index: React.FC = () => {
         setSesion(null);
         setSessionData(null);
         setPerfil(null);
-        setScreen('config');
+        setScreen('dimensions');
     };
 
     const handleBack = () => {
@@ -309,18 +310,24 @@ const Index: React.FC = () => {
                     userId={authUser.uid}
                     onSuccess={(students) => {
                         setPerfiles(students);
-                        setScreen('config');
+                        setScreen('dimensions');
                     }}
+                />
+            )}
+            {screen === 'dimensions' && (
+                <DimensionsScreen
+                    perfiles={perfiles}
+                    onPerfilesChange={setPerfiles}
+                    userId={authUser.uid}
+                    rolUsuario={rolUsuario}
+                    onAgregarNino={() => setScreen('onboarding')}
+                    onFlexibilizarClase={() => setScreen('config')}
                 />
             )}
             {screen === 'config' && (
                 <ConfigScreen
                     onGenerate={handleGenerate}
-                    onAgregarNino={() => setScreen('onboarding')}
                     perfiles={perfiles}
-                    onPerfilesChange={setPerfiles}
-                    userId={authUser.uid}
-                    rolUsuario={rolUsuario}
                 />
             )}
             {screen === 'session' && perfil && (

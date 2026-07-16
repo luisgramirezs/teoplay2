@@ -35,7 +35,7 @@ export type Idioma = 'es' | 'en';
 
 export type TipoJuego = 'A' | 'B' | 'C' | 'D' | 'E';
 
-export type AppScreen = 'config' | 'session' | 'report' | 'canjear-invitacion';
+export type AppScreen = 'dimensions' | 'config' | 'session' | 'report' | 'canjear-invitacion';
 export type SessionPhase = 1 | 2 | 3 | 4;
 
 /** Perfil del niño — nombre/edad/grado/condición persisten en localStorage */

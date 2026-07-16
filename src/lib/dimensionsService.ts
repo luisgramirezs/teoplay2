@@ -179,6 +179,13 @@ async function sintetizarDimensiones(evidencias: EvidenciaDimension[]): Promise<
   }
 }
 
+// ── Lectura del perfil ya calculado (sin recalcular) ──────────────────────────
+
+export async function getPerfilDimensiones(studentId: string): Promise<NeuroeducationalProfile | null> {
+  const snap = await getDoc(doc(db, 'neuroeducationalProfiles', studentId));
+  return snap.exists() ? (snap.data() as NeuroeducationalProfile) : null;
+}
+
 // ── Cálculo bajo demanda del perfil de dimensiones ────────────────────────────
 
 export async function calcularPerfilDimensiones(studentId: string): Promise<void> {

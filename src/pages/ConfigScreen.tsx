@@ -1,236 +1,25 @@
 // src/pages/ConfigScreen.tsx
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Sparkles, User, BookOpen, Pencil, X, CheckCircle, PlusCircle, BarChart2, UserPlus, Copy, Check, ClipboardList } from 'lucide-react';
-import {
-    PerfilNino, PerfilPersistente, Condicion, Asignatura, Idioma,
-    CONDICIONES, ASIGNATURAS, GRADOS, PERFIL_ACTIVO_KEY,
-} from '@/types';
-import { PerfilCompleto, TipoUsuario } from '@/components/OnboardingWizard';
-import { actualizarPerfilNeuroeducativo } from '@/lib/studentsService';
-import { crearInvitacion } from '@/lib/studentLinksService';
-import ObservationForm from '@/components/ObservationForm';
+import { Sparkles, BookOpen } from 'lucide-react';
+import { PerfilNino, Asignatura, Idioma, ASIGNATURAS, PERFIL_ACTIVO_KEY } from '@/types';
+import { PerfilCompleto } from '@/components/OnboardingWizard';
 
 interface ConfigScreenProps {
     onGenerate: (perfil: PerfilNino) => void;
-    onAgregarNino: () => void;
-    // ── Nuevas props: perfiles vienen de Firestore vía Index ──────────────────
     perfiles: PerfilCompleto[];
-    onPerfilesChange: (perfiles: PerfilCompleto[]) => void;
-    userId: string;
-    rolUsuario: TipoUsuario;
 }
-
-// ── Edit Profile Modal ───────────────────────────────────────────────────────
-const EditProfileModal: React.FC<{
-    perfil: PerfilCompleto;
-    onSave: (p: PerfilCompleto) => void;
-    onClose: () => void;
-}> = ({ perfil, onSave, onClose }) => {
-    const [draft, setDraft] = useState<PerfilPersistente>({
-        nombre: perfil.nombre,
-        edad: perfil.edad,
-        grado: perfil.grado,
-        condicion: perfil.condicion,
-    });
-
-    const inputClass = 'w-full px-4 py-3 bg-white border-2 border-border rounded-xl text-sm font-semibold text-foreground focus:outline-none focus:border-primary transition-colors';
-    const labelClass = 'block text-sm font-bold text-foreground/80 mb-2';
-
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-                <div className="flex items-center justify-between px-6 py-4 border-b border-border sticky top-0 bg-white rounded-t-2xl">
-                    <div className="flex items-center gap-2">
-                        <User className="w-5 h-5 text-primary" />
-                        <h2 className="font-black text-foreground text-lg">Editar perfil</h2>
-                    </div>
-                    <button onClick={onClose} className="p-2 rounded-xl hover:bg-muted transition-colors cursor-pointer">
-                        <X className="w-5 h-5 text-muted-foreground" />
-                    </button>
-                </div>
-                <div className="p-6 space-y-4">
-                    <div>
-                        <label className={labelClass}>Nombre</label>
-                        <input type="text" className={inputClass} value={draft.nombre}
-                            onChange={e => setDraft(d => ({ ...d, nombre: e.target.value }))} />
-                    </div>
-                    <div>
-                        <label className={labelClass}>Edad: <span className="text-primary font-black">{draft.edad} años</span></label>
-                        <input type="range" min={5} max={15} value={draft.edad}
-                            onChange={e => setDraft(d => ({ ...d, edad: Number(e.target.value) }))}
-                            className="w-full h-2 bg-muted rounded-full appearance-none cursor-pointer accent-primary mt-2" />
-                    </div>
-                    <div>
-                        <label className={labelClass}>Grado escolar</label>
-                        <select className={inputClass} value={draft.grado}
-                            onChange={e => setDraft(d => ({ ...d, grado: e.target.value }))}>
-                            {GRADOS.map(g => <option key={g} value={g}>{g}</option>)}
-                        </select>
-                    </div>
-                    <div>
-                        <label className={labelClass}>Condición principal</label>
-                        <div className="grid grid-cols-2 gap-2">
-                            {(Object.entries(CONDICIONES) as [Condicion, typeof CONDICIONES[Condicion]][]).map(([key, val]) => (
-                                <button key={key} type="button"
-                                    onClick={() => setDraft(d => ({ ...d, condicion: key }))}
-                                    className={`p-3 rounded-xl border-2 text-left transition-all ${draft.condicion === key ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/40'}`}>
-                                    <div className={`font-bold text-sm ${draft.condicion === key ? 'text-primary' : 'text-foreground'}`}>{val.label}</div>
-                                    <div className="text-xs text-muted-foreground mt-0.5">{val.descripcion}</div>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-                <div className="px-6 pb-6 flex gap-3">
-                    <button onClick={onClose}
-                        className="flex-1 py-3 rounded-xl border-2 border-border font-bold text-muted-foreground hover:bg-muted transition-colors cursor-pointer">
-                        Cancelar
-                    </button>
-                    <button
-                        onClick={() => { onSave({ ...perfil, ...draft }); onClose(); }}
-                        className="flex-1 py-3 rounded-xl bg-primary text-white font-black transition-colors hover:bg-primary/90 flex items-center justify-center gap-2 cursor-pointer">
-                        <CheckCircle className="w-4 h-4" /> Guardar
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-// ── Invite Specialist Modal ──────────────────────────────────────────────────
-const InviteSpecialistModal: React.FC<{
-    studentId: string;
-    userId: string;
-    onClose: () => void;
-}> = ({ studentId, userId, onClose }) => {
-    const [rol, setRol] = useState<'docente' | 'terapeuta'>('docente');
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [codigo, setCodigo] = useState<string | null>(null);
-    const [copiado, setCopiado] = useState(false);
-    const copiadoTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-
-    // Limpiar el timeout pendiente si el modal se desmonta antes de los 2s
-    React.useEffect(() => {
-        return () => {
-            if (copiadoTimeoutRef.current) clearTimeout(copiadoTimeoutRef.current);
-        };
-    }, []);
-
-    const handleGenerar = async () => {
-        setError(null);
-        setLoading(true);
-        try {
-            const nuevoCodigo = await crearInvitacion(studentId, userId, rol);
-            setCodigo(nuevoCodigo);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Ocurrió un error. Intenta de nuevo.');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleCopiar = async () => {
-        if (!codigo) return;
-        await navigator.clipboard.writeText(codigo);
-        setCopiado(true);
-        if (copiadoTimeoutRef.current) clearTimeout(copiadoTimeoutRef.current);
-        copiadoTimeoutRef.current = setTimeout(() => setCopiado(false), 2000);
-    };
-
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-                <div className="flex items-center justify-between px-6 py-4 border-b border-border sticky top-0 bg-white rounded-t-2xl">
-                    <div className="flex items-center gap-2">
-                        <UserPlus className="w-5 h-5 text-primary" />
-                        <h2 className="font-black text-foreground text-lg">Invitar especialista</h2>
-                    </div>
-                    <button onClick={onClose} className="p-2 rounded-xl hover:bg-muted transition-colors cursor-pointer">
-                        <X className="w-5 h-5 text-muted-foreground" />
-                    </button>
-                </div>
-
-                <div className="p-6 space-y-4">
-                    {!codigo ? (
-                        <>
-                            <div>
-                                <label className="block text-sm font-bold text-foreground/80 mb-2">Rol del especialista</label>
-                                <div className="grid grid-cols-2 gap-2">
-                                    {(['docente', 'terapeuta'] as const).map(r => (
-                                        <button
-                                            key={r}
-                                            type="button"
-                                            onClick={() => setRol(r)}
-                                            className={`p-3 rounded-xl border-2 text-center font-bold text-sm transition-all cursor-pointer ${
-                                                rol === r ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:border-primary/40'
-                                            }`}
-                                        >
-                                            {r === 'docente' ? 'Docente' : 'Terapeuta'}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {error && (
-                                <p className="text-xs text-destructive font-bold text-center">{error}</p>
-                            )}
-
-                            <button
-                                onClick={handleGenerar}
-                                disabled={loading}
-                                className="w-full flex items-center justify-center gap-2 bg-primary text-white font-black py-3.5 rounded-2xl disabled:opacity-60 cursor-pointer shadow-md"
-                            >
-                                {loading ? <Sparkles className="w-5 h-5 animate-pulse" /> : 'Generar invitación'}
-                            </button>
-                        </>
-                    ) : (
-                        <>
-                            <div className="text-center py-2">
-                                <p className="text-sm text-muted-foreground font-semibold mb-2">Código generado</p>
-                                <p className="text-3xl font-black text-primary tracking-wider">{codigo}</p>
-                            </div>
-
-                            <button
-                                onClick={handleCopiar}
-                                className="w-full flex items-center justify-center gap-2 border-2 border-primary/40 text-primary font-black py-3 rounded-xl hover:bg-primary/5 transition-colors cursor-pointer"
-                            >
-                                {copiado ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                                {copiado ? '¡Copiado!' : 'Copiar código'}
-                            </button>
-
-                            <p className="text-xs text-muted-foreground text-center leading-relaxed">
-                                Comparte este código con el especialista por WhatsApp o correo. Es de un solo uso.
-                            </p>
-                        </>
-                    )}
-                </div>
-            </div>
-        </div>
-    );
-};
 
 // ── Main ConfigScreen ────────────────────────────────────────────────────────
 const ConfigScreen: React.FC<ConfigScreenProps> = ({
     onGenerate,
-    onAgregarNino,
     perfiles,
-    onPerfilesChange,
-    userId,
-    rolUsuario,
 }) => {
-    const navigate = useNavigate();
-
     // Perfil activo: primero intentamos el guardado en localStorage, si no el primero de la lista
     const [perfilActivo, setPerfilActivo] = useState<PerfilCompleto | null>(() => {
         const id = localStorage.getItem(PERFIL_ACTIVO_KEY);
         return perfiles.find(p => p.id === id) || perfiles[0] || null;
     });
 
-    const [showEditModal, setShowEditModal] = useState(false);
-    const [showInviteModal, setShowInviteModal] = useState(false);
-    const [showObservationModal, setShowObservationModal] = useState(false);
     const [asignatura, setAsignatura] = useState<Asignatura>('matematicas');
     const [tema, setTema] = useState('');
     const [idioma, setIdioma] = useState<Idioma>('es');
@@ -247,31 +36,6 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({
             if (actualizado) setPerfilActivo(actualizado);
         }
     }, [perfiles]);
-
-    const handleSeleccionarPerfil = (id: string) => {
-        const p = perfiles.find(p => p.id === id) || null;
-        setPerfilActivo(p);
-        if (id) localStorage.setItem(PERFIL_ACTIVO_KEY, id);
-    };
-
-    const handleGuardarEdicion = async (perfilEditado: PerfilCompleto) => {
-        const nuevos = perfiles.map(p => p.id === perfilEditado.id ? perfilEditado : p);
-        onPerfilesChange(nuevos);
-        setPerfilActivo(perfilEditado);
-
-        // Si tiene perfil neuroeducativo, actualizar también en Firestore
-        if (perfilEditado.perfilNeuroeducativo) {
-            try {
-                await actualizarPerfilNeuroeducativo(
-                    perfilEditado.id,
-                    perfilEditado.perfilNeuroeducativo,
-                    Date.now()
-                );
-            } catch (e) {
-                console.error('Error actualizando perfil en Firestore:', e);
-            }
-        }
-    };
 
     const validate = () => {
         const errs: Record<string, string> = {};
@@ -331,108 +95,10 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({
             <main className="max-w-4xl mx-auto px-4 py-8">
                 <form onSubmit={handleSubmit} className="space-y-6">
 
-                    {/* Selector de niño */}
-                    <section className="bg-white rounded-2xl border-2 border-primary/20 shadow-sm overflow-hidden">
-                        <div className="px-6 py-4">
-                            <div className="flex items-center justify-between mb-4">
-                                <h2 className="font-black text-foreground text-base flex items-center gap-2">
-                                    <User className="w-5 h-5 text-primary" />
-                                    Niño/a activo
-                                </h2>
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        type="button"
-                                        onClick={onAgregarNino}
-                                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl border-2 border-dashed border-primary/40 text-xs font-black text-primary hover:bg-primary/5 transition-all cursor-pointer"
-                                    >
-                                        <PlusCircle className="w-4 h-4" />
-                                        Agregar niño
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => navigate('/dashboard')}
-                                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl border-2 border-border text-xs font-black text-muted-foreground hover:border-primary hover:text-primary transition-all cursor-pointer"
-                                    >
-                                        <BarChart2 className="w-4 h-4" />
-                                        Tablero
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowEditModal(true)}
-                                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl border-2 border-border text-xs font-black text-muted-foreground hover:border-primary hover:text-primary transition-all cursor-pointer"
-                                    >
-                                        <Pencil className="w-4 h-4" />
-                                        Editar
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowObservationModal(true)}
-                                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl border-2 border-border text-xs font-black text-muted-foreground hover:border-primary hover:text-primary transition-all cursor-pointer"
-                                    >
-                                        <ClipboardList className="w-4 h-4" />
-                                        Ficha de retroalimentación
-                                    </button>
-                                    {rolUsuario === 'padre' && (
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowInviteModal(true)}
-                                            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border-2 border-border text-xs font-black text-muted-foreground hover:border-primary hover:text-primary transition-all cursor-pointer"
-                                        >
-                                            <UserPlus className="w-4 h-4" />
-                                            Invitar especialista
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Lista de perfiles si hay más de uno */}
-                            {perfiles.length > 1 && (
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
-                                    {perfiles.map(p => (
-                                        <button
-                                            key={p.id}
-                                            type="button"
-                                            onClick={() => handleSeleccionarPerfil(p.id)}
-                                            className={`flex items-center gap-2 p-3 rounded-xl border-2 text-left transition-all ${perfilActivo.id === p.id
-                                                ? 'border-primary bg-primary/5'
-                                                : 'border-border hover:border-primary/40'
-                                                }`}
-                                        >
-                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-black flex-shrink-0 ${perfilActivo.id === p.id ? 'bg-primary text-white' : 'bg-muted text-foreground'}`}>
-                                                {p.nombre ? p.nombre.charAt(0).toUpperCase() : '?'}
-                                            </div>
-                                            <div className="overflow-hidden">
-                                                <p className={`font-black text-xs truncate ${perfilActivo.id === p.id ? 'text-primary' : 'text-foreground'}`}>
-                                                    {p.nombre || 'Sin nombre'}
-                                                </p>
-                                                <p className="text-xs text-muted-foreground truncate">{CONDICIONES[p.condicion]?.label}</p>
-                                            </div>
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-
-                            {/* Perfil activo */}
-                            <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-xl">
-                                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-lg font-black text-primary flex-shrink-0">
-                                    {perfilActivo.nombre ? perfilActivo.nombre.charAt(0).toUpperCase() : '👤'}
-                                </div>
-                                <div className="flex-1">
-                                    <p className="font-black text-foreground text-sm">
-                                        {perfilActivo.nombre || 'Sin nombre'} · {perfilActivo.edad} años
-                                    </p>
-                                    <p className="text-xs text-muted-foreground font-semibold">
-                                        {perfilActivo.grado} · {CONDICIONES[perfilActivo.condicion]?.label}
-                                    </p>
-                                </div>
-                                {perfilActivo.perfilNeuroeducativo && (
-                                    <span className="text-xs font-black text-teo-green bg-teo-green/10 px-2 py-1 rounded-lg">
-                                        ✓ Perfil IA
-                                    </span>
-                                )}
-                            </div>
-                        </div>
-                    </section>
+                    {/* Contexto: niño activo (solo lectura, sin selector ni botones) */}
+                    <p className="text-sm font-bold text-muted-foreground">
+                        Generando lección para: <span className="text-foreground">{perfilActivo.nombre || 'Sin nombre'}</span>
+                    </p>
 
                     {/* Nueva lección */}
                     <section className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
@@ -513,32 +179,6 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({
                     </div>
                 </form>
             </main>
-
-            {/* Edit modal */}
-            {showEditModal && perfilActivo && (
-                <EditProfileModal
-                    perfil={perfilActivo}
-                    onSave={handleGuardarEdicion}
-                    onClose={() => setShowEditModal(false)}
-                />
-            )}
-            {/* Invite specialist modal */}
-            {showInviteModal && perfilActivo && (
-                <InviteSpecialistModal
-                    studentId={perfilActivo.id}
-                    userId={userId}
-                    onClose={() => setShowInviteModal(false)}
-                />
-            )}
-            {/* Observation form modal */}
-            {showObservationModal && perfilActivo && (
-                <ObservationForm
-                    studentId={perfilActivo.id}
-                    userId={userId}
-                    rolUsuario={rolUsuario}
-                    onClose={() => setShowObservationModal(false)}
-                />
-            )}
         </div>
     );
 };
