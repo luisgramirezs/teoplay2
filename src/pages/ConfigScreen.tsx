@@ -9,7 +9,6 @@ import {
 import { PerfilCompleto, TipoUsuario } from '@/components/OnboardingWizard';
 import { actualizarPerfilNeuroeducativo } from '@/lib/studentsService';
 import { crearInvitacion } from '@/lib/studentLinksService';
-import { crearObservacion } from '@/lib/observationsService';
 
 interface ConfigScreenProps {
     onGenerate: (perfil: PerfilNino) => void;
@@ -272,26 +271,6 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({
         }
     };
 
-    // TEMP - solo para probar crearObservacion, quitar después
-    const handleTestCrearObservacion = async () => {
-        if (!perfilActivo) return;
-        const authorRole = rolUsuario === 'padre' ? 'familia' : rolUsuario; // 'familia' | 'docente' | 'terapeuta'
-        try {
-            const id = await crearObservacion(
-                perfilActivo.id,
-                userId,
-                authorRole,
-                'media',
-                null,
-                Date.now(),
-                'Observación de prueba para validar el flujo completo de creación y clasificación.'
-            );
-            alert(`Observación creada con id: ${id}`);
-        } catch (err) {
-            alert(`Error al crear observación: ${err instanceof Error ? err.message : String(err)}`);
-        }
-    };
-
     const validate = () => {
         const errs: Record<string, string> = {};
         if (!tema.trim()) errs.tema = 'Por favor ingresa el tema a trabajar.';
@@ -393,14 +372,6 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({
                                             Invitar especialista
                                         </button>
                                     )}
-                                    {/* TEMP - solo para probar crearObservacion, quitar después */}
-                                    <button
-                                        type="button"
-                                        onClick={handleTestCrearObservacion}
-                                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl border-2 border-dashed border-destructive/40 text-xs font-black text-destructive hover:bg-destructive/5 transition-all cursor-pointer"
-                                    >
-                                        🧪 Test observación
-                                    </button>
                                 </div>
                             </div>
 
