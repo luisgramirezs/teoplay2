@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Sparkles, Mail, Lock, User, ChevronRight } from 'lucide-react';
 import { registrarUsuario, loginUsuario } from '@/lib/authService';
 import { TipoUsuario } from '@/components/OnboardingWizard';
+import { auth } from '@/lib/firebase';
 
 interface LoginScreenProps {
   onAuthSuccess: () => void;
@@ -37,6 +38,9 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onAuthSuccess }) => {
         await registrarUsuario(email, password, nombre, role);
       } else {
         await loginUsuario(email, password);
+        console.log('[DEBUG login] auth.currentUser.email =', JSON.stringify(auth.currentUser?.email));
+        console.log('[DEBUG login] auth.currentUser.uid   =', JSON.stringify(auth.currentUser?.uid));
+        console.log('[DEBUG login] providerData =', auth.currentUser?.providerData);
       }
       onAuthSuccess();
     } catch (err: any) {
