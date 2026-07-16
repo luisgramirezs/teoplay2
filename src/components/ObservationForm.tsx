@@ -84,7 +84,9 @@ const ObservationForm: React.FC<ObservationFormProps> = ({ studentId, userId, ro
                 ).join(' ') + '\n';
             }
             setTextoInforme(texto.slice(0, 8000));
-        } catch {
+        } catch (err) {
+            // TEMPORAL: depuración de extracción PDF
+            console.error('Error extrayendo texto del PDF:', err);
             setTextoInforme(null);
             setAvisoExtraccion('No se pudo leer el PDF. Puedes continuar con el texto que ya escribiste.');
         } finally {
