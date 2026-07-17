@@ -9,7 +9,7 @@ export interface DashboardMetrics {
   asignaturasFrecuentes: { asignatura: string; sesiones: number }[];
   evolucionAciertos: { fecha: number; pct: number; tema: string }[];
   ultimaSesion: any | null;
-  nivelAprendizaje: 'Alto' | 'Medio' | 'Bajo';
+  nivelAprendizaje: 'Alto' | 'Medio' | 'Bajo' | 'Sin datos';
   rachaActual: number;
 }
 
@@ -26,7 +26,7 @@ export const getDashboardMetrics = (sesiones: any[]): DashboardMetrics => {
       asignaturasFrecuentes: [],
       evolucionAciertos: [],
       ultimaSesion: null,
-      nivelAprendizaje: 'Bajo',
+      nivelAprendizaje: 'Sin datos',
       rachaActual: 0,
     };
   }

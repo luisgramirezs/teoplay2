@@ -318,7 +318,8 @@ const DimensionsScreen: React.FC<DimensionsScreenProps> = ({
     const nivelColor =
         metrics.nivelAprendizaje === 'Alto' ? 'text-teo-green'
         : metrics.nivelAprendizaje === 'Medio' ? 'text-teo-yellow'
-        : 'text-teo-red';
+        : metrics.nivelAprendizaje === 'Bajo' ? 'text-teo-red'
+        : 'text-muted-foreground';
 
     const handleSeleccionarPerfil = (id: string) => {
         const p = perfiles.find(p => p.id === id) || null;
