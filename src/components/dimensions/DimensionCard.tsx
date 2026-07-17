@@ -95,7 +95,7 @@ const DimensionCard: React.FC<DimensionCardProps> = ({ dimensionKey, data, onCli
         <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${meta.iconBgClass} text-white`}>
           <Icon className="w-5 h-5" />
         </div>
-        <h3 className="font-black text-foreground text-[15px] flex-1">{meta.label}</h3>
+        <h3 className="font-black text-foreground text-[18px] flex-1">{meta.label}</h3>
       </div>
 
       {data?.progress !== undefined && (
@@ -108,7 +108,7 @@ const DimensionCard: React.FC<DimensionCardProps> = ({ dimensionKey, data, onCli
           </div>
           <div className="flex items-center justify-between mt-1">
             <p className={`text-xs font-bold ${meta.colorClass}`}>{encuadreProgreso(data.progress)}</p>
-            <p className="text-[10px] font-semibold text-muted-foreground">{data.progress}%</p>
+            <p className="text-[14px] font-semibold text-muted-foreground">{data.progress}%</p>
           </div>
         </div>
       )}
