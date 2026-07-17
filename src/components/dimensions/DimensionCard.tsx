@@ -1,25 +1,27 @@
 // src/components/dimensions/DimensionCard.tsx
 import React from 'react';
-import { BookOpen, MessagesSquare, Heart, ListChecks, Stethoscope, Star, Lightbulb, LucideIcon } from 'lucide-react';
+import { BookOpen, MessagesSquare, Heart, ListChecks, Stethoscope, Star, LucideIcon } from 'lucide-react';
 import { DimensionKey } from '@/lib/observationsService';
 import { DimensionData } from '@/lib/dimensionsService';
 
-interface DimensionMeta {
+export interface DimensionMeta {
   label: string;
   icon: LucideIcon;
   colorClass: string;
   iconBgClass: string; // fondo sólido claro del contenedor del ícono
+  bgTint: string; // fondo sutil (/50) de la tarjeta completa
   barClass: string;
 }
 
 // Colores/iconos por dimensión: mapeo provisorio sobre la paleta teo-* ya
 // existente en tailwind.config.ts / index.css. Ajustar si difiere del diseño aprobado.
-const DIMENSION_META: Record<DimensionKey, DimensionMeta> = {
+export const DIMENSION_META: Record<DimensionKey, DimensionMeta> = {
   aprendizajeYDesempeno: {
     label: 'Aprendizaje y desempeño',
     icon: BookOpen,
     colorClass: 'text-blue-700',
     iconBgClass: 'bg-blue-50',
+    bgTint: 'bg-blue-50/50',
     barClass: 'bg-blue-700',
   },
   comunicacionSocial: {
@@ -27,6 +29,7 @@ const DIMENSION_META: Record<DimensionKey, DimensionMeta> = {
     icon: MessagesSquare,
     colorClass: 'text-teal-700',
     iconBgClass: 'bg-teal-50',
+    bgTint: 'bg-teal-50/50',
     barClass: 'bg-teal-700',
   },
   regulacionEmocional: {
@@ -34,6 +37,7 @@ const DIMENSION_META: Record<DimensionKey, DimensionMeta> = {
     icon: Heart,
     colorClass: 'text-purple-700',
     iconBgClass: 'bg-purple-50',
+    bgTint: 'bg-purple-50/50',
     barClass: 'bg-purple-700',
   },
   autonomiaCotidiana: {
@@ -41,6 +45,7 @@ const DIMENSION_META: Record<DimensionKey, DimensionMeta> = {
     icon: ListChecks,
     colorClass: 'text-amber-700',
     iconBgClass: 'bg-amber-50',
+    bgTint: 'bg-amber-50/50',
     barClass: 'bg-amber-700',
   },
   saludDesarrollo: {
@@ -48,6 +53,7 @@ const DIMENSION_META: Record<DimensionKey, DimensionMeta> = {
     icon: Stethoscope,
     colorClass: 'text-red-700',
     iconBgClass: 'bg-red-50',
+    bgTint: 'bg-red-50/50',
     barClass: 'bg-red-700',
   },
   interesesFortalezas: {
@@ -55,6 +61,7 @@ const DIMENSION_META: Record<DimensionKey, DimensionMeta> = {
     icon: Star,
     colorClass: 'text-pink-700',
     iconBgClass: 'bg-pink-50',
+    bgTint: 'bg-pink-50/50',
     barClass: 'bg-pink-700',
   },
 };
@@ -70,15 +77,19 @@ function encuadreProgreso(progress: number): string {
 interface DimensionCardProps {
   dimensionKey: DimensionKey;
   data?: DimensionData;
-  adaptedRecommendation?: string;
+  onClick?: () => void;
 }
 
-const DimensionCard: React.FC<DimensionCardProps> = ({ dimensionKey, data, adaptedRecommendation }) => {
+const DimensionCard: React.FC<DimensionCardProps> = ({ dimensionKey, data, onClick }) => {
   const meta = DIMENSION_META[dimensionKey];
   const Icon = meta.icon;
+  const clickable = Boolean(data && onClick);
 
   return (
-    <div className="bg-white rounded-2xl border border-border p-6 flex flex-col gap-3">
+    <div
+      className={`${meta.bgTint} rounded-2xl border border-border p-6 flex flex-col gap-3 ${clickable ? 'cursor-pointer hover:shadow-sm transition-shadow' : ''}`}
+      onClick={clickable ? onClick : undefined}
+    >
       <div className="flex items-center gap-3">
         <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${meta.iconBgClass} ${meta.colorClass}`}>
           <Icon className="w-5 h-5" />
@@ -102,13 +113,7 @@ const DimensionCard: React.FC<DimensionCardProps> = ({ dimensionKey, data, adapt
       )}
 
       {data ? (
-        <>
-          <p className="text-sm text-foreground/80 leading-relaxed">{data.summary}</p>
-          <div className={`border-t border-border pt-3 flex items-start gap-2 text-xs font-bold ${meta.colorClass}`}>
-            <Lightbulb className="w-5 h-5 flex-shrink-0" />
-            <span>{adaptedRecommendation ?? data.baseRecommendation}</span>
-          </div>
-        </>
+        <p className="text-sm text-foreground/80 leading-relaxed line-clamp-2">{data.summary}</p>
       ) : (
         <p className="text-sm text-muted-foreground italic">
           Aún no hay evidencia suficiente para esta dimensión.

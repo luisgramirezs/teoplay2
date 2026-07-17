@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Sparkles, User, Pencil, X, CheckCircle, PlusCircle, BarChart2,
-    UserPlus, Copy, Check, ClipboardList, Wand2, Target, Zap, KeyRound, ChevronRight, Calendar,
+    UserPlus, Copy, Check, ClipboardList, Wand2, Target, Zap, KeyRound, ChevronRight, Calendar, Lightbulb,
 } from 'lucide-react';
 import {
     PerfilPersistente, Condicion, CONDICIONES, GRADOS, EMOCIONES, PERFIL_ACTIVO_KEY,
@@ -14,10 +14,10 @@ import { actualizarPerfilNeuroeducativo, getStudentsLinkedToUser } from '@/lib/s
 import { crearInvitacion, canjearInvitacion } from '@/lib/studentLinksService';
 import ObservationForm from '@/components/ObservationForm';
 import { DimensionKey } from '@/lib/observationsService';
-import { calcularPerfilDimensiones, getPerfilDimensiones, adaptarRecomendacionesPorRol, NeuroeducationalProfile } from '@/lib/dimensionsService';
+import { calcularPerfilDimensiones, getPerfilDimensiones, adaptarRecomendacionesPorRol, NeuroeducationalProfile, DimensionData } from '@/lib/dimensionsService';
 import { getSessionsByStudent } from '@/lib/sessionsService';
 import { getDashboardMetrics } from '@/lib/dashboardMetrics';
-import DimensionCard from '@/components/dimensions/DimensionCard';
+import DimensionCard, { DIMENSION_META } from '@/components/dimensions/DimensionCard';
 
 const ROL_LABEL: Record<TipoUsuario, string> = {
     padre: 'Familia',
@@ -324,6 +324,48 @@ const CanjearCodigoModal: React.FC<{
     );
 };
 
+// ── Dimension Detail Modal (clic en una tarjeta de dimensión) ────────────────
+const DimensionDetailModal: React.FC<{
+    dimensionKey: DimensionKey;
+    data: DimensionData;
+    adaptedRecommendation?: string;
+    onClose: () => void;
+}> = ({ dimensionKey, data, adaptedRecommendation, onClose }) => {
+    const meta = DIMENSION_META[dimensionKey];
+    const Icon = meta.icon;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-border sticky top-0 bg-white rounded-t-2xl">
+                    <div className="flex items-center gap-2">
+                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${meta.iconBgClass} ${meta.colorClass}`}>
+                            <Icon className="w-4 h-4" />
+                        </div>
+                        <h2 className="font-black text-foreground text-lg">{meta.label}</h2>
+                    </div>
+                    <button onClick={onClose} className="p-2 rounded-xl hover:bg-muted transition-colors cursor-pointer">
+                        <X className="w-5 h-5 text-muted-foreground" />
+                    </button>
+                </div>
+
+                <div className="p-6 space-y-4">
+                    <p className="text-sm text-foreground/80 leading-relaxed">{data.summary}</p>
+
+                    <div className={`border-t border-border pt-3 flex items-start gap-2 text-sm font-bold ${meta.colorClass}`}>
+                        <Lightbulb className="w-5 h-5 flex-shrink-0" />
+                        <span>{adaptedRecommendation ?? data.baseRecommendation}</span>
+                    </div>
+
+                    <p className="text-xs text-muted-foreground font-semibold pt-2">
+                        Actualizado: {new Date(data.updatedAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </p>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // ── Indicador simple del panel lateral ────────────────────────────────────────
 function IndicatorTile({ icon, label, value, valueClass = 'text-foreground' }: {
     icon: React.ReactNode; label: string; value: string; valueClass?: string;
@@ -365,6 +407,7 @@ const DimensionsScreen: React.FC<DimensionsScreenProps> = ({
     const [datosUsuario, setDatosUsuario] = useState<{ nombre?: string; email?: string } | null>(null);
     const [recomendacionesAdaptadas, setRecomendacionesAdaptadas] = useState<Partial<Record<DimensionKey, string>> | null>(null);
     const [adaptacionCache, setAdaptacionCache] = useState<{ rol: TipoUsuario; perfilUpdatedAt: number } | null>(null);
+    const [dimensionAbierta, setDimensionAbierta] = useState<DimensionKey | null>(null);
 
     const [perfilDimensiones, setPerfilDimensiones] = useState<NeuroeducationalProfile | null>(null);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -492,7 +535,7 @@ const DimensionsScreen: React.FC<DimensionsScreenProps> = ({
 
             {/* Header */}
             <section className="bg-white border-b border-border">
-                <div className="max-w-7xl mx-auto px-6 lg:px-12 pt-4 pb-3">
+                <div className="max-w-[1600px] mx-auto px-6 lg:px-12 pt-4 pb-3">
                     <div className="flex flex-col items-start">
                         <img src="/logo.png" alt="TEOplay" className="h-[180px] object-contain block" />
                         <h1 className="font-[Fredoka] text-3xl text-orange-600 font-black">
@@ -507,7 +550,7 @@ const DimensionsScreen: React.FC<DimensionsScreenProps> = ({
 
             {/* Info banner */}
             <div className="bg-primary/5 border-b border-primary/10 px-6 lg:px-12 py-3">
-                <div className="max-w-7xl mx-auto flex items-center gap-3 text-sm text-primary/80">
+                <div className="max-w-[1600px] mx-auto flex items-center gap-3 text-sm text-primary/80">
                     <span className="text-lg">💡</span>
                     <span className="font-[Fredoka]">
                         Este perfil se actualiza automáticamente con cada nueva sesión y observación registrada.
@@ -515,7 +558,7 @@ const DimensionsScreen: React.FC<DimensionsScreenProps> = ({
                 </div>
             </div>
 
-            <main className="max-w-7xl mx-auto px-6 lg:px-12 py-8 space-y-6">
+            <main className="max-w-[1600px] mx-auto px-6 lg:px-12 py-8 space-y-6">
 
                 {/* Niño activo + barra de acciones */}
                 <section className="bg-white rounded-2xl border-2 border-primary/20 shadow-sm overflow-hidden">
@@ -639,7 +682,7 @@ const DimensionsScreen: React.FC<DimensionsScreenProps> = ({
                                     key={key}
                                     dimensionKey={key}
                                     data={perfilDimensiones?.dimensions[key]}
-                                    adaptedRecommendation={recomendacionesAdaptadas?.[key]}
+                                    onClick={() => setDimensionAbierta(key)}
                                 />
                             ))}
                         </div>
@@ -717,6 +760,15 @@ const DimensionsScreen: React.FC<DimensionsScreenProps> = ({
                     userId={userId}
                     onSuccess={onPerfilesChange}
                     onClose={() => setShowCanjearModal(false)}
+                />
+            )}
+            {/* Detalle de dimensión (clic en una tarjeta) */}
+            {dimensionAbierta && perfilDimensiones?.dimensions[dimensionAbierta] && (
+                <DimensionDetailModal
+                    dimensionKey={dimensionAbierta}
+                    data={perfilDimensiones.dimensions[dimensionAbierta]!}
+                    adaptedRecommendation={recomendacionesAdaptadas?.[dimensionAbierta]}
+                    onClose={() => setDimensionAbierta(null)}
                 />
             )}
         </div>
