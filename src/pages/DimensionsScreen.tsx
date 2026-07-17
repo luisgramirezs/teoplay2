@@ -14,7 +14,7 @@ import { actualizarPerfilNeuroeducativo, getStudentsLinkedToUser } from '@/lib/s
 import { crearInvitacion, canjearInvitacion } from '@/lib/studentLinksService';
 import ObservationForm from '@/components/ObservationForm';
 import { DimensionKey } from '@/lib/observationsService';
-import { calcularPerfilDimensiones, getPerfilDimensiones, NeuroeducationalProfile } from '@/lib/dimensionsService';
+import { calcularPerfilDimensiones, getPerfilDimensiones, adaptarRecomendacionesPorRol, NeuroeducationalProfile } from '@/lib/dimensionsService';
 import { getSessionsByStudent } from '@/lib/sessionsService';
 import { getDashboardMetrics } from '@/lib/dashboardMetrics';
 import DimensionCard from '@/components/dimensions/DimensionCard';
@@ -23,6 +23,12 @@ const ROL_LABEL: Record<TipoUsuario, string> = {
     padre: 'Familia',
     docente: 'Docente',
     terapeuta: 'Terapeuta',
+};
+
+const RECOMENDACIONES_TITULO: Record<TipoUsuario, string> = {
+    padre: 'Recomendaciones para la familia',
+    docente: 'Recomendaciones para el colegio',
+    terapeuta: 'Recomendaciones para la terapia',
 };
 
 const DIMENSION_KEYS: DimensionKey[] = [
@@ -357,6 +363,8 @@ const DimensionsScreen: React.FC<DimensionsScreenProps> = ({
     const [showObservationModal, setShowObservationModal] = useState(false);
     const [showCanjearModal, setShowCanjearModal] = useState(false);
     const [datosUsuario, setDatosUsuario] = useState<{ nombre?: string; email?: string } | null>(null);
+    const [recomendacionesAdaptadas, setRecomendacionesAdaptadas] = useState<Partial<Record<DimensionKey, string>> | null>(null);
+    const [adaptacionCache, setAdaptacionCache] = useState<{ rol: TipoUsuario; perfilUpdatedAt: number } | null>(null);
 
     const [perfilDimensiones, setPerfilDimensiones] = useState<NeuroeducationalProfile | null>(null);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -406,15 +414,43 @@ const DimensionsScreen: React.FC<DimensionsScreenProps> = ({
         return () => { cancelled = true; };
     }, [perfilActivo?.id]);
 
+    // "Perfil-level updatedAt" derivado: NeuroeducationalProfile no tiene un
+    // updatedAt propio, cada DimensionData tiene el suyo — se usa el más
+    // reciente entre las dimensiones con contenido como señal de cambio.
+    const perfilUpdatedAt = useMemo(() => {
+        if (!perfilDimensiones) return 0;
+        const timestamps = DIMENSION_KEYS
+            .map(key => perfilDimensiones.dimensions[key]?.updatedAt)
+            .filter((t): t is number => typeof t === 'number');
+        return timestamps.length > 0 ? Math.max(...timestamps) : 0;
+    }, [perfilDimensiones]);
+
+    // Adaptación de recomendaciones por rol ("lente", sección 21/22): un solo
+    // prompt para todas las dimensiones con contenido, cacheado en memoria
+    // por (rol, perfilUpdatedAt) — nunca en Firestore. Nunca bloquea la
+    // vista: si falla o aún no llega, las tarjetas caen a baseRecommendation.
+    useEffect(() => {
+        if (perfilUpdatedAt === 0 || !perfilDimensiones) return;
+        if (adaptacionCache && adaptacionCache.rol === rolUsuario && adaptacionCache.perfilUpdatedAt === perfilUpdatedAt) return;
+
+        let cancelled = false;
+        adaptarRecomendacionesPorRol(perfilDimensiones, rolUsuario).then(adaptadas => {
+            if (cancelled) return;
+            setRecomendacionesAdaptadas(adaptadas);
+            setAdaptacionCache({ rol: rolUsuario, perfilUpdatedAt });
+        });
+        return () => { cancelled = true; };
+    }, [perfilUpdatedAt, rolUsuario, perfilDimensiones, adaptacionCache]);
+
     const metrics = useMemo(() => getDashboardMetrics(sesiones), [sesiones]);
     const emocionPredominante = EMOCIONES.find(e => e.valor === Math.round(metrics.promedioEmocionalFin));
 
     const recomendaciones = useMemo(() => {
         if (!perfilDimensiones) return [];
         return DIMENSION_KEYS
-            .map(key => perfilDimensiones.dimensions[key]?.baseRecommendation)
+            .map(key => recomendacionesAdaptadas?.[key] ?? perfilDimensiones.dimensions[key]?.baseRecommendation)
             .filter((r): r is string => Boolean(r));
-    }, [perfilDimensiones]);
+    }, [perfilDimensiones, recomendacionesAdaptadas]);
 
     const nivelColor =
         metrics.nivelAprendizaje === 'Alto' ? 'text-teo-green'
@@ -589,7 +625,12 @@ const DimensionsScreen: React.FC<DimensionsScreenProps> = ({
                     <div className="flex flex-col lg:flex-row gap-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
                             {DIMENSION_KEYS.map(key => (
-                                <DimensionCard key={key} dimensionKey={key} data={perfilDimensiones?.dimensions[key]} />
+                                <DimensionCard
+                                    key={key}
+                                    dimensionKey={key}
+                                    data={perfilDimensiones?.dimensions[key]}
+                                    adaptedRecommendation={recomendacionesAdaptadas?.[key]}
+                                />
                             ))}
                         </div>
 
@@ -619,7 +660,7 @@ const DimensionsScreen: React.FC<DimensionsScreenProps> = ({
                                 <div className="bg-gradient-to-br from-primary/5 to-accent/5 rounded-2xl border border-primary/20 p-5 space-y-2">
                                     <h3 className="font-black text-foreground text-sm flex items-center gap-2">
                                         <Sparkles className="w-4 h-4 text-primary" />
-                                        Recomendaciones
+                                        {RECOMENDACIONES_TITULO[rolUsuario]}
                                     </h3>
                                     <ul className="space-y-2">
                                         {recomendaciones.map((rec, i) => (

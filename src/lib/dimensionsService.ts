@@ -3,7 +3,7 @@ import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
 import { db } from './firebase';
 import { ActorRole, DimensionKey, Observacion, getObservationsByStudent } from './observationsService';
 import { getSessionsByStudent } from './sessionsService';
-import { PerfilNeuroeducativo } from '@/components/OnboardingWizard';
+import { PerfilNeuroeducativo, TipoUsuario } from '@/components/OnboardingWizard';
 
 // ── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -78,6 +78,15 @@ const EVIDENCIA_BASE_ONBOARDING: Partial<Record<DimensionKey, (p: PerfilNeuroedu
   interesesFortalezas: p => p.fortalezas ?? [],
   aprendizajeYDesempeno: p => [...(p.retos ?? []), ...(p.estrategias ?? [])],
   comunicacionSocial: p => p.retos ?? [],
+};
+
+// Enfoque de reformulación por rol (sección 21/22 — "lente" por rol al
+// consultar): mismo dato de fondo, distinto lenguaje según quién lo va a
+// aplicar.
+const ROL_ENFOQUE: Record<TipoUsuario, string> = {
+  padre: 'la familia, en el contexto de rutinas y apoyo en casa',
+  docente: 'el docente, en el contexto de estrategias dentro del aula',
+  terapeuta: 'el terapeuta, en el contexto clínico-funcional de la intervención',
 };
 
 function toMillis(ts: Timestamp | null | undefined): number {
@@ -333,4 +342,75 @@ export async function calcularPerfilDimensiones(studentId: string): Promise<void
     { studentId, dimensions: dimensionesActualizadas },
     { merge: true }
   );
+}
+
+// ── Adaptación de recomendaciones por rol ("lente", sección 21/22) ───────────
+// Un solo prompt para todas las dimensiones con contenido — nunca una
+// llamada por tarjeta. Solo reformula baseRecommendation; el summary
+// narrativo se mantiene canónico, sin adaptar. Nunca lanza, nunca se
+// persiste en Firestore — el llamador decide caché/invalidación.
+
+function buildAdaptacionPrompt(
+  items: { dimension: DimensionKey; baseRecommendation: string }[],
+  rolUsuario: TipoUsuario
+): string {
+  const bloques = items
+    .map(it => `### ${it.dimension} — ${DIMENSION_LABELS[it.dimension]}\nRecomendación original: "${it.baseRecommendation}"`)
+    .join('\n\n');
+
+  const clavesJson = items.map(it => `  "${it.dimension}": "..."`).join(',\n');
+
+  return `Eres un Consultor Senior en Neuropsicología y Neuroeducación Aplicada especializado en tecnología asistiva educativa.
+Tu tarea es reformular cada recomendación a continuación para que le hable directamente a ${ROL_ENFOQUE[rolUsuario]}. El dato de fondo (la evidencia y la intención de la recomendación) es el mismo — solo cambia el enfoque y el lenguaje según quién la va a leer y aplicar.
+
+REGLA DE ENCUADRE (obligatoria): nunca describas al estudiante en términos evaluativos o de déficit ("le va mal", "bajo rendimiento", "problema de conducta"). Encuadra siempre como evolución y ajuste de estrategia. El texto debe poder leerse en voz alta frente a la familia sin sonar como un diagnóstico o una calificación.
+
+RECOMENDACIONES A REFORMULAR:
+
+${bloques}
+
+Para CADA una, genera UNA recomendación puntual y accionable (no una lista, una sola sugerencia concreta), reformulada para ${ROL_ENFOQUE[rolUsuario]}, sin perder el sentido original.
+
+Responde SOLO con este JSON (sin texto fuera, sin markdown), con una clave por cada dimensión listada arriba:
+{
+${clavesJson}
+}`;
+}
+
+export async function adaptarRecomendacionesPorRol(
+  perfil: NeuroeducationalProfile,
+  rolUsuario: TipoUsuario
+): Promise<Partial<Record<DimensionKey, string>> | null> {
+  const items: { dimension: DimensionKey; baseRecommendation: string }[] = [];
+  for (const dim of DIMENSION_KEYS) {
+    const rec = perfil.dimensions[dim]?.baseRecommendation;
+    if (rec) items.push({ dimension: dim, baseRecommendation: rec });
+  }
+  if (items.length === 0) return null;
+
+  try {
+    const API_URL = import.meta.env.VITE_BACKEND_URL;
+    const res = await fetch(`${API_URL}/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        max_tokens: 800,
+        messages: [{ role: 'user', content: buildAdaptacionPrompt(items, rolUsuario) }],
+      }),
+    });
+
+    const data = await res.json();
+    const raw = data.choices?.[0]?.message?.content || '{}';
+    const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
+
+    const resultado: Partial<Record<DimensionKey, string>> = {};
+    for (const it of items) {
+      const texto = parsed[it.dimension];
+      if (typeof texto === 'string' && texto.trim()) resultado[it.dimension] = texto.trim();
+    }
+    return Object.keys(resultado).length > 0 ? resultado : null;
+  } catch {
+    return null;
+  }
 }

@@ -70,9 +70,10 @@ function encuadreProgreso(progress: number): string {
 interface DimensionCardProps {
   dimensionKey: DimensionKey;
   data?: DimensionData;
+  adaptedRecommendation?: string;
 }
 
-const DimensionCard: React.FC<DimensionCardProps> = ({ dimensionKey, data }) => {
+const DimensionCard: React.FC<DimensionCardProps> = ({ dimensionKey, data, adaptedRecommendation }) => {
   const meta = DIMENSION_META[dimensionKey];
   const Icon = meta.icon;
 
@@ -104,7 +105,7 @@ const DimensionCard: React.FC<DimensionCardProps> = ({ dimensionKey, data }) => 
         <>
           <p className="text-sm text-foreground/80 leading-relaxed">{data.summary}</p>
           <div className={`rounded-xl px-3 py-2 text-xs font-bold ${meta.bgClass} ${meta.colorClass}`}>
-            💡 {data.baseRecommendation}
+            💡 {adaptedRecommendation ?? data.baseRecommendation}
           </div>
         </>
       ) : (
