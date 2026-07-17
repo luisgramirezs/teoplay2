@@ -634,7 +634,8 @@ export default function Dashboard() {
                             <span className="text-xs text-muted-foreground font-medium">Nivel aprendizaje</span>
                             <span className={`text-sm font-black ${
                               metrics.nivelAprendizaje === 'Alto' ? 'text-teo-green' :
-                              metrics.nivelAprendizaje === 'Medio' ? 'text-teo-yellow' : 'text-teo-red'
+                              metrics.nivelAprendizaje === 'Medio' ? 'text-teo-yellow' :
+                              metrics.nivelAprendizaje === 'Bajo' ? 'text-teo-red' : 'text-muted-foreground'
                             }`}>{metrics.nivelAprendizaje}</span>
                           </div>
                         </div>
