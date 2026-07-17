@@ -9,6 +9,7 @@ import {
     PerfilPersistente, Condicion, CONDICIONES, GRADOS, EMOCIONES, PERFIL_ACTIVO_KEY,
 } from '@/types';
 import { PerfilCompleto, TipoUsuario } from '@/components/OnboardingWizard';
+import { getUsuarioData } from '@/lib/authService';
 import { actualizarPerfilNeuroeducativo, getStudentsLinkedToUser } from '@/lib/studentsService';
 import { crearInvitacion, canjearInvitacion } from '@/lib/studentLinksService';
 import ObservationForm from '@/components/ObservationForm';
@@ -17,6 +18,12 @@ import { calcularPerfilDimensiones, getPerfilDimensiones, NeuroeducationalProfil
 import { getSessionsByStudent } from '@/lib/sessionsService';
 import { getDashboardMetrics } from '@/lib/dashboardMetrics';
 import DimensionCard from '@/components/dimensions/DimensionCard';
+
+const ROL_LABEL: Record<TipoUsuario, string> = {
+    padre: 'Familia',
+    docente: 'Docente',
+    terapeuta: 'Terapeuta',
+};
 
 const DIMENSION_KEYS: DimensionKey[] = [
     'aprendizajeYDesempeno',
@@ -349,6 +356,7 @@ const DimensionsScreen: React.FC<DimensionsScreenProps> = ({
     const [showInviteModal, setShowInviteModal] = useState(false);
     const [showObservationModal, setShowObservationModal] = useState(false);
     const [showCanjearModal, setShowCanjearModal] = useState(false);
+    const [datosUsuario, setDatosUsuario] = useState<{ nombre?: string; email?: string } | null>(null);
 
     const [perfilDimensiones, setPerfilDimensiones] = useState<NeuroeducationalProfile | null>(null);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -366,6 +374,13 @@ const DimensionsScreen: React.FC<DimensionsScreenProps> = ({
             if (actualizado) setPerfilActivo(actualizado);
         }
     }, [perfiles]);
+
+    // Datos del usuario conectado (nombre/correo) para el encabezado.
+    useEffect(() => {
+        getUsuarioData(userId)
+            .then(data => setDatosUsuario(data ? { nombre: data.nombre, email: data.email } : null))
+            .catch(() => setDatosUsuario(null));
+    }, [userId]);
 
     // Al entrar (o cambiar de niño activo): recalcular el perfil de dimensiones
     // con la evidencia nueva y cargar el resultado + sesiones para el panel lateral.
@@ -447,6 +462,9 @@ const DimensionsScreen: React.FC<DimensionsScreenProps> = ({
                         <h1 className="font-[Fredoka] text-3xl text-orange-600 font-black">
                             Perfil neuroeducativo
                         </h1>
+                        <p className="text-xs text-muted-foreground font-semibold mt-1">
+                            Conectado como: {datosUsuario?.nombre || datosUsuario?.email || 'Usuario'} · {ROL_LABEL[rolUsuario]}
+                        </p>
                     </div>
                 </div>
             </section>
