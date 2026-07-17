@@ -91,7 +91,7 @@ const DimensionCard: React.FC<DimensionCardProps> = ({ dimensionKey, data, onCli
       onClick={clickable ? onClick : undefined}
     >
       <div className="flex items-center gap-3">
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${meta.iconBgClass} ${meta.colorClass}`}>
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${meta.iconBgClass} text-white`}>
           <Icon className="w-5 h-5" />
         </div>
         <h3 className="font-black text-foreground text-[15px] flex-1">{meta.label}</h3>
