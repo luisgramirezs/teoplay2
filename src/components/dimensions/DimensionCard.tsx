@@ -20,7 +20,7 @@ export const DIMENSION_META: Record<DimensionKey, DimensionMeta> = {
     label: 'Aprendizaje y desempeño',
     icon: BookOpen,
     colorClass: 'text-blue-700',
-    iconBgClass: 'bg-blue-50',
+    iconBgClass: 'bg-blue-80',
     bgTint: 'bg-blue-50/50',
     barClass: 'bg-blue-700',
   },
