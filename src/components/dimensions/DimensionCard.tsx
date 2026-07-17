@@ -8,8 +8,7 @@ interface DimensionMeta {
   label: string;
   icon: LucideIcon;
   colorClass: string;
-  bgClass: string;
-  iconBgClass: string; // círculo del ícono — más saturado (/15) que bgClass (/10)
+  iconBgClass: string; // fondo sólido claro del contenedor del ícono
   barClass: string;
 }
 
@@ -19,50 +18,44 @@ const DIMENSION_META: Record<DimensionKey, DimensionMeta> = {
   aprendizajeYDesempeno: {
     label: 'Aprendizaje y desempeño',
     icon: BookOpen,
-    colorClass: 'text-teo-blue',
-    bgClass: 'bg-teo-blue/10',
-    iconBgClass: 'bg-teo-blue/15',
-    barClass: 'bg-teo-blue',
+    colorClass: 'text-blue-700',
+    iconBgClass: 'bg-blue-50',
+    barClass: 'bg-blue-700',
   },
   comunicacionSocial: {
     label: 'Comunicación social',
     icon: MessagesSquare,
-    colorClass: 'text-teo-teal',
-    bgClass: 'bg-teo-teal/10',
-    iconBgClass: 'bg-teo-teal/15',
-    barClass: 'bg-teo-teal',
+    colorClass: 'text-teal-700',
+    iconBgClass: 'bg-teal-50',
+    barClass: 'bg-teal-700',
   },
   regulacionEmocional: {
     label: 'Regulación emocional',
     icon: Heart,
-    colorClass: 'text-teo-purple',
-    bgClass: 'bg-teo-purple/10',
-    iconBgClass: 'bg-teo-purple/15',
-    barClass: 'bg-teo-purple',
+    colorClass: 'text-purple-700',
+    iconBgClass: 'bg-purple-50',
+    barClass: 'bg-purple-700',
   },
   autonomiaCotidiana: {
     label: 'Autonomía cotidiana',
     icon: ListChecks,
-    colorClass: 'text-teo-orange',
-    bgClass: 'bg-teo-orange/10',
-    iconBgClass: 'bg-teo-orange/15',
-    barClass: 'bg-teo-orange',
+    colorClass: 'text-amber-700',
+    iconBgClass: 'bg-amber-50',
+    barClass: 'bg-amber-700',
   },
   saludDesarrollo: {
     label: 'Salud y desarrollo',
     icon: Stethoscope,
-    colorClass: 'text-teo-green',
-    bgClass: 'bg-teo-green/10',
-    iconBgClass: 'bg-teo-green/15',
-    barClass: 'bg-teo-green',
+    colorClass: 'text-red-700',
+    iconBgClass: 'bg-red-50',
+    barClass: 'bg-red-700',
   },
   interesesFortalezas: {
     label: 'Intereses y fortalezas',
     icon: Star,
-    colorClass: 'text-teo-yellow',
-    bgClass: 'bg-teo-yellow/10',
-    iconBgClass: 'bg-teo-yellow/15',
-    barClass: 'bg-teo-yellow',
+    colorClass: 'text-pink-700',
+    iconBgClass: 'bg-pink-50',
+    barClass: 'bg-pink-700',
   },
 };
 
@@ -85,12 +78,12 @@ const DimensionCard: React.FC<DimensionCardProps> = ({ dimensionKey, data, adapt
   const Icon = meta.icon;
 
   return (
-    <div className="bg-white rounded-3xl border border-border shadow-md hover:shadow-lg transition-shadow p-6 flex flex-col gap-3">
+    <div className="bg-white rounded-2xl border border-border p-6 flex flex-col gap-3">
       <div className="flex items-center gap-3">
-        <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${meta.iconBgClass} ${meta.colorClass}`}>
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${meta.iconBgClass} ${meta.colorClass}`}>
           <Icon className="w-5 h-5" />
         </div>
-        <h3 className="font-black text-foreground text-base flex-1">{meta.label}</h3>
+        <h3 className="font-medium text-foreground text-[15px] flex-1">{meta.label}</h3>
       </div>
 
       {data?.progress !== undefined && (
@@ -111,8 +104,7 @@ const DimensionCard: React.FC<DimensionCardProps> = ({ dimensionKey, data, adapt
       {data ? (
         <>
           <p className="text-sm text-foreground/80 leading-relaxed">{data.summary}</p>
-          <div className="border-t border-border/50" />
-          <div className={`rounded-2xl p-4 text-xs font-bold flex items-start gap-2 ${meta.bgClass} ${meta.colorClass}`}>
+          <div className={`border-t border-border pt-3 flex items-start gap-2 text-xs font-bold ${meta.colorClass}`}>
             <Lightbulb className="w-5 h-5 flex-shrink-0" />
             <span>{adaptedRecommendation ?? data.baseRecommendation}</span>
           </div>
