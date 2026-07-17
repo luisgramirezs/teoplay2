@@ -3,14 +3,14 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Sparkles, User, Pencil, X, CheckCircle, PlusCircle, BarChart2,
-    UserPlus, Copy, Check, ClipboardList, Wand2, Target, Zap,
+    UserPlus, Copy, Check, ClipboardList, Wand2, Target, Zap, KeyRound, ChevronRight,
 } from 'lucide-react';
 import {
     PerfilPersistente, Condicion, CONDICIONES, GRADOS, EMOCIONES, PERFIL_ACTIVO_KEY,
 } from '@/types';
 import { PerfilCompleto, TipoUsuario } from '@/components/OnboardingWizard';
-import { actualizarPerfilNeuroeducativo } from '@/lib/studentsService';
-import { crearInvitacion } from '@/lib/studentLinksService';
+import { actualizarPerfilNeuroeducativo, getStudentsLinkedToUser } from '@/lib/studentsService';
+import { crearInvitacion, canjearInvitacion } from '@/lib/studentLinksService';
 import ObservationForm from '@/components/ObservationForm';
 import { DimensionKey } from '@/lib/observationsService';
 import { calcularPerfilDimensiones, getPerfilDimensiones, NeuroeducationalProfile } from '@/lib/dimensionsService';
@@ -226,6 +226,91 @@ const InviteSpecialistModal: React.FC<{
     );
 };
 
+// ── Canjear Código Modal (docente/terapeuta con niños ya vinculados) ─────────
+const CanjearCodigoModal: React.FC<{
+    userId: string;
+    onSuccess: (perfiles: PerfilCompleto[]) => void;
+    onClose: () => void;
+}> = ({ userId, onSuccess, onClose }) => {
+    const [codigo, setCodigo] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const inputClass = 'w-full px-4 py-3 bg-white border-2 border-border rounded-xl text-sm font-semibold text-foreground focus:outline-none focus:border-primary transition-colors';
+    const labelClass = 'block text-sm font-bold text-foreground/80 mb-1';
+
+    const handleValidar = async () => {
+        setError(null);
+        if (!codigo.trim()) { setError('Ingresa el código de invitación.'); return; }
+
+        setLoading(true);
+        try {
+            await canjearInvitacion(codigo.trim(), userId);
+            const perfiles = await getStudentsLinkedToUser(userId);
+            onSuccess(perfiles);
+            onClose();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Ocurrió un error. Intenta de nuevo.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-border sticky top-0 bg-white rounded-t-2xl">
+                    <div className="flex items-center gap-2">
+                        <KeyRound className="w-5 h-5 text-primary" />
+                        <h2 className="font-black text-foreground text-lg">Código de invitación</h2>
+                    </div>
+                    <button onClick={onClose} className="p-2 rounded-xl hover:bg-muted transition-colors cursor-pointer">
+                        <X className="w-5 h-5 text-muted-foreground" />
+                    </button>
+                </div>
+
+                <div className="p-6 space-y-4">
+                    <p className="text-sm text-muted-foreground font-semibold">
+                        Ingresa el código que te compartió la familia para vincularte a otro niño(a).
+                    </p>
+
+                    <div>
+                        <label className={labelClass}>Código</label>
+                        <div className="relative">
+                            <KeyRound className="absolute left-3 top-3.5 w-4 h-4 text-muted-foreground" />
+                            <input
+                                type="text"
+                                value={codigo}
+                                onChange={e => setCodigo(e.target.value.toUpperCase())}
+                                placeholder="TEO-XXXX-YYYY"
+                                className={`${inputClass} pl-9 uppercase`}
+                            />
+                        </div>
+                        {error && (
+                            <p className="text-xs text-destructive font-bold mt-2">{error}</p>
+                        )}
+                    </div>
+
+                    <button
+                        onClick={handleValidar}
+                        disabled={loading}
+                        className="w-full flex items-center justify-center gap-2 bg-primary text-white font-black py-3.5 rounded-2xl disabled:opacity-60 cursor-pointer shadow-md"
+                    >
+                        {loading ? (
+                            <Sparkles className="w-5 h-5 animate-pulse" />
+                        ) : (
+                            <>
+                                Validar código
+                                <ChevronRight className="w-5 h-5" />
+                            </>
+                        )}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 // ── Indicador simple del panel lateral ────────────────────────────────────────
 function IndicatorTile({ icon, label, value, valueClass = 'text-foreground' }: {
     icon: React.ReactNode; label: string; value: string; valueClass?: string;
@@ -263,6 +348,7 @@ const DimensionsScreen: React.FC<DimensionsScreenProps> = ({
     const [showEditModal, setShowEditModal] = useState(false);
     const [showInviteModal, setShowInviteModal] = useState(false);
     const [showObservationModal, setShowObservationModal] = useState(false);
+    const [showCanjearModal, setShowCanjearModal] = useState(false);
 
     const [perfilDimensiones, setPerfilDimensiones] = useState<NeuroeducationalProfile | null>(null);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -396,6 +482,12 @@ const DimensionsScreen: React.FC<DimensionsScreenProps> = ({
                                     <BarChart2 className="w-4 h-4" />
                                     Tablero
                                 </button>
+                                {(rolUsuario === 'docente' || rolUsuario === 'terapeuta') && (
+                                    <button type="button" onClick={() => setShowCanjearModal(true)} className={actionButtonClass}>
+                                        <KeyRound className="w-4 h-4" />
+                                        Tengo un código
+                                    </button>
+                                )}
                                 {rolUsuario === 'padre' && (
                                     <button type="button" onClick={() => setShowEditModal(true)} className={actionButtonClass}>
                                         <Pencil className="w-4 h-4" />
@@ -548,6 +640,14 @@ const DimensionsScreen: React.FC<DimensionsScreenProps> = ({
                     userId={userId}
                     rolUsuario={rolUsuario}
                     onClose={() => setShowObservationModal(false)}
+                />
+            )}
+            {/* Canjear código modal (docente/terapeuta con niños ya vinculados) */}
+            {showCanjearModal && (
+                <CanjearCodigoModal
+                    userId={userId}
+                    onSuccess={onPerfilesChange}
+                    onClose={() => setShowCanjearModal(false)}
                 />
             )}
         </div>
