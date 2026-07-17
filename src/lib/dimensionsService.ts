@@ -1,8 +1,9 @@
 // src/lib/dimensionsService.ts
 import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
 import { db } from './firebase';
-import { DimensionKey, Observacion, getObservationsByStudent } from './observationsService';
+import { ActorRole, DimensionKey, Observacion, getObservationsByStudent } from './observationsService';
 import { getSessionsByStudent } from './sessionsService';
+import { PerfilNeuroeducativo } from '@/components/OnboardingWizard';
 
 // ── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -10,7 +11,7 @@ export interface DimensionData {
   summary: string;
   baseRecommendation: string;
   progress?: number; // 0-100, solo aprendizajeYDesempeno y regulacionEmocional
-  evidenceRefs: string[]; // "observations/{id}" | "sessions/{id}"
+  evidenceRefs: string[]; // "observations/{id}" | "sessions/{id}" | "alumnos/{id}#perfilNeuroeducativo"
   evidenceProcessedThrough: number; // millis del evento más reciente ya incorporado
   updatedAt: number;
 }
@@ -40,6 +41,7 @@ interface EvidenciaDimension {
   dimension: DimensionKey;
   observacionesTexto: { authorRole: ActorRole; texto: string }[];
   resumenSesiones?: ResumenSesiones;
+  evidenciaBase?: string[]; // frases del perfilNeuroeducativo de onboarding, solo en el primer cálculo
 }
 
 type SintesisPorDimension = Partial<Record<DimensionKey, { summary: string; baseRecommendation: string }>>;
@@ -65,6 +67,18 @@ const DIMENSION_LABELS: Record<DimensionKey, string> = {
 // Únicas dimensiones con métrica cuantitativa real (sección 21 del documento
 // de visión): las sesiones alimentan evidencia y progreso solo para estas dos.
 const DIMENSIONES_CON_PROGRESO: DimensionKey[] = ['aprendizajeYDesempeno', 'regulacionEmocional'];
+
+// Mapeo del perfilNeuroeducativo de onboarding hacia dimensiones (inventario
+// de señal real): fortalezas → interesesFortalezas; retos/estrategias →
+// aprendizajeYDesempeno; retos también → comunicacionSocial (ambas comparten
+// el mismo campo desde el ajuste del onboarding). Las dimensiones sin mapeo
+// (saludDesarrollo, autonomiaCotidiana, regulacionEmocional) no reciben nada
+// de aquí: si no tienen evidencia propia, siguen "sin evidencia suficiente".
+const EVIDENCIA_BASE_ONBOARDING: Partial<Record<DimensionKey, (p: PerfilNeuroeducativo) => string[]>> = {
+  interesesFortalezas: p => p.fortalezas ?? [],
+  aprendizajeYDesempeno: p => [...(p.retos ?? []), ...(p.estrategias ?? [])],
+  comunicacionSocial: p => p.retos ?? [],
+};
 
 function toMillis(ts: Timestamp | null | undefined): number {
   return ts?.toMillis ? ts.toMillis() : 0;
@@ -104,11 +118,34 @@ function calcularProgreso(dim: DimensionKey, todasLasSesiones: EvidenciaSesion[]
   return Math.round(Math.min(100, Math.max(0, normalizado)));
 }
 
+// ── Evidencia base del onboarding (solo primer cálculo) ───────────────────────
+
+function construirEvidenciaBase(dim: DimensionKey, perfil: PerfilNeuroeducativo): string[] {
+  const mapper = EVIDENCIA_BASE_ONBOARDING[dim];
+  const items = mapper?.(perfil) ?? [];
+  if (items.length === 0) return [];
+
+  return [
+    ...(perfil.resumen ? [`Resumen del registro inicial: ${perfil.resumen}`] : []),
+    ...items,
+    ...(perfil.recomendaciones && perfil.recomendaciones.length > 0
+      ? [`Recomendaciones del registro inicial: ${perfil.recomendaciones.join('; ')}`]
+      : []),
+  ];
+}
+
 // ── Prompt de síntesis ────────────────────────────────────────────────────────
 
 function buildSintesisPrompt(evidencias: EvidenciaDimension[]): string {
   const bloques = evidencias.map(ev => {
     const partes: string[] = [];
+
+    if (ev.evidenciaBase && ev.evidenciaBase.length > 0) {
+      partes.push(
+        'Evidencia del registro inicial (onboarding, primera vez que se calcula este perfil):\n' +
+        ev.evidenciaBase.map(t => `  - ${t}`).join('\n')
+      );
+    }
 
     if (ev.observacionesTexto.length > 0) {
       partes.push(
@@ -195,6 +232,20 @@ export async function calcularPerfilDimensiones(studentId: string): Promise<void
     ? (perfilSnap.data() as NeuroeducationalProfile)
     : { studentId, dimensions: {} };
 
+  // Primer cálculo real: el doc no existe todavía, o existe pero ninguna
+  // dimensión ha sido procesada aún (dimensions vacío). Se define sobre las
+  // dimensiones YA PRESENTES en el doc, no sobre las 6 fijas — si no, una
+  // dimensión que nunca recibe evidencia (ni de onboarding ni observaciones)
+  // dejaría esPrimerCalculo en true para siempre y reinyectaría el perfil de
+  // onboarding en cada apertura del módulo.
+  const esPrimerCalculo = !perfilSnap.exists() || Object.keys(perfilActual.dimensions).length === 0;
+
+  let perfilOnboarding: PerfilNeuroeducativo | null = null;
+  if (esPrimerCalculo) {
+    const alumnoSnap = await getDoc(doc(db, 'alumnos', studentId));
+    perfilOnboarding = (alumnoSnap.data()?.perfilNeuroeducativo as PerfilNeuroeducativo | undefined) ?? null;
+  }
+
   const [observaciones, sesiones]: [EvidenciaObservacion[], EvidenciaSesion[]] = await Promise.all([
     getObservationsByStudent(studentId),
     getSessionsByStudent(studentId) as Promise<EvidenciaSesion[]>,
@@ -217,16 +268,25 @@ export async function calcularPerfilDimensiones(studentId: string): Promise<void
       ? sesiones.filter(s => toMillis(s.createdAt) > processedThrough)
       : [];
 
-    if (observacionesNuevas.length === 0 && sesionesNuevas.length === 0) continue;
+    const evidenciaBase = (esPrimerCalculo && perfilOnboarding)
+      ? construirEvidenciaBase(dim, perfilOnboarding)
+      : [];
+
+    if (observacionesNuevas.length === 0 && sesionesNuevas.length === 0 && evidenciaBase.length === 0) continue;
 
     const timestamps = [
       ...observacionesNuevas.map(o => toMillis(o.createdAt)),
       ...sesionesNuevas.map(s => toMillis(s.createdAt)),
     ];
-    nuevoProcessedThrough[dim] = Math.max(...timestamps);
+    // Si la dimensión queda sucia solo por evidenciaBase (sin observaciones ni
+    // sesiones con fecha), no hay timestamp que tomar: se usa 0 como
+    // centinela — "procesada" (evita reinyectar el onboarding otra vez) pero
+    // sin descartar ninguna observación/sesión futura (createdAt siempre > 0).
+    nuevoProcessedThrough[dim] = timestamps.length > 0 ? Math.max(...timestamps) : 0;
 
     nuevosEvidenceRefs[dim] = [
       ...(perfilActual.dimensions[dim]?.evidenceRefs ?? []),
+      ...(evidenciaBase.length > 0 ? [`alumnos/${studentId}#perfilNeuroeducativo`] : []),
       ...observacionesNuevas.map(o => `observations/${o.id}`),
       ...sesionesNuevas.map(s => `sessions/${s.id}`),
     ];
@@ -235,6 +295,7 @@ export async function calcularPerfilDimensiones(studentId: string): Promise<void
       dimension: dim,
       observacionesTexto: observacionesNuevas.map(o => ({ authorRole: o.authorRole, texto: o.freeText })),
       resumenSesiones: sesionesNuevas.length > 0 ? resumirSesiones(dim, sesionesNuevas) : undefined,
+      evidenciaBase: evidenciaBase.length > 0 ? evidenciaBase : undefined,
     });
   }
 

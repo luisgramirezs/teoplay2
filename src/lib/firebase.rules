@@ -23,6 +23,7 @@ service cloud.firestore {
             && linkId == request.resource.data.studentId + '_' + request.resource.data.userId
             && request.resource.data.userId == request.auth.uid
             && request.resource.data.role == 'familia'
+            && exists(/databases/$(database)/documents/alumnos/$(request.resource.data.studentId))
             && get(/databases/$(database)/documents/alumnos/$(request.resource.data.studentId)).data.userId == request.auth.uid
           )
           ||
@@ -121,16 +122,19 @@ service cloud.firestore {
     match /student_profiles_history/{histId} {
       allow read, update, delete: if request.auth != null
         && 'studentId' in resource.data
+        && exists(/databases/$(database)/documents/alumnos/$(resource.data.studentId))
         && get(/databases/$(database)/documents/alumnos/$(resource.data.studentId)).data.userId == request.auth.uid;
 
       allow create: if request.auth != null
         && 'studentId' in request.resource.data
+        && exists(/databases/$(database)/documents/alumnos/$(request.resource.data.studentId))
         && get(/databases/$(database)/documents/alumnos/$(request.resource.data.studentId)).data.userId == request.auth.uid;
     }
 
     match /observations/{observationId} {
       allow read: if request.auth != null && (
-        get(/databases/$(database)/documents/alumnos/$(resource.data.studentId)).data.userId == request.auth.uid ||
+        (exists(/databases/$(database)/documents/alumnos/$(resource.data.studentId))
+         && get(/databases/$(database)/documents/alumnos/$(resource.data.studentId)).data.userId == request.auth.uid) ||
         (exists(/databases/$(database)/documents/studentLinks/$(resource.data.studentId + '_' + request.auth.uid))
          && get(/databases/$(database)/documents/studentLinks/$(resource.data.studentId + '_' + request.auth.uid)).data.status == 'activo')
       );
@@ -138,7 +142,8 @@ service cloud.firestore {
       allow create: if request.auth != null
         && request.resource.data.authorId == request.auth.uid
         && (
-          get(/databases/$(database)/documents/alumnos/$(request.resource.data.studentId)).data.userId == request.auth.uid ||
+          (exists(/databases/$(database)/documents/alumnos/$(request.resource.data.studentId))
+           && get(/databases/$(database)/documents/alumnos/$(request.resource.data.studentId)).data.userId == request.auth.uid) ||
           (exists(/databases/$(database)/documents/studentLinks/$(request.resource.data.studentId + '_' + request.auth.uid))
            && get(/databases/$(database)/documents/studentLinks/$(request.resource.data.studentId + '_' + request.auth.uid)).data.status == 'activo')
         );
@@ -148,13 +153,15 @@ service cloud.firestore {
 
     match /neuroeducationalProfiles/{studentId} {
       allow read: if request.auth != null && (
-        get(/databases/$(database)/documents/alumnos/$(studentId)).data.userId == request.auth.uid ||
+        (exists(/databases/$(database)/documents/alumnos/$(studentId))
+         && get(/databases/$(database)/documents/alumnos/$(studentId)).data.userId == request.auth.uid) ||
         (exists(/databases/$(database)/documents/studentLinks/$(studentId + '_' + request.auth.uid))
          && get(/databases/$(database)/documents/studentLinks/$(studentId + '_' + request.auth.uid)).data.status == 'activo')
       );
 
       allow create, update: if request.auth != null && (
-        get(/databases/$(database)/documents/alumnos/$(studentId)).data.userId == request.auth.uid ||
+        (exists(/databases/$(database)/documents/alumnos/$(studentId))
+         && get(/databases/$(database)/documents/alumnos/$(studentId)).data.userId == request.auth.uid) ||
         (exists(/databases/$(database)/documents/studentLinks/$(studentId + '_' + request.auth.uid))
          && get(/databases/$(database)/documents/studentLinks/$(studentId + '_' + request.auth.uid)).data.status == 'activo')
       );
