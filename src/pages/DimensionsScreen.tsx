@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Sparkles, User, Pencil, X, CheckCircle, PlusCircle, BarChart2,
-    UserPlus, Copy, Check, ClipboardList, Wand2, Target, Zap, KeyRound, ChevronRight,
+    UserPlus, Copy, Check, ClipboardList, Wand2, Target, Zap, KeyRound, ChevronRight, Calendar,
 } from 'lucide-react';
 import {
     PerfilPersistente, Condicion, CONDICIONES, GRADOS, EMOCIONES, PERFIL_ACTIVO_KEY,
@@ -329,8 +329,8 @@ function IndicatorTile({ icon, label, value, valueClass = 'text-foreground' }: {
     icon: React.ReactNode; label: string; value: string; valueClass?: string;
 }) {
     return (
-        <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-xl">
-            <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center flex-shrink-0 shadow-sm">
+        <div className="flex items-center gap-3 p-4 bg-muted/30 rounded-xl">
+            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 shadow-sm">
                 {icon}
             </div>
             <div className="min-w-0">
@@ -492,7 +492,7 @@ const DimensionsScreen: React.FC<DimensionsScreenProps> = ({
 
             {/* Header */}
             <section className="bg-white border-b border-border">
-                <div className="max-w-5xl mx-auto px-4 pt-4 pb-3">
+                <div className="max-w-7xl mx-auto px-6 lg:px-12 pt-4 pb-3">
                     <div className="flex flex-col items-start">
                         <img src="/logo.png" alt="TEOplay" className="h-[180px] object-contain block" />
                         <h1 className="font-[Fredoka] text-3xl text-orange-600 font-black">
@@ -506,8 +506,8 @@ const DimensionsScreen: React.FC<DimensionsScreenProps> = ({
             </section>
 
             {/* Info banner */}
-            <div className="bg-primary/5 border-b border-primary/10 px-6 py-3">
-                <div className="max-w-5xl mx-auto flex items-center gap-3 text-sm text-primary/80">
+            <div className="bg-primary/5 border-b border-primary/10 px-6 lg:px-12 py-3">
+                <div className="max-w-7xl mx-auto flex items-center gap-3 text-sm text-primary/80">
                     <span className="text-lg">💡</span>
                     <span className="font-[Fredoka]">
                         Este perfil se actualiza automáticamente con cada nueva sesión y observación registrada.
@@ -515,7 +515,7 @@ const DimensionsScreen: React.FC<DimensionsScreenProps> = ({
                 </div>
             </div>
 
-            <main className="max-w-5xl mx-auto px-4 py-8 space-y-6">
+            <main className="max-w-7xl mx-auto px-6 lg:px-12 py-8 space-y-6">
 
                 {/* Niño activo + barra de acciones */}
                 <section className="bg-white rounded-2xl border-2 border-primary/20 shadow-sm overflow-hidden">
@@ -599,18 +599,28 @@ const DimensionsScreen: React.FC<DimensionsScreenProps> = ({
                         )}
 
                         {/* Perfil activo */}
-                        <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-xl">
-                            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-lg font-black text-primary flex-shrink-0">
-                                {perfilActivo.nombre ? perfilActivo.nombre.charAt(0).toUpperCase() : '👤'}
+                        <div className="flex items-center justify-between gap-3 p-4 bg-muted/30 rounded-xl flex-wrap">
+                            <div className="flex items-center gap-4">
+                                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-2xl font-black text-primary flex-shrink-0 shadow-sm">
+                                    {perfilActivo.nombre ? perfilActivo.nombre.charAt(0).toUpperCase() : '👤'}
+                                </div>
+                                <div>
+                                    <p className="font-black text-foreground text-2xl">
+                                        {perfilActivo.nombre || 'Sin nombre'}
+                                    </p>
+                                    <div className="flex items-center gap-2 flex-wrap mt-1.5">
+                                        <span className="bg-muted rounded-full px-3 py-1 text-xs font-bold text-muted-foreground">{perfilActivo.edad} años</span>
+                                        <span className="bg-muted rounded-full px-3 py-1 text-xs font-bold text-muted-foreground">{perfilActivo.grado}</span>
+                                        <span className="bg-muted rounded-full px-3 py-1 text-xs font-bold text-muted-foreground">{CONDICIONES[perfilActivo.condicion]?.label}</span>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="flex-1">
-                                <p className="font-black text-foreground text-sm">
-                                    {perfilActivo.nombre || 'Sin nombre'} · {perfilActivo.edad} años
-                                </p>
-                                <p className="text-xs text-muted-foreground font-semibold">
-                                    {perfilActivo.grado} · {CONDICIONES[perfilActivo.condicion]?.label}
-                                </p>
-                            </div>
+                            {perfilUpdatedAt > 0 && (
+                                <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-semibold">
+                                    <Calendar className="w-3.5 h-3.5" />
+                                    Última actualización: {new Date(perfilUpdatedAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </section>
@@ -623,7 +633,7 @@ const DimensionsScreen: React.FC<DimensionsScreenProps> = ({
                     </div>
                 ) : (
                     <div className="flex flex-col lg:flex-row gap-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 flex-1">
                             {DIMENSION_KEYS.map(key => (
                                 <DimensionCard
                                     key={key}
@@ -634,7 +644,7 @@ const DimensionsScreen: React.FC<DimensionsScreenProps> = ({
                             ))}
                         </div>
 
-                        <aside className="lg:w-80 flex-shrink-0 space-y-4">
+                        <aside className="lg:w-96 flex-shrink-0 space-y-4">
                             <div className="bg-white rounded-2xl border border-border shadow-sm p-5 space-y-3">
                                 <h3 className="font-black text-foreground text-sm mb-1">Panorama general</h3>
                                 <IndicatorTile
@@ -657,7 +667,7 @@ const DimensionsScreen: React.FC<DimensionsScreenProps> = ({
                             </div>
 
                             {recomendaciones.length > 0 && (
-                                <div className="bg-gradient-to-br from-primary/5 to-accent/5 rounded-2xl border border-primary/20 p-5 space-y-2">
+                                <div className="bg-white rounded-2xl border border-border shadow-sm p-5 space-y-2">
                                     <h3 className="font-black text-foreground text-sm flex items-center gap-2">
                                         <Sparkles className="w-4 h-4 text-primary" />
                                         {RECOMENDACIONES_TITULO[rolUsuario]}
