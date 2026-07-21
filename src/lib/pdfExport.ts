@@ -1,5 +1,18 @@
 import { SessionData } from '@/types';
 import { EMOCIONES, INTERESES, CONDICIONES, ASIGNATURAS } from '@/types';
+import { PerfilCompleto } from '@/components/OnboardingWizard';
+import { NeuroeducationalProfile } from '@/lib/dimensionsService';
+import { DimensionKey } from '@/lib/observationsService';
+import { DIMENSION_META } from '@/components/dimensions/DimensionCard';
+
+const DIMENSION_ORDER: DimensionKey[] = [
+  'aprendizajeYDesempeno',
+  'comunicacionSocial',
+  'regulacionEmocional',
+  'autonomiaCotidiana',
+  'saludDesarrollo',
+  'interesesFortalezas',
+];
 
 export function exportReportPDF(data: SessionData): void {
   // Dynamic import to keep bundle clean
@@ -329,5 +342,169 @@ export function exportReportPDF(data: SessionData): void {
           );
       }
       doc.save(`TEOplay_Reporte_${nombre.replace(/\s+/g, '_')}_${now.toISOString().slice(0, 10)}.pdf`);
-  }); 
+  });
+}
+
+// ── Perfil neuroeducativo por dimensiones ───────────────────────────────────
+
+export function exportPerfilDimensionesPDF(
+  perfil: PerfilCompleto,
+  perfilDimensiones: NeuroeducationalProfile | null,
+  recomendacionesAdaptadas: Partial<Record<DimensionKey, string>> | null
+): void {
+  import('jspdf').then(({ jsPDF }) => {
+    const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+    const PAGE_W = 210;
+    const PAGE_H = 297;
+    const MARGIN = 20;
+    const CONTENT_W = PAGE_W - MARGIN * 2;
+    const BOTTOM_MARGIN = 20;
+    let y = 0;
+
+    const checkPageBreak = (neededSpace: number) => {
+      if (y + neededSpace > PAGE_H - BOTTOM_MARGIN) {
+        doc.addPage();
+        y = 20;
+      }
+    };
+
+    const nombre = perfil.nombre || 'Alumno/a';
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('es-CL', { day: '2-digit', month: 'long', year: 'numeric' });
+
+    // ── HEADER ──────────────────────────────────────────────────────────────
+    doc.setFillColor(67, 97, 238);
+    doc.rect(0, 0, PAGE_W, 42, 'F');
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(22);
+    doc.setFont('helvetica', 'bold');
+    doc.text('TEOplay', MARGIN, 18);
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Perfil Neuroeducativo', MARGIN, 27);
+    doc.text(`Generado el ${dateStr}`, PAGE_W - MARGIN, 27, { align: 'right' });
+
+    y = 55;
+
+    // ── STUDENT INFO ─────────────────────────────────────────────────────────
+    checkPageBreak(35);
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 30, 50);
+    doc.text('Información del alumno', MARGIN, y);
+    y += 2;
+    doc.setDrawColor(67, 97, 238);
+    doc.setLineWidth(0.5);
+    doc.line(MARGIN, y + 1, MARGIN + CONTENT_W, y + 1);
+    y += 9;
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(60, 60, 80);
+
+    const infoLeft: [string, string][] = [
+      ['Nombre', nombre],
+      ['Edad', `${perfil.edad} años`],
+    ];
+    const infoRight: [string, string][] = [
+      ['Grado', perfil.grado],
+      ['Condición', CONDICIONES[perfil.condicion]?.label || perfil.condicion],
+    ];
+
+    infoLeft.forEach(([label, value], i) => {
+      doc.setFont('helvetica', 'bold');
+      doc.text(`${label}:`, MARGIN, y + i * 7);
+      doc.setFont('helvetica', 'normal');
+      doc.text(value, MARGIN + 25, y + i * 7);
+    });
+    infoRight.forEach(([label, value], i) => {
+      doc.setFont('helvetica', 'bold');
+      doc.text(`${label}:`, PAGE_W / 2 + 5, y + i * 7);
+      doc.setFont('helvetica', 'normal');
+      doc.text(value, PAGE_W / 2 + 30, y + i * 7);
+    });
+    y += 24;
+
+    // ── DIMENSIONES ──────────────────────────────────────────────────────────
+    DIMENSION_ORDER.forEach(key => {
+      const meta = DIMENSION_META[key];
+      const data = perfilDimensiones?.dimensions[key];
+
+      if (!data) {
+        checkPageBreak(28);
+        doc.setFontSize(13);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(30, 30, 50);
+        doc.text(meta.label, MARGIN, y);
+        y += 2;
+        doc.setDrawColor(67, 97, 238);
+        doc.setLineWidth(0.5);
+        doc.line(MARGIN, y + 1, MARGIN + CONTENT_W, y + 1);
+        y += 9;
+
+        doc.setFontSize(9.5);
+        doc.setFont('helvetica', 'italic');
+        doc.setTextColor(120, 120, 140);
+        doc.text('Aún no hay evidencia suficiente para esta dimensión.', MARGIN, y);
+        y += 14;
+        return;
+      }
+
+      const recomendacion = recomendacionesAdaptadas?.[key] ?? data.baseRecommendation;
+      const summaryLines = doc.splitTextToSize(data.summary, CONTENT_W);
+      const recLines = doc.splitTextToSize(recomendacion, CONTENT_W - 9);
+      const fechaActualizacion = new Date(data.updatedAt).toLocaleDateString('es-CL', { day: '2-digit', month: 'long', year: 'numeric' });
+      const recBoxH = recLines.length * 5 + 8;
+
+      checkPageBreak(11 + summaryLines.length * 5 + 4 + recBoxH + 5 + 12);
+
+      doc.setFontSize(13);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(30, 30, 50);
+      doc.text(meta.label, MARGIN, y);
+      y += 2;
+      doc.setDrawColor(67, 97, 238);
+      doc.setLineWidth(0.5);
+      doc.line(MARGIN, y + 1, MARGIN + CONTENT_W, y + 1);
+      y += 9;
+
+      doc.setFontSize(9.5);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(50, 50, 70);
+      doc.text(summaryLines, MARGIN, y);
+      y += summaryLines.length * 5 + 4;
+
+      doc.setFillColor(248, 249, 255);
+      doc.roundedRect(MARGIN, y, CONTENT_W, recBoxH, 2, 2, 'F');
+      doc.setFillColor(67, 97, 238);
+      doc.circle(MARGIN + 4, y + recBoxH / 2, 2.5, 'F');
+      doc.setFontSize(9.5);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(40, 40, 60);
+      doc.text(recLines, MARGIN + 9, y + 6);
+      y += recBoxH + 5;
+
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(140, 140, 160);
+      doc.text(`Última actualización: ${fechaActualizacion}`, MARGIN, y);
+      y += 12;
+    });
+
+    // ── FOOTER ───────────────────────────────────────────────────────────────
+    const totalPages = doc.getNumberOfPages();
+    for (let p = 1; p <= totalPages; p++) {
+      doc.setPage(p);
+      doc.setFillColor(240, 240, 248);
+      doc.rect(0, 285, PAGE_W, 12, 'F');
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(120, 120, 140);
+      doc.text('TEOplay', PAGE_W / 2, 292, { align: 'center' });
+    }
+
+    doc.save(`TEOplay_PerfilNeuroeducativo_${nombre.replace(/\s+/g, '_')}_${now.toISOString().slice(0, 10)}.pdf`);
+  });
 }

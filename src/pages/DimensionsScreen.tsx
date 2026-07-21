@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Sparkles, User, Pencil, X, CheckCircle, PlusCircle, BarChart2,
-    UserPlus, Copy, Check, ClipboardList, Wand2, Target, Zap, KeyRound, ChevronRight, Calendar, Lightbulb, Menu,
+    UserPlus, Copy, Check, ClipboardList, Wand2, Target, Zap, KeyRound, ChevronRight, Calendar, Lightbulb, Menu, FileDown,
 } from 'lucide-react';
 import {
     PerfilPersistente, Condicion, CONDICIONES, GRADOS, EMOCIONES, PERFIL_ACTIVO_KEY,
@@ -17,6 +17,7 @@ import { DimensionKey } from '@/lib/observationsService';
 import { calcularPerfilDimensiones, getPerfilDimensiones, adaptarRecomendacionesPorRol, NeuroeducationalProfile, DimensionData } from '@/lib/dimensionsService';
 import { getSessionsByStudent } from '@/lib/sessionsService';
 import { getDashboardMetrics } from '@/lib/dashboardMetrics';
+import { exportPerfilDimensionesPDF } from '@/lib/pdfExport';
 import DimensionCard, { DIMENSION_META } from '@/components/dimensions/DimensionCard';
 
 const ROL_LABEL: Record<TipoUsuario, string> = {
@@ -643,6 +644,15 @@ const DimensionsScreen: React.FC<DimensionsScreenProps> = ({
                             <button type="button" onClick={() => setShowObservationModal(true)} className={sidebarButtonClass}>
                                 <ClipboardList className="w-4 h-4" />
                                 Ficha de retroalimentación
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => exportPerfilDimensionesPDF(perfilActivo, perfilDimensiones, recomendacionesAdaptadas)}
+                                disabled={loadingPerfil}
+                                className={`${sidebarButtonClass} disabled:opacity-50 disabled:cursor-not-allowed`}
+                            >
+                                <FileDown className="w-4 h-4" />
+                                Descargar perfil en PDF
                             </button>
                             {rolUsuario === 'padre' && (
                                 <button type="button" onClick={() => setShowInviteModal(true)} className={sidebarButtonClass}>
