@@ -41,6 +41,7 @@ interface EvidenciaDimension {
   observacionesTexto: { authorRole: ActorRole; texto: string }[];
   resumenSesiones?: ResumenSesiones;
   evidenciaBase?: string[]; // frases del perfilNeuroeducativo de onboarding, solo en el primer cálculo
+  analisisAnterior?: { summary: string; baseRecommendation: string }; // summary/baseRecommendation ya guardados antes de este recálculo, si la dimensión ya había sido calculada
 }
 
 type SintesisPorDimension = Partial<Record<DimensionKey, { summary: string; baseRecommendation: string }>>;
@@ -137,6 +138,14 @@ function buildSintesisPrompt(evidencias: EvidenciaDimension[]): string {
       );
     }
 
+    if (ev.analisisAnterior) {
+      partes.push(
+        'Análisis previo de esta dimensión (a integrar, no reemplazar a ciegas):\n' +
+        `  Resumen anterior: "${ev.analisisAnterior.summary}"\n` +
+        `  Recomendación anterior: "${ev.analisisAnterior.baseRecommendation}"`
+      );
+    }
+
     if (ev.observacionesTexto.length > 0) {
       partes.push(
         'Observaciones nuevas:\n' +
@@ -167,6 +176,8 @@ function buildSintesisPrompt(evidencias: EvidenciaDimension[]): string {
 Tu tarea es actualizar el Perfil Neuroeducativo de un estudiante, sintetizando ÚNICAMENTE la evidencia nueva recibida a continuación para cada dimensión indicada. No inventes información fuera de la evidencia entregada.
 
 REGLA DE ENCUADRE (obligatoria): nunca describas al estudiante en términos evaluativos o de déficit ("le va mal", "bajo rendimiento", "problema de conducta"). Encuadra siempre como evolución y ajuste de estrategia ("conviene ajustar la estrategia de...", "se observa una oportunidad para reforzar...", "esta evidencia sugiere probar..."). El summary y la recomendación deben poder leerse en voz alta frente a la familia sin sonar como un diagnóstico o una calificación.
+
+REGLA DE CONTINUIDAD (obligatoria): cuando una dimensión tenga un análisis previo, tu nuevo summary debe INTEGRAR el patrón acumulado con la evidencia nueva — no ignores ni reemplaces el análisis previo sin considerarlo. Si la evidencia nueva confirma el patrón anterior, refuerza esa conclusión. Si lo contradice o matiza, actualiza el análisis reflejando la evolución. El resultado debe leerse como una síntesis acumulada del historial completo de esa dimensión, no como un análisis aislado del último dato recibido.
 
 REGLA DE SÍNTESIS (obligatoria): el summary NUNCA debe citar ni parafrasear casi textualmente el texto de una observación — siempre debe reformularse con lenguaje propio, analítico y en tercera persona, como lo haría un profesional sintetizando un caso, incluso cuando solo hay una única observación como evidencia. No inventar información es distinto de no reformular: el contenido debe ser fiel a la evidencia, pero el LENGUAJE siempre debe ser sintetizado, nunca una transcripción.
 
@@ -269,6 +280,11 @@ export async function calcularPerfilDimensiones(studentId: string): Promise<void
       ? construirEvidenciaBase(dim, perfilOnboarding)
       : [];
 
+    const perfilDimPrevio = perfilActual.dimensions[dim];
+    const analisisAnterior = (perfilDimPrevio?.summary && perfilDimPrevio?.baseRecommendation)
+      ? { summary: perfilDimPrevio.summary, baseRecommendation: perfilDimPrevio.baseRecommendation }
+      : undefined;
+
     if (observacionesNuevas.length === 0 && sesionesNuevas.length === 0 && evidenciaBase.length === 0) continue;
 
     const timestamps = [
@@ -293,6 +309,7 @@ export async function calcularPerfilDimensiones(studentId: string): Promise<void
       observacionesTexto: observacionesNuevas.map(o => ({ authorRole: o.authorRole, texto: o.freeText })),
       resumenSesiones: sesionesNuevas.length > 0 ? resumirSesiones(dim, sesionesNuevas) : undefined,
       evidenciaBase: evidenciaBase.length > 0 ? evidenciaBase : undefined,
+      analisisAnterior,
     });
   }
 
