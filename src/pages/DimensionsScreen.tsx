@@ -3,14 +3,14 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Sparkles, User, Pencil, X, CheckCircle, PlusCircle, BarChart2,
-    UserPlus, Copy, Check, ClipboardList, Wand2, Target, Zap, KeyRound, ChevronRight, Calendar, Lightbulb,
+    UserPlus, Copy, Check, ClipboardList, Wand2, Target, Zap, KeyRound, ChevronRight, Calendar, Lightbulb, Menu,
 } from 'lucide-react';
 import {
     PerfilPersistente, Condicion, CONDICIONES, GRADOS, EMOCIONES, PERFIL_ACTIVO_KEY,
 } from '@/types';
 import { PerfilCompleto, TipoUsuario } from '@/components/OnboardingWizard';
 import { getUsuarioData } from '@/lib/authService';
-import { actualizarPerfilNeuroeducativo, getStudentsLinkedToUser } from '@/lib/studentsService';
+import { actualizarPerfilNeuroeducativo, actualizarDatosBasicos, getStudentsLinkedToUser } from '@/lib/studentsService';
 import { crearInvitacion, canjearInvitacion } from '@/lib/studentLinksService';
 import ObservationForm from '@/components/ObservationForm';
 import { DimensionKey } from '@/lib/observationsService';
@@ -23,6 +23,18 @@ const ROL_LABEL: Record<TipoUsuario, string> = {
     padre: 'Familia',
     docente: 'Docente',
     terapeuta: 'Terapeuta',
+};
+
+const ROL_EMOJI: Record<TipoUsuario, string> = {
+    padre: '👨‍👩‍👦',
+    docente: '🧑‍🏫',
+    terapeuta: '🧑🏻‍⚕️',
+};
+
+const ROL_BG: Record<TipoUsuario, string> = {
+    padre: 'bg-blue-100/70',
+    docente: 'bg-purple-10/70',
+    terapeuta: 'bg-teal-100/70',
 };
 
 const RECOMENDACIONES_TITULO: Record<TipoUsuario, string> = {
@@ -400,6 +412,7 @@ const DimensionsScreen: React.FC<DimensionsScreenProps> = ({
         return perfiles.find(p => p.id === id) || perfiles[0] || null;
     });
 
+    const [sidebarAbierto, setSidebarAbierto] = useState(true);
     const [showEditModal, setShowEditModal] = useState(false);
     const [showInviteModal, setShowInviteModal] = useState(false);
     const [showObservationModal, setShowObservationModal] = useState(false);
@@ -512,6 +525,17 @@ const DimensionsScreen: React.FC<DimensionsScreenProps> = ({
         onPerfilesChange(nuevos);
         setPerfilActivo(perfilEditado);
 
+        try {
+            await actualizarDatosBasicos(perfilEditado.id, {
+                nombre: perfilEditado.nombre,
+                edad: perfilEditado.edad,
+                grado: perfilEditado.grado,
+                condicion: perfilEditado.condicion,
+            });
+        } catch (e) {
+            console.error('Error actualizando datos básicos en Firestore:', e);
+        }
+
         // Si tiene perfil neuroeducativo, actualizar también en Firestore
         if (perfilEditado.perfilNeuroeducativo) {
             try {
@@ -526,7 +550,7 @@ const DimensionsScreen: React.FC<DimensionsScreenProps> = ({
         }
     };
 
-    const actionButtonClass = 'flex items-center gap-1.5 px-3 py-2 rounded-xl border-2 border-border text-xs font-black text-muted-foreground hover:border-primary hover:text-primary transition-all cursor-pointer';
+    const sidebarButtonClass = 'flex items-center gap-2 w-full px-3 py-2.5 rounded-xl border-2 border-border text-sm font-black text-muted-foreground hover:border-primary hover:text-primary transition-all cursor-pointer';
 
     if (!perfilActivo) return null;
 
@@ -536,14 +560,36 @@ const DimensionsScreen: React.FC<DimensionsScreenProps> = ({
             {/* Header */}
             <section className="bg-white border-b border-border">
                 <div className="max-w-[1600px] mx-auto px-6 lg:px-12 pt-4 pb-3">
-                    <div className="flex flex-col items-start">
-                        <img src="/logo.png" alt="TEOplay" className="h-[180px] object-contain block" />
-                        <h1 className="font-[Fredoka] text-3xl text-orange-600 font-black">
-                            Perfil neuroeducativo
-                        </h1>
-                        <p className="text-xs text-muted-foreground font-semibold mt-1">
-                            Conectado como: {datosUsuario?.nombre || datosUsuario?.email || 'Usuario'} · {ROL_LABEL[rolUsuario]}
-                        </p>
+                    <div className="flex items-end justify-between flex-wrap gap-2">
+                        <div className="flex flex-col items-start">
+                            <div className="flex items-center gap-3">
+                                <img src="/logo.png" alt="TEOplay" className="h-[180px] object-contain block" />
+                                <button
+                                    type="button"
+                                    onClick={() => setSidebarAbierto(v => !v)}
+                                    aria-label={sidebarAbierto ? 'Ocultar menú lateral' : 'Mostrar menú lateral'}
+                                    className="p-2.5 rounded-xl border-2 border-border text-muted-foreground hover:border-primary hover:text-primary transition-colors cursor-pointer flex-shrink-0"
+                                >
+                                    <Menu className="w-5 h-5" />
+                                </button>
+                            </div>
+                            <h1 className="font-[Fredoka] text-3xl text-orange-600 font-black">
+                                Dimensiones del perfil neuroeducativo
+                            </h1>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className={`w-14 h-14 rounded-full ${ROL_BG[rolUsuario]} flex items-center justify-center flex-shrink-0 shadow-sm`} style={{ fontSize: '28px' }}>
+                                {ROL_EMOJI[rolUsuario]}
+                            </span>
+                            <div className="flex flex-col">
+                                <p className="text-sm text-foreground font-bold">
+                                    {datosUsuario?.nombre || datosUsuario?.email || 'Usuario'}
+                                </p>
+                                <p className="text-sm text-muted-foreground font-semibold">
+                                    {ROL_LABEL[rolUsuario]}
+                                </p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -553,93 +599,113 @@ const DimensionsScreen: React.FC<DimensionsScreenProps> = ({
                 <div className="max-w-[1600px] mx-auto flex items-center gap-3 text-sm text-primary/80">
                     <span className="text-lg">💡</span>
                     <span className="font-[Fredoka]">
-                        Este perfil se actualiza automáticamente con cada nueva sesión y observación registrada.
+                        Selecciona una dimensión para ver la información detallada.
                     </span>
                 </div>
             </div>
 
-            <main className="max-w-[1600px] mx-auto px-6 lg:px-12 py-8 space-y-6">
+            <main className="max-w-[1600px] mx-auto px-6 lg:px-12 py-8">
+                <div className={`flex flex-col lg:flex-row transition-all duration-200 ${sidebarAbierto ? 'gap-6' : 'gap-0'}`}>
 
-                {/* Niño activo + barra de acciones */}
-                <section className="bg-white rounded-2xl border-2 border-primary/20 shadow-sm overflow-hidden">
-                    <div className="px-6 py-4">
-                        <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-                            <h2 className="font-black text-foreground text-base flex items-center gap-2">
+                    {/* Sidebar de acciones (colapsable) */}
+                    <aside
+                        className={`flex-shrink-0 overflow-hidden transition-all duration-200 ${
+                            sidebarAbierto
+                                ? 'max-h-[2000px] opacity-100 lg:max-h-none lg:w-72'
+                                : 'max-h-0 opacity-0 lg:w-0'
+                        }`}
+                    >
+                        <div className="lg:w-72 space-y-4">
+                        <div className="bg-white rounded-2xl border border-border shadow-sm p-5 space-y-2">
+                            <h3 className="font-black text-foreground text-sm mb-1">Acciones</h3>
+                            {rolUsuario === 'padre' && (
+                                <button type="button" onClick={onAgregarNino} className={sidebarButtonClass}>
+                                    <PlusCircle className="w-4 h-4" />
+                                    Agregar niño
+                                </button>
+                            )}
+                            <button type="button" onClick={() => navigate('/dashboard')} className={sidebarButtonClass}>
+                                <BarChart2 className="w-4 h-4" />
+                                Tablero
+                            </button>
+                            {(rolUsuario === 'docente' || rolUsuario === 'terapeuta') && (
+                                <button type="button" onClick={() => setShowCanjearModal(true)} className={sidebarButtonClass}>
+                                    <KeyRound className="w-4 h-4" />
+                                    Tengo un código
+                                </button>
+                            )}
+                            {rolUsuario === 'padre' && (
+                                <button type="button" onClick={() => setShowEditModal(true)} className={sidebarButtonClass}>
+                                    <Pencil className="w-4 h-4" />
+                                    Editar
+                                </button>
+                            )}
+                            <button type="button" onClick={() => setShowObservationModal(true)} className={sidebarButtonClass}>
+                                <ClipboardList className="w-4 h-4" />
+                                Ficha de retroalimentación
+                            </button>
+                            {rolUsuario === 'padre' && (
+                                <button type="button" onClick={() => setShowInviteModal(true)} className={sidebarButtonClass}>
+                                    <UserPlus className="w-4 h-4" />
+                                    Invitar especialista
+                                </button>
+                            )}
+                            {rolUsuario !== 'terapeuta' && (
+                                <button
+                                    type="button"
+                                    onClick={onFlexibilizarClase}
+                                    className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl bg-primary text-white text-sm font-black hover:bg-primary/90 transition-all cursor-pointer shadow-sm"
+                                >
+                                    <Wand2 className="w-4 h-4" />
+                                    Flexibilizar clase
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Otros usuarios */}
+                        {perfiles.length > 1 && (
+                            <div className="bg-white rounded-2xl border border-border shadow-sm p-5">
+                                <details className="group">
+                                    <summary className="flex items-center justify-between cursor-pointer list-none [&::-webkit-details-marker]:hidden font-black text-foreground text-sm">
+                                        <span>Otros usuarios ({perfiles.length - 1})</span>
+                                        <ChevronRight className="w-4 h-4 text-muted-foreground transition-transform group-open:rotate-90" />
+                                    </summary>
+                                    <div className="mt-3 space-y-2">
+                                        {perfiles.filter(p => p.id !== perfilActivo.id).map(p => (
+                                            <button
+                                                key={p.id}
+                                                type="button"
+                                                onClick={() => handleSeleccionarPerfil(p.id)}
+                                                className="flex items-center gap-2 w-full p-3 rounded-xl border-2 border-border text-left hover:border-primary/40 transition-all cursor-pointer"
+                                            >
+                                                <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-sm font-black text-foreground flex-shrink-0">
+                                                    {p.nombre ? p.nombre.charAt(0).toUpperCase() : '?'}
+                                                </div>
+                                                <div className="overflow-hidden">
+                                                    <p className="font-black text-xs truncate text-foreground">
+                                                        {p.nombre || 'Sin nombre'}
+                                                    </p>
+                                                    <p className="text-xs text-muted-foreground truncate">{CONDICIONES[p.condicion]?.label}</p>
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </details>
+                            </div>
+                        )}
+                        </div>
+                    </aside>
+
+                    {/* Contenido principal */}
+                    <div className="flex-1 min-w-0 space-y-6">
+
+                    {/* Niño activo */}
+                    <section className="bg-white rounded-2xl border-2 border-primary/20 shadow-sm overflow-hidden">
+                        <div className="px-6 py-4">
+                            <h2 className="font-black text-foreground text-base flex items-center gap-2 mb-4">
                                 <User className="w-5 h-5 text-primary" />
                                 Niño/a activo
                             </h2>
-                            <div className="flex items-center gap-2 flex-wrap">
-                                {rolUsuario === 'padre' && (
-                                    <button type="button" onClick={onAgregarNino} className={actionButtonClass}>
-                                        <PlusCircle className="w-4 h-4" />
-                                        Agregar niño
-                                    </button>
-                                )}
-                                <button type="button" onClick={() => navigate('/dashboard')} className={actionButtonClass}>
-                                    <BarChart2 className="w-4 h-4" />
-                                    Tablero
-                                </button>
-                                {(rolUsuario === 'docente' || rolUsuario === 'terapeuta') && (
-                                    <button type="button" onClick={() => setShowCanjearModal(true)} className={actionButtonClass}>
-                                        <KeyRound className="w-4 h-4" />
-                                        Tengo un código
-                                    </button>
-                                )}
-                                {rolUsuario === 'padre' && (
-                                    <button type="button" onClick={() => setShowEditModal(true)} className={actionButtonClass}>
-                                        <Pencil className="w-4 h-4" />
-                                        Editar
-                                    </button>
-                                )}
-                                <button type="button" onClick={() => setShowObservationModal(true)} className={actionButtonClass}>
-                                    <ClipboardList className="w-4 h-4" />
-                                    Ficha de retroalimentación
-                                </button>
-                                {rolUsuario === 'padre' && (
-                                    <button type="button" onClick={() => setShowInviteModal(true)} className={actionButtonClass}>
-                                        <UserPlus className="w-4 h-4" />
-                                        Invitar especialista
-                                    </button>
-                                )}
-                                {rolUsuario !== 'terapeuta' && (
-                                    <button
-                                        type="button"
-                                        onClick={onFlexibilizarClase}
-                                        className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-white text-xs font-black hover:bg-primary/90 transition-all cursor-pointer shadow-sm"
-                                    >
-                                        <Wand2 className="w-4 h-4" />
-                                        Flexibilizar clase
-                                    </button>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Lista de perfiles si hay más de uno */}
-                        {perfiles.length > 1 && (
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
-                                {perfiles.map(p => (
-                                    <button
-                                        key={p.id}
-                                        type="button"
-                                        onClick={() => handleSeleccionarPerfil(p.id)}
-                                        className={`flex items-center gap-2 p-3 rounded-xl border-2 text-left transition-all ${perfilActivo.id === p.id
-                                            ? 'border-primary bg-primary/5'
-                                            : 'border-border hover:border-primary/40'
-                                            }`}
-                                    >
-                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-black flex-shrink-0 ${perfilActivo.id === p.id ? 'bg-primary text-white' : 'bg-muted text-foreground'}`}>
-                                            {p.nombre ? p.nombre.charAt(0).toUpperCase() : '?'}
-                                        </div>
-                                        <div className="overflow-hidden">
-                                            <p className={`font-black text-xs truncate ${perfilActivo.id === p.id ? 'text-primary' : 'text-foreground'}`}>
-                                                {p.nombre || 'Sin nombre'}
-                                            </p>
-                                            <p className="text-xs text-muted-foreground truncate">{CONDICIONES[p.condicion]?.label}</p>
-                                        </div>
-                                    </button>
-                                ))}
-                            </div>
-                        )}
 
                         {/* Perfil activo */}
                         <div className="flex items-center justify-between gap-3 p-4 bg-muted/30 rounded-xl flex-wrap">
@@ -665,16 +731,16 @@ const DimensionsScreen: React.FC<DimensionsScreenProps> = ({
                                 </div>
                             )}
                         </div>
-                    </div>
-                </section>
+                        </div>
+                    </section>
 
-                {/* Dimensiones + panel lateral */}
-                {loadingPerfil ? (
-                    <div className="flex flex-col items-center justify-center py-20 gap-3">
-                        <Sparkles className="w-8 h-8 text-primary animate-pulse" />
-                        <p className="text-sm text-muted-foreground font-semibold">Actualizando perfil neuroeducativo…</p>
-                    </div>
-                ) : (
+                    {/* Dimensiones + panel lateral */}
+                    {loadingPerfil ? (
+                        <div className="flex flex-col items-center justify-center py-20 gap-3">
+                            <Sparkles className="w-8 h-8 text-primary animate-pulse" />
+                            <p className="text-sm text-muted-foreground font-semibold">Actualizando perfil neuroeducativo…</p>
+                        </div>
+                    ) : (
                     <div className="flex flex-col lg:flex-row gap-6">
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 flex-1">
                             {DIMENSION_KEYS.map(key => (
@@ -726,7 +792,9 @@ const DimensionsScreen: React.FC<DimensionsScreenProps> = ({
                             )}
                         </aside>
                     </div>
-                )}
+                    )}
+                    </div>
+                </div>
             </main>
 
             {/* Edit modal */}

@@ -10,7 +10,6 @@ export interface DimensionMeta {
   colorClass: string;
   iconBgClass: string; // fondo sólido claro del contenedor del ícono
   bgTint: string; // fondo sutil (/50) de la tarjeta completa
-  barClass: string;
 }
 
 // Colores/iconos por dimensión: mapeo provisorio sobre la paleta teo-* ya
@@ -21,40 +20,35 @@ export const DIMENSION_META: Record<DimensionKey, DimensionMeta> = {
     icon: BookOpen,
     colorClass: 'text-blue-700',
     iconBgClass: 'bg-blue-600',
-    bgTint: 'bg-blue-50/50',
-    barClass: 'bg-blue-700',
+    bgTint: 'bg-blue-100/70',
   },
   comunicacionSocial: {
     label: 'Comunicación social',
     icon: MessagesSquare,
     colorClass: 'text-teal-700',
     iconBgClass: 'bg-teal-600',
-    bgTint: 'bg-teal-50/50',
-    barClass: 'bg-teal-700',
+    bgTint: 'bg-teal-100/70',
   },
   regulacionEmocional: {
     label: 'Regulación emocional',
     icon: Heart,
     colorClass: 'text-purple-700',
     iconBgClass: 'bg-purple-600',
-    bgTint: 'bg-purple-50/50',
-    barClass: 'bg-purple-700',
+    bgTint: 'bg-purple-100/70',
   },
   autonomiaCotidiana: {
     label: 'Autonomía cotidiana',
     icon: ListChecks,
     colorClass: 'text-amber-700',
     iconBgClass: 'bg-amber-600',
-    bgTint: 'bg-amber-50/50',
-    barClass: 'bg-amber-700',
+    bgTint: 'bg-amber-100/70',
   },
   saludDesarrollo: {
     label: 'Salud y desarrollo',
     icon: Stethoscope,
     colorClass: 'text-red-700',
     iconBgClass: 'bg-red-600',
-    bgTint: 'bg-red-50/50',
-    barClass: 'bg-red-700',
+    bgTint: 'bg-red-100/70',
   },
   interesesFortalezas: {
     label: 'Intereses y fortalezas',
@@ -62,17 +56,8 @@ export const DIMENSION_META: Record<DimensionKey, DimensionMeta> = {
     colorClass: 'text-pink-700',
     iconBgClass: 'bg-pink-600',
     bgTint: 'bg-pink-50/50',
-    barClass: 'bg-pink-700',
   },
 };
-
-// Encuadre no evaluativo del progreso (sección 21 del documento de visión):
-// nunca se presenta como nota/calificación, siempre como proceso en curso.
-function encuadreProgreso(progress: number): string {
-  if (progress <= 40) return 'Iniciando este proceso';
-  if (progress <= 70) return 'En desarrollo, mejorando';
-  return 'Consolidando avances';
-}
 
 interface DimensionCardProps {
   dimensionKey: DimensionKey;
@@ -97,21 +82,6 @@ const DimensionCard: React.FC<DimensionCardProps> = ({ dimensionKey, data, onCli
         </div>
         <h3 className="font-black text-foreground text-[18px] flex-1">{meta.label}</h3>
       </div>
-
-      {data?.progress !== undefined && (
-        <div>
-          <div className="h-2 bg-muted rounded-full overflow-hidden">
-            <div
-              className={`h-full rounded-full ${meta.barClass}`}
-              style={{ width: `${data.progress}%` }}
-            />
-          </div>
-          <div className="flex items-center justify-between mt-1">
-            <p className={`text-xs font-bold ${meta.colorClass}`}>{encuadreProgreso(data.progress)}</p>
-            <p className="text-[14px] font-semibold text-muted-foreground">{data.progress}%</p>
-          </div>
-        </div>
-      )}
 
       {data ? (
         <p className="text-sm text-foreground/80 leading-relaxed line-clamp-2">{data.summary}</p>

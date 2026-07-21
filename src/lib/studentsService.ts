@@ -14,6 +14,7 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { PerfilCompleto, PerfilNeuroeducativo } from '@/components/OnboardingWizard';
+import { Condicion } from '@/types';
 
 // ── Guardar alumno nuevo (desde Onboarding) ───────────────────────────────────
 
@@ -114,6 +115,21 @@ export async function getStudentsLinkedToUser(userId: string): Promise<PerfilCom
     }
   }
   return perfiles;
+}
+
+// ── Actualizar datos básicos (nombre/edad/grado/condición) ────────────────────
+
+export async function actualizarDatosBasicos(
+  studentId: string,
+  datos: { nombre: string; edad: number; grado: string; condicion: Condicion }
+): Promise<void> {
+  await updateDoc(doc(db, 'alumnos', studentId), {
+    nombre: datos.nombre,
+    edad: datos.edad,
+    grado: datos.grado,
+    condicion: datos.condicion,
+    updatedAt: serverTimestamp(),
+  });
 }
 
 // ── Actualizar perfil neuroeducativo (guarda histórico automáticamente) ────────
