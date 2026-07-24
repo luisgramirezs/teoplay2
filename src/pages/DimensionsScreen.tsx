@@ -352,7 +352,7 @@ const DimensionDetailModal: React.FC<{
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
                 <div className="flex items-center justify-between px-6 py-4 border-b border-border sticky top-0 bg-white rounded-t-2xl">
                     <div className="flex items-center gap-2">
-                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${meta.iconBgClass} ${meta.colorClass}`}>
+                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${meta.iconBgClass} text-white`}>
                             <Icon className="w-4 h-4" />
                         </div>
                         <h2 className="font-black text-foreground text-lg">{meta.label}</h2>
@@ -617,8 +617,8 @@ const DimensionsScreen: React.FC<DimensionsScreenProps> = ({
                         }`}
                     >
                         <div className="lg:w-72 space-y-4">
-                        <div className="bg-white rounded-2xl border border-border shadow-sm p-5 space-y-2">
-                            <h3 className="font-black text-foreground text-sm mb-1">Acciones</h3>
+                        <div className="bg-gray-50 rounded-2xl border-2 border-primary/30 shadow-sm overflow-hidden p-5 space-y-2">
+                            <h3 className="font-black text-foreground text-sm mb-1">Herramientas:</h3>
                             {rolUsuario === 'padre' && (
                                 <button type="button" onClick={onAgregarNino} className={sidebarButtonClass}>
                                     <PlusCircle className="w-4 h-4" />
@@ -664,17 +664,17 @@ const DimensionsScreen: React.FC<DimensionsScreenProps> = ({
                                 <button
                                     type="button"
                                     onClick={onFlexibilizarClase}
-                                    className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl bg-primary text-white text-sm font-black hover:bg-primary/90 transition-all cursor-pointer shadow-sm"
+                                    className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl bg-orange-600 text-white text-sm font-black hover:bg-primary/70 transition-all cursor-pointer shadow-sm"
                                 >
                                     <Wand2 className="w-4 h-4" />
-                                    Flexibilizar clase
+                                    Flexibilización de temas
                                 </button>
                             )}
                         </div>
 
                         {/* Otros usuarios */}
                         {perfiles.length > 1 && (
-                            <div className="bg-white rounded-2xl border border-border shadow-sm p-5">
+                            <div className="bg-gray-50 rounded-2xl border-2 border-primary/30 shadow-sm overflow-hidden p-5">
                                 <details className="group">
                                     <summary className="flex items-center justify-between cursor-pointer list-none [&::-webkit-details-marker]:hidden font-black text-foreground text-sm">
                                         <span>Otros usuarios ({perfiles.length - 1})</span>
@@ -710,22 +710,24 @@ const DimensionsScreen: React.FC<DimensionsScreenProps> = ({
                     <div className="flex-1 min-w-0 space-y-6">
 
                     {/* Niño activo */}
-                    <section className="bg-white rounded-2xl border-2 border-primary/20 shadow-sm overflow-hidden">
+                    <section className="bg-gray-50 rounded-2xl border-2 border-primary/30 shadow-sm overflow-hidden">
                         <div className="px-6 py-4">
                             <h2 className="font-black text-foreground text-base flex items-center gap-2 mb-4">
-                                <User className="w-5 h-5 text-primary" />
-                                Niño/a activo
+                                
+                                Perfil activo:
                             </h2>
 
                         {/* Perfil activo */}
                         <div className="flex items-center justify-between gap-3 p-4 bg-muted/30 rounded-xl flex-wrap">
                             <div className="flex items-center gap-4">
-                                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-2xl font-black text-primary flex-shrink-0 shadow-sm">
-                                    {perfilActivo.nombre ? perfilActivo.nombre.charAt(0).toUpperCase() : '👤'}
+                                <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center text-2xl font-black text-primary flex-shrink-0 shadow-sm">
+                                    
+                                    <User className="w-8 h-8 text-primary" />
                                 </div>
                                 <div>
                                     <p className="font-black text-foreground text-2xl">
                                         {perfilActivo.nombre || 'Sin nombre'}
+                                        
                                     </p>
                                     <div className="flex items-center gap-2 flex-wrap mt-1.5">
                                         <span className="bg-muted rounded-full px-3 py-1 text-xs font-bold text-muted-foreground">{perfilActivo.edad} años</span>
@@ -764,8 +766,8 @@ const DimensionsScreen: React.FC<DimensionsScreenProps> = ({
                         </div>
 
                         <aside className="lg:w-96 flex-shrink-0 space-y-4">
-                            <div className="bg-white rounded-2xl border border-border shadow-sm p-5 space-y-3">
-                                <h3 className="font-black text-foreground text-sm mb-1">Panorama general</h3>
+                            <div className="bg-gray-50 rounded-2xl border-2 border-primary/30 shadow-sm overflow-hidden p-5 space-y-3">
+                                <h3 className="font-black text-foreground text-sm mb-1">Últimos indicadores:</h3>
                                 <IndicatorTile
                                     icon={<Target className="w-4 h-4 text-primary" />}
                                     label="Nivel de comprensión"
@@ -786,7 +788,7 @@ const DimensionsScreen: React.FC<DimensionsScreenProps> = ({
                             </div>
 
                             {recomendaciones.length > 0 && (
-                                <div className="bg-white rounded-2xl border border-border shadow-sm p-5 space-y-2">
+                                <div className="bg-gray-50 rounded-2xl border-2 border-primary/30 shadow-sm overflow-hidden p-5 space-y-2">
                                     <h3 className="font-black text-foreground text-sm flex items-center gap-2">
                                         <Sparkles className="w-4 h-4 text-primary" />
                                         {RECOMENDACIONES_TITULO[rolUsuario]}

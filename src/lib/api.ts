@@ -153,39 +153,16 @@ function buildPrompt(perfil: PerfilNino): string {
 
 
         "apoyoGramatical": {
-          "titulo": "Nombre de la estructura gramatical",
-          "idioma": "inglés | francés | español",
+          "titulo": "",
+          "idioma": "",
           "piezas": [
-            {
-              "rol": "Sujeto",
-              "valores": ["She", "He", "It"],
-              "etiqueta": "Personas que usan HAS",
-              "color": "orange"
-            },
-            {
-              "rol": "Auxiliar",
-              "valores": ["has", "have"],
-              "etiqueta": "has → She/He/It | have → I/You/We/They",
-              "color": "blue"
-            },
-            {
-              "rol": "Participio pasado",
-              "valores": ["eaten", "finished", "gone", "done", "seen"],
-              "etiqueta": "Verbo en su forma de participio pasado",
-              "color": "green"
-            }
+            { "rol": "", "valores": [""], "etiqueta": "", "color": "orange | blue | green | purple | pink | teal" }
           ],
-          "reglas": [
-            "She / He / It → usa HAS",
-            "I / You / We / They → usa HAVE",
-            "El verbo principal siempre va en participio pasado"
-          ],
+          "reglas": [""],
           "ejemplos": [
-            { "oracion": "She has eaten.", "traduccion": "Ella ha comido." },
-            { "oracion": "I have finished.", "traduccion": "Yo he terminado." },
-            { "oracion": "They have gone.", "traduccion": "Ellos se han ido." }
+            { "oracion": "", "traduccion": "" }
           ],
-          "nota": "Usa HAS o HAVE según quién realiza la acción. El verbo principal siempre cambia a su forma especial (participio pasado)."
+          "nota": ""
         }
 
         "apoyoVisual": {
@@ -229,39 +206,16 @@ function buildPrompt(perfil: PerfilNino): string {
         "analogia": "",
         "ejemplos": [],
         "apoyoGramatical": {
-          "titulo": "Nombre de la estructura gramatical",
-          "idioma": "inglés | francés | español",
+          "titulo": "",
+          "idioma": "",
           "piezas": [
-            {
-              "rol": "Sujeto",
-              "valores": ["She", "He", "It"],
-              "etiqueta": "Personas que usan HAS",
-              "color": "orange"
-            },
-            {
-              "rol": "Auxiliar",
-              "valores": ["has", "have"],
-              "etiqueta": "has → She/He/It | have → I/You/We/They",
-              "color": "blue"
-            },
-            {
-              "rol": "Participio pasado",
-              "valores": ["eaten", "finished", "gone", "done", "seen"],
-              "etiqueta": "Verbo en su forma de participio pasado",
-              "color": "green"
-            }
+            { "rol": "", "valores": [""], "etiqueta": "", "color": "orange | blue | green | purple | pink | teal" }
           ],
-          "reglas": [
-            "She / He / It → usa HAS",
-            "I / You / We / They → usa HAVE",
-            "El verbo principal siempre va en participio pasado"
-          ],
+          "reglas": [""],
           "ejemplos": [
-            { "oracion": "She has eaten.", "traduccion": "Ella ha comido." },
-            { "oracion": "I have finished.", "traduccion": "Yo he terminado." },
-            { "oracion": "They have gone.", "traduccion": "Ellos se han ido." }
+            { "oracion": "", "traduccion": "" }
           ],
-          "nota": "Usa HAS o HAVE según quién realiza la acción. El verbo principal siempre cambia a su forma especial (participio pasado)."
+          "nota": ""
         }
 
         "apoyoVisual": {},
@@ -293,41 +247,18 @@ function buildPrompt(perfil: PerfilNino): string {
         "chequeoCobertura": [],
         "analogia": "",
         "ejemplos": [],
-        
+
         "apoyoGramatical": {
-          "titulo": "Nombre de la estructura gramatical",
-          "idioma": "inglés | francés | español",
+          "titulo": "",
+          "idioma": "",
           "piezas": [
-            {
-              "rol": "Sujeto",
-              "valores": ["She", "He", "It"],
-              "etiqueta": "Personas que usan HAS",
-              "color": "orange"
-            },
-            {
-              "rol": "Auxiliar",
-              "valores": ["has", "have"],
-              "etiqueta": "has → She/He/It | have → I/You/We/They",
-              "color": "blue"
-            },
-            {
-              "rol": "Participio pasado",
-              "valores": ["eaten", "finished", "gone", "done", "seen"],
-              "etiqueta": "Verbo en su forma de participio pasado",
-              "color": "green"
-            }
+            { "rol": "", "valores": [""], "etiqueta": "", "color": "orange | blue | green | purple | pink | teal" }
           ],
-          "reglas": [
-            "She / He / It → usa HAS",
-            "I / You / We / They → usa HAVE",
-            "El verbo principal siempre va en participio pasado"
-          ],
+          "reglas": [""],
           "ejemplos": [
-            { "oracion": "She has eaten.", "traduccion": "Ella ha comido." },
-            { "oracion": "I have finished.", "traduccion": "Yo he terminado." },
-            { "oracion": "They have gone.", "traduccion": "Ellos se han ido." }
+            { "oracion": "", "traduccion": "" }
           ],
-          "nota": "Usa HAS o HAVE según quién realiza la acción. El verbo principal siempre cambia a su forma especial (participio pasado)."
+          "nota": ""
         }
 
         "apoyoVisual": {},
@@ -408,6 +339,7 @@ function buildPrompt(perfil: PerfilNino): string {
         `25. "ejemplosVisuales" SOLO debe generarse si la asignatura es: artes, sociales, historia o ciencias. Para matemáticas, inglés, francés, lenguaje, física, química, ed_física y tecnología: devuelve "ejemplosVisuales": [] (arreglo vacío).`,
         `26. Para asignatura inglés o francés o lenguaje con temas gramaticales: usa tipo "estructura_oracion" en apoyoVisual, NO "formula".`,
         `27. "apoyoGramatical" es OBLIGATORIO si la asignatura es inglés, francés, español o lenguaje Y el tema es una estructura gramatical (tiempo verbal, tipo de oración, conjugación, etc.).`,
+        `27b. Los valores de "apoyoGramatical" (piezas, reglas, ejemplos) deben corresponder EXCLUSIVAMENTE a la estructura gramatical del tema de ESTA lección. Nunca reutilices vocabulario, roles o ejemplos de otra estructura gramatical distinta a la indicada en "Tema" (ej. no mezcles presente perfecto con pasado simple, ni subjuntivo con indicativo, salvo que el tema lo pida explícitamente).`,
         `28. Para "apoyoGramatical.piezas": incluye TODAS las partes de la estructura (sujeto, auxiliar, verbo principal, complemento, etc.) con sus valores reales del idioma.`,
         `29. "piezas[].valores" debe contener ejemplos concretos y reales del idioma — no descripciones abstractas.`,
         `30. "piezas[].etiqueta" debe explicar CUÁNDO o POR QUÉ se usa esa pieza — no solo nombrarla.`,
