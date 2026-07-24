@@ -1,4 +1,4 @@
-import { PerfilNino, SesionGenerada, ExplicacionBloque } from '@/types';
+import { PerfilNino, SesionGenerada, ExplicacionBloque, Idioma } from '@/types';
 import { buildOperationalProfile, renderOperationalProfileBlock } from '../utils/profilePrompt';
 
 
@@ -298,9 +298,13 @@ function buildPrompt(perfil: PerfilNino): string {
         `Condición: ${condicion}`,
         `Asignatura: ${asignatura}`,
         `Tema: ${perfil.tema}`,
+        `Objetivo de aprendizaje: ${perfil.objetivo}`,
+        ...(perfil.recursoContexto ? [`Recurso o contexto pedagógico: ${perfil.recursoContexto}`] : []),
         `Idioma: ${idioma}`,
         '',
         'INSTRUCCIONES PEDAGÓGICAS OBLIGATORIAS:',
+        `0. El "Objetivo de aprendizaje" delimita el alcance real de esta lección. Si el objetivo acota una porción del tema "${perfil.tema}", las reglas de completitud (1 a 11, "cubre TODO el tema") quedan subordinadas a ese objetivo: NO generes "conceptosClave", "ejemplos", "apoyoGramatical" ni "juegos" que excedan lo que el objetivo pide cubrir. Si el objetivo no acota nada (pide el tema completo), aplica las reglas de completitud sin restricción.`,
+        `0b. Si se especifica un "Recurso o contexto pedagógico", úsalo SOLO para ambientar ejemplos y analogías dentro del contenido — nunca como concepto a evaluar en "conceptosClave" ni en los juegos, y nunca como parte del alcance del objetivo, salvo que el "Objetivo de aprendizaje" lo mencione explícitamente.`,
         `1. Antes de generar, identifica todo lo que el niño necesita aprender sobre "${perfil.tema}".`,
         `2. Descompón el tema en sus componentes, partes, etapas, miembros o elementos esenciales.`,
         `3. En "conceptosClave" debes incluir TODAS las partes fundamentales del tema. No devuelvas un solo concepto general si el tema puede dividirse pedagógicamente.`,
@@ -503,6 +507,63 @@ export async function pedirExplicacionAlternativa(
     const data = await res.json();
     return data.choices?.[0]?.message?.content?.trim() || '';
 }
+
+/** Sugiere 3 objetivos de aprendizaje acotados para el tema, bajo demanda (no automático) */
+export async function generarSugerenciasObjetivo(
+    perfil: Pick<PerfilNino, 'nombre' | 'edad' | 'grado' | 'condicion' | 'asignatura' | 'tema' | 'perfilNeuroeducativo'>,
+    idioma: Idioma
+): Promise<string[]> {
+
+    const idiomaStr = idioma === 'es' ? 'español' : 'English';
+    const condicion = condicionLabels[perfil.condicion] || perfil.condicion;
+    const asignatura = asignaturaLabels[perfil.asignatura] || perfil.asignatura;
+    const nombre = perfil.nombre || 'el niño';
+
+    const perfilOperativo = buildOperationalProfile(perfil.perfilNeuroeducativo);
+    const perfilBloque = renderOperationalProfileBlock(nombre, perfilOperativo, condicion);
+
+    const prompt = [
+        perfilBloque,
+        '',
+        `Un adulto va a generar una lección de "${asignatura}" sobre el tema "${perfil.tema}" para ${nombre} (${perfil.edad} años, ${perfil.grado}, condición: ${condicion}).`,
+        `Sugiere 3 posibles "objetivos de aprendizaje" breves en ${idiomaStr} que acoten qué parte del tema priorizar en esta lección puntual (no todo el tema tiene que cubrirse siempre).`,
+        'Cada sugerencia debe ser una frase corta y accionable (máximo 20 palabras), del tipo "que identifique X, sin profundizar en Y" o "que reconozca X en situaciones cotidianas".',
+        `Si el tema "${perfil.tema}" ya es breve o atómico (no se puede fragmentar más sin perder sentido), UNA de las 3 opciones debe ser explícitamente "cubrir el tema completo sin fragmentar artificialmente".`,
+        'Responde SOLO con este JSON válido, sin texto adicional ni markdown: { "sugerencias": ["", "", ""] }',
+    ].join('\n');
+
+    const API_URL = import.meta.env.VITE_BACKEND_URL;
+    const res = await fetch(`${API_URL}/api/chat`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            max_tokens: 300,
+            response_format: { type: 'json_object' },
+            messages: [{ role: 'user', content: prompt }],
+        }),
+    });
+
+    if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Error de OpenAI (${res.status}): ${errText}`);
+    }
+
+    const data = await res.json();
+    const rawContent = data.choices?.[0]?.message?.content || '{}';
+
+    try {
+        const parsed = JSON.parse(rawContent);
+        const sugerencias = Array.isArray(parsed?.sugerencias) ? parsed.sugerencias : [];
+        return sugerencias.filter((s: unknown): s is string => typeof s === 'string' && s.trim().length > 0);
+    } catch (error) {
+        console.error('🔴 Error parseando sugerencias de objetivo:', error);
+        return [];
+    }
+}
+
 /** Función de guardado local de lecciones localstorage */
 function guardarSesionLocal(session: any) {
     console.log("🔥 GUARDANDO SESION", session);

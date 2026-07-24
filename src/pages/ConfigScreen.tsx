@@ -1,8 +1,9 @@
 // src/pages/ConfigScreen.tsx
 import React, { useState } from 'react';
-import { Sparkles, BookOpen } from 'lucide-react';
+import { Sparkles, BookOpen, Lightbulb, ChevronDown, ChevronUp } from 'lucide-react';
 import { PerfilNino, Asignatura, Idioma, ASIGNATURAS, PERFIL_ACTIVO_KEY } from '@/types';
 import { PerfilCompleto } from '@/components/OnboardingWizard';
+import { generarSugerenciasObjetivo } from '@/lib/api';
 
 interface ConfigScreenProps {
     onGenerate: (perfil: PerfilNino) => void;
@@ -22,6 +23,11 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({
 
     const [asignatura, setAsignatura] = useState<Asignatura>('matematicas');
     const [tema, setTema] = useState('');
+    const [objetivo, setObjetivo] = useState('');
+    const [recursoContexto, setRecursoContexto] = useState('');
+    const [mostrarRecurso, setMostrarRecurso] = useState(false);
+    const [sugerencias, setSugerencias] = useState<string[]>([]);
+    const [cargandoSugerencias, setCargandoSugerencias] = useState(false);
     const [idioma, setIdioma] = useState<Idioma>('es');
     const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -40,6 +46,7 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({
     const validate = () => {
         const errs: Record<string, string> = {};
         if (!tema.trim()) errs.tema = 'Por favor ingresa el tema a trabajar.';
+        if (!objetivo.trim()) errs.objetivo = 'Define qué parte de este tema trabajar hoy y hasta qué nivel, para que la lección no intente cubrirlo todo de una vez.';
         setErrors(errs);
         return Object.keys(errs).length === 0;
     };
@@ -56,9 +63,33 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({
             interes: 'dinosaurios',
             asignatura,
             tema,
+            objetivo,
+            recursoContexto: recursoContexto.trim() || undefined,
             idioma,
             perfilNeuroeducativo: perfilActivo.perfilNeuroeducativo,
         } as PerfilNino);
+    };
+
+    const handleSugerirObjetivos = async () => {
+        if (!perfilActivo || !tema.trim() || cargandoSugerencias) return;
+        setCargandoSugerencias(true);
+        try {
+            const resultado = await generarSugerenciasObjetivo({
+                nombre: perfilActivo.nombre,
+                edad: perfilActivo.edad,
+                grado: perfilActivo.grado,
+                condicion: perfilActivo.condicion,
+                asignatura,
+                tema,
+                perfilNeuroeducativo: perfilActivo.perfilNeuroeducativo,
+            }, idioma);
+            setSugerencias(resultado);
+        } catch (error) {
+            console.error('Error generando sugerencias de objetivo:', error);
+            setSugerencias([]);
+        } finally {
+            setCargandoSugerencias(false);
+        }
     };
 
     const inputClass = 'w-full px-4 py-3 bg-white border-2 border-border rounded-xl text-sm font-semibold text-foreground focus:outline-none focus:border-primary transition-colors';
@@ -136,6 +167,66 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({
                                     rows={4}
                                 />
                                 {errors.tema && <p className={errorClass}>{errors.tema}</p>}
+                            </div>
+
+                            {/* Objetivo de aprendizaje */}
+                            <div className="md:col-span-2 flex flex-col">
+                                <div className="flex items-center justify-between mb-2">
+                                    <label className={`${labelClass} mb-0`}>Objetivo de aprendizaje *</label>
+                                    <button type="button"
+                                        onClick={handleSugerirObjetivos}
+                                        disabled={!tema.trim() || cargandoSugerencias}
+                                        className="flex items-center gap-1.5 text-xs font-bold text-accent hover:text-accent/80 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+                                        <Lightbulb className="w-3.5 h-3.5" />
+                                        {cargandoSugerencias ? 'Pensando...' : 'Sugerir objetivos'}
+                                    </button>
+                                </div>
+
+                                {sugerencias.length > 0 && (
+                                    <div className="flex flex-wrap gap-2 mb-2">
+                                        {sugerencias.map((s, i) => (
+                                            <button key={i} type="button"
+                                                onClick={() => setObjetivo(s)}
+                                                className="text-xs font-semibold text-left px-3 py-1.5 rounded-full border-2 border-accent/30 bg-accent/5 text-accent hover:bg-accent/10 transition-colors">
+                                                {s}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+
+                                <textarea
+                                    className={`${inputClass} resize-none min-h-[90px]`}
+                                    placeholder="Ej: Que identifique actores, cuándo y para qué — sin profundizar en consecuencias políticas"
+                                    value={objetivo}
+                                    onChange={e => setObjetivo(e.target.value)}
+                                    rows={3}
+                                />
+                                {errors.objetivo && <p className={errorClass}>{errors.objetivo}</p>}
+                            </div>
+
+                            {/* Recurso o contexto pedagógico (opcional, colapsable) */}
+                            <div className="md:col-span-2">
+                                <button type="button"
+                                    onClick={() => setMostrarRecurso(v => !v)}
+                                    className="flex items-center gap-2 text-sm font-bold text-muted-foreground hover:text-foreground transition-colors">
+                                    {mostrarRecurso ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                    Recurso o contexto pedagógico (opcional)
+                                </button>
+
+                                {mostrarRecurso && (
+                                    <div className="mt-2 flex flex-col">
+                                        <textarea
+                                            className={`${inputClass} resize-none min-h-[70px]`}
+                                            placeholder="Ej: instrumentos musicales"
+                                            value={recursoContexto}
+                                            onChange={e => setRecursoContexto(e.target.value)}
+                                            rows={2}
+                                        />
+                                        <p className="text-xs text-muted-foreground mt-1.5 font-semibold">
+                                            Se usa solo como contexto para ejemplos y analogías, nunca para buscar el video ni las imágenes.
+                                        </p>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Idioma */}

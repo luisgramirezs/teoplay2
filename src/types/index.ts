@@ -47,6 +47,8 @@ export interface PerfilNino {
   interes: Interes; // Set by child during session
   asignatura: Asignatura;
   tema: string;
+  objetivo: string;
+  recursoContexto?: string;
   idioma: Idioma;
   perfilNeuroeducativo?: import('@/components/OnboardingWizard').PerfilNeuroeducativo;
   id:string;
