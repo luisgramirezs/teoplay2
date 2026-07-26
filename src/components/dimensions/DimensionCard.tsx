@@ -2,7 +2,7 @@
 import React from 'react';
 import { BookOpen, MessagesSquare, Heart, ListChecks, Stethoscope, Star, LucideIcon } from 'lucide-react';
 import { DimensionKey } from '@/lib/observationsService';
-import { DimensionData } from '@/lib/dimensionsService';
+import { DimensionData, normalizarDimensionData } from '@/lib/dimensionsService';
 
 export interface DimensionMeta {
   label: string;
@@ -68,7 +68,8 @@ interface DimensionCardProps {
 const DimensionCard: React.FC<DimensionCardProps> = ({ dimensionKey, data, onClick }) => {
   const meta = DIMENSION_META[dimensionKey];
   const Icon = meta.icon;
-  const clickable = Boolean(data && onClick);
+  const normalized = normalizarDimensionData(data);
+  const clickable = Boolean(normalized && onClick);
 
   return (
     <div
@@ -76,15 +77,45 @@ const DimensionCard: React.FC<DimensionCardProps> = ({ dimensionKey, data, onCli
       onClick={clickable ? onClick : undefined}
     >
       <div className="flex items-center gap-3">
-        
+
         <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${meta.iconBgClass} text-white`}>
           <Icon className="w-5 h-5" />
         </div>
         <h3 className="font-black text-foreground text-[18px] flex-1">{meta.label}</h3>
       </div>
 
-      {data ? (
-        <p className="text-sm text-foreground/80 leading-relaxed line-clamp-2">{data.summary}</p>
+      {normalized ? (
+        <div className="flex flex-col gap-2">
+          {normalized.fortalezas.length > 0 && (
+            <div>
+              <p className="text-xs font-bold text-foreground/70">Fortalezas</p>
+              <ul className="mt-0.5 space-y-0.5">
+                {normalized.fortalezas.map((item, i) => (
+                  <li key={i} className="text-sm text-foreground/80 leading-snug">• {item}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {normalized.enDesarrollo.length > 0 && (
+            <div>
+              <p className="text-xs font-bold text-foreground/70">En desarrollo</p>
+              <ul className="mt-0.5 space-y-0.5">
+                {normalized.enDesarrollo.map((item, i) => (
+                  <li key={i} className="text-sm text-foreground/80 leading-snug">• {item}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <p className="text-xs font-bold text-muted-foreground mt-1">
+            Recomendaciones activas: {normalized.recomendaciones.length}
+          </p>
+
+          <span className={`text-sm font-black flex items-center gap-1 mt-auto ${meta.colorClass}`}>
+            Ver detalle →
+          </span>
+        </div>
       ) : (
         <p className="text-sm text-muted-foreground italic">
           Aún no hay evidencia suficiente para esta dimensión.

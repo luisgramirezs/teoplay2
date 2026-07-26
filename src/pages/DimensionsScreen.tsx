@@ -14,7 +14,7 @@ import { actualizarPerfilNeuroeducativo, actualizarDatosBasicos, getStudentsLink
 import { crearInvitacion, canjearInvitacion } from '@/lib/studentLinksService';
 import ObservationForm from '@/components/ObservationForm';
 import { DimensionKey } from '@/lib/observationsService';
-import { calcularPerfilDimensiones, getPerfilDimensiones, adaptarRecomendacionesPorRol, NeuroeducationalProfile, DimensionData } from '@/lib/dimensionsService';
+import { calcularPerfilDimensiones, getPerfilDimensiones, adaptarRecomendacionesPorRol, normalizarDimensionData, NeuroeducationalProfile, DimensionData } from '@/lib/dimensionsService';
 import { getSessionsByStudent } from '@/lib/sessionsService';
 import { getDashboardMetrics } from '@/lib/dashboardMetrics';
 import { exportPerfilDimensionesPDF } from '@/lib/pdfExport';
@@ -341,11 +341,13 @@ const CanjearCodigoModal: React.FC<{
 const DimensionDetailModal: React.FC<{
     dimensionKey: DimensionKey;
     data: DimensionData;
-    adaptedRecommendation?: string;
+    adaptedRecomendaciones?: string[];
     onClose: () => void;
-}> = ({ dimensionKey, data, adaptedRecommendation, onClose }) => {
+}> = ({ dimensionKey, data, adaptedRecomendaciones, onClose }) => {
     const meta = DIMENSION_META[dimensionKey];
     const Icon = meta.icon;
+    const normalized = normalizarDimensionData(data)!;
+    const recomendaciones = adaptedRecomendaciones ?? normalized.recomendaciones;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
@@ -363,15 +365,45 @@ const DimensionDetailModal: React.FC<{
                 </div>
 
                 <div className="p-6 space-y-4">
-                    <p className="text-sm text-foreground/80 leading-relaxed">{data.summary}</p>
+                    <p className="text-sm text-foreground/80 leading-relaxed">{normalized.summary}</p>
 
-                    <div className={`border-t border-border pt-3 flex items-start gap-2 text-sm font-bold ${meta.colorClass}`}>
-                        <Lightbulb className="w-5 h-5 flex-shrink-0" />
-                        <span>{adaptedRecommendation ?? data.baseRecommendation}</span>
-                    </div>
+                    {normalized.fortalezas.length > 0 && (
+                        <div>
+                            <h3 className="text-xs font-black text-foreground/70 uppercase tracking-wide mb-1.5">Fortalezas</h3>
+                            <ul className="space-y-1">
+                                {normalized.fortalezas.map((item, i) => (
+                                    <li key={i} className="text-sm text-foreground/80 leading-relaxed">• {item}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+
+                    {normalized.enDesarrollo.length > 0 && (
+                        <div>
+                            <h3 className="text-xs font-black text-foreground/70 uppercase tracking-wide mb-1.5">En desarrollo</h3>
+                            <ul className="space-y-1">
+                                {normalized.enDesarrollo.map((item, i) => (
+                                    <li key={i} className="text-sm text-foreground/80 leading-relaxed">• {item}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+
+                    {recomendaciones.length > 0 && (
+                        <div className="border-t border-border pt-3 space-y-2">
+                            <h3 className={`text-xs font-black uppercase tracking-wide flex items-center gap-1.5 ${meta.colorClass}`}>
+                                <Lightbulb className="w-4 h-4" /> Recomendaciones
+                            </h3>
+                            <ul className="space-y-1.5">
+                                {recomendaciones.map((rec, i) => (
+                                    <li key={i} className={`text-sm font-bold ${meta.colorClass}`}>{rec}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
 
                     <p className="text-xs text-muted-foreground font-semibold pt-2">
-                        Actualizado: {new Date(data.updatedAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        Actualizado: {new Date(normalized.updatedAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
                     </p>
                 </div>
             </div>
@@ -419,7 +451,7 @@ const DimensionsScreen: React.FC<DimensionsScreenProps> = ({
     const [showObservationModal, setShowObservationModal] = useState(false);
     const [showCanjearModal, setShowCanjearModal] = useState(false);
     const [datosUsuario, setDatosUsuario] = useState<{ nombre?: string; email?: string } | null>(null);
-    const [recomendacionesAdaptadas, setRecomendacionesAdaptadas] = useState<Partial<Record<DimensionKey, string>> | null>(null);
+    const [recomendacionesAdaptadas, setRecomendacionesAdaptadas] = useState<Partial<Record<DimensionKey, string[]>> | null>(null);
     const [adaptacionCache, setAdaptacionCache] = useState<{ rol: TipoUsuario; perfilUpdatedAt: number } | null>(null);
     const [dimensionAbierta, setDimensionAbierta] = useState<DimensionKey | null>(null);
 
@@ -485,7 +517,8 @@ const DimensionsScreen: React.FC<DimensionsScreenProps> = ({
     // Adaptación de recomendaciones por rol ("lente", sección 21/22): un solo
     // prompt para todas las dimensiones con contenido, cacheado en memoria
     // por (rol, perfilUpdatedAt) — nunca en Firestore. Nunca bloquea la
-    // vista: si falla o aún no llega, las tarjetas caen a baseRecommendation.
+    // vista: si falla o aún no llega, las tarjetas caen a las recomendaciones
+    // sin adaptar (normalizadas).
     useEffect(() => {
         if (perfilUpdatedAt === 0 || !perfilDimensiones) return;
         if (adaptacionCache && adaptacionCache.rol === rolUsuario && adaptacionCache.perfilUpdatedAt === perfilUpdatedAt) return;
@@ -504,9 +537,11 @@ const DimensionsScreen: React.FC<DimensionsScreenProps> = ({
 
     const recomendaciones = useMemo(() => {
         if (!perfilDimensiones) return [];
-        return DIMENSION_KEYS
-            .map(key => recomendacionesAdaptadas?.[key] ?? perfilDimensiones.dimensions[key]?.baseRecommendation)
-            .filter((r): r is string => Boolean(r));
+        return DIMENSION_KEYS.flatMap(key => {
+            const normalized = normalizarDimensionData(perfilDimensiones.dimensions[key]);
+            if (!normalized) return [];
+            return recomendacionesAdaptadas?.[key] ?? normalized.recomendaciones;
+        });
     }, [perfilDimensiones, recomendacionesAdaptadas]);
 
     const nivelColor =
@@ -847,7 +882,7 @@ const DimensionsScreen: React.FC<DimensionsScreenProps> = ({
                 <DimensionDetailModal
                     dimensionKey={dimensionAbierta}
                     data={perfilDimensiones.dimensions[dimensionAbierta]!}
-                    adaptedRecommendation={recomendacionesAdaptadas?.[dimensionAbierta]}
+                    adaptedRecomendaciones={recomendacionesAdaptadas?.[dimensionAbierta]}
                     onClose={() => setDimensionAbierta(null)}
                 />
             )}

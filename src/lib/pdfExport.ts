@@ -1,7 +1,7 @@
 import { SessionData } from '@/types';
 import { EMOCIONES, INTERESES, CONDICIONES, ASIGNATURAS } from '@/types';
 import { PerfilCompleto } from '@/components/OnboardingWizard';
-import { NeuroeducationalProfile } from '@/lib/dimensionsService';
+import { NeuroeducationalProfile, normalizarDimensionData } from '@/lib/dimensionsService';
 import { DimensionKey } from '@/lib/observationsService';
 import { DIMENSION_META } from '@/components/dimensions/DimensionCard';
 
@@ -350,7 +350,7 @@ export function exportReportPDF(data: SessionData): void {
 export function exportPerfilDimensionesPDF(
   perfil: PerfilCompleto,
   perfilDimensiones: NeuroeducationalProfile | null,
-  recomendacionesAdaptadas: Partial<Record<DimensionKey, string>> | null
+  recomendacionesAdaptadas: Partial<Record<DimensionKey, string[]>> | null
 ): void {
   import('jspdf').then(({ jsPDF }) => {
     const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
@@ -430,7 +430,7 @@ export function exportPerfilDimensionesPDF(
     // ── DIMENSIONES ──────────────────────────────────────────────────────────
     DIMENSION_ORDER.forEach(key => {
       const meta = DIMENSION_META[key];
-      const data = perfilDimensiones?.dimensions[key];
+      const data = normalizarDimensionData(perfilDimensiones?.dimensions[key]);
 
       if (!data) {
         checkPageBreak(28);
@@ -452,13 +452,25 @@ export function exportPerfilDimensionesPDF(
         return;
       }
 
-      const recomendacion = recomendacionesAdaptadas?.[key] ?? data.baseRecommendation;
+      const recomendaciones = recomendacionesAdaptadas?.[key] ?? data.recomendaciones;
       const summaryLines = doc.splitTextToSize(data.summary, CONTENT_W);
-      const recLines = doc.splitTextToSize(recomendacion, CONTENT_W - 9);
+      const fortalezasLines = data.fortalezas.length > 0
+        ? doc.splitTextToSize(`Fortalezas: ${data.fortalezas.join(' · ')}`, CONTENT_W)
+        : [];
+      const enDesarrolloLines = data.enDesarrollo.length > 0
+        ? doc.splitTextToSize(`En desarrollo: ${data.enDesarrollo.join(' · ')}`, CONTENT_W)
+        : [];
+      const recLinesPerItem = recomendaciones.map(rec => doc.splitTextToSize(rec, CONTENT_W - 9));
+      const recBoxHeights = recLinesPerItem.map(lines => lines.length * 5 + 8);
       const fechaActualizacion = new Date(data.updatedAt).toLocaleDateString('es-CL', { day: '2-digit', month: 'long', year: 'numeric' });
-      const recBoxH = recLines.length * 5 + 8;
 
-      checkPageBreak(11 + summaryLines.length * 5 + 4 + recBoxH + 5 + 12);
+      const alturaEstimada = 11
+        + summaryLines.length * 5 + 4
+        + (fortalezasLines.length > 0 ? fortalezasLines.length * 5 + 3 : 0)
+        + (enDesarrolloLines.length > 0 ? enDesarrolloLines.length * 5 + 3 : 0)
+        + recBoxHeights.reduce((acc, h) => acc + h + 4, 0)
+        + 12;
+      checkPageBreak(alturaEstimada);
 
       doc.setFontSize(13);
       doc.setFont('helvetica', 'bold');
@@ -476,15 +488,33 @@ export function exportPerfilDimensionesPDF(
       doc.text(summaryLines, MARGIN, y);
       y += summaryLines.length * 5 + 4;
 
-      doc.setFillColor(248, 249, 255);
-      doc.roundedRect(MARGIN, y, CONTENT_W, recBoxH, 2, 2, 'F');
-      doc.setFillColor(67, 97, 238);
-      doc.circle(MARGIN + 4, y + recBoxH / 2, 2.5, 'F');
-      doc.setFontSize(9.5);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(40, 40, 60);
-      doc.text(recLines, MARGIN + 9, y + 6);
-      y += recBoxH + 5;
+      if (fortalezasLines.length > 0) {
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(50, 50, 70);
+        doc.text(fortalezasLines, MARGIN, y);
+        y += fortalezasLines.length * 5 + 3;
+      }
+
+      if (enDesarrolloLines.length > 0) {
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(50, 50, 70);
+        doc.text(enDesarrolloLines, MARGIN, y);
+        y += enDesarrolloLines.length * 5 + 3;
+      }
+
+      recLinesPerItem.forEach((lines, i) => {
+        const boxH = recBoxHeights[i];
+        checkPageBreak(boxH + 4);
+        doc.setFillColor(248, 249, 255);
+        doc.roundedRect(MARGIN, y, CONTENT_W, boxH, 2, 2, 'F');
+        doc.setFillColor(67, 97, 238);
+        doc.circle(MARGIN + 4, y + boxH / 2, 2.5, 'F');
+        doc.setFontSize(9.5);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(40, 40, 60);
+        doc.text(lines, MARGIN + 9, y + 6);
+        y += boxH + 4;
+      });
 
       doc.setFontSize(8);
       doc.setFont('helvetica', 'normal');
