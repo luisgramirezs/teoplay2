@@ -591,10 +591,17 @@ const DimensionsScreen: React.FC<DimensionsScreenProps> = ({
     if (!perfilActivo) return null;
 
     return (
-        <div className="min-h-screen bg-background font-child">
+        <div 
+            className="min-h-screen font-child bg-cover bg-center bg-no-repeat"
+            style={{ backgroundImage: "url('/background-teoplay.png')" }}
+        >
 
             {/* Header */}
-            <section className="bg-white border-b border-border">
+            <section 
+                
+                
+                style={{ backgroundImage: "url('/background-teoplay.png')" }}
+            >
                 <div className="max-w-[1600px] mx-auto px-6 lg:px-12 pt-4 pb-3">
                     <div className="flex items-end justify-between flex-wrap gap-2">
                         <div className="flex flex-col items-start">
@@ -609,9 +616,11 @@ const DimensionsScreen: React.FC<DimensionsScreenProps> = ({
                                     <Menu className="w-5 h-5" />
                                 </button>
                             </div>
-                            <h1 className="font-[Fredoka] text-3xl text-orange-600 font-black">
+                            <h1 className="font-[Fredoka] text-3xl text-blue-600 font-black ">
                                 Dimensiones del perfil neuroeducativo
                             </h1>
+                            <span className="text-lg mt-3 space-y-2">💡 Selecciona una dimensión para ver la información detallada.</span>
+
                         </div>
                         <div className="flex items-center gap-2">
                             <span className={`w-14 h-14 rounded-full ${ROL_BG[rolUsuario]} flex items-center justify-center flex-shrink-0 shadow-sm`} style={{ fontSize: '28px' }}>
@@ -631,14 +640,7 @@ const DimensionsScreen: React.FC<DimensionsScreenProps> = ({
             </section>
 
             {/* Info banner */}
-            <div className="bg-primary/5 border-b border-primary/10 px-6 lg:px-12 py-3">
-                <div className="max-w-[1600px] mx-auto flex items-center gap-3 text-sm text-primary/80">
-                    <span className="text-lg">💡</span>
-                    <span className="font-[Fredoka]">
-                        Selecciona una dimensión para ver la información detallada.
-                    </span>
-                </div>
-            </div>
+
 
             <main className="max-w-[1600px] mx-auto px-6 lg:px-12 py-8">
                 <div className={`flex flex-col lg:flex-row transition-all duration-200 ${sidebarAbierto ? 'gap-6' : 'gap-0'}`}>
@@ -742,7 +744,7 @@ const DimensionsScreen: React.FC<DimensionsScreenProps> = ({
                     </aside>
 
                     {/* Contenido principal */}
-                    <div className="flex-1 min-w-0 space-y-6">
+                    <div className="flex-1 min-w-0 bg-white rounded-3xl border border-border shadow-sm p-6 lg:p-8 space-y-6">
 
                     {/* Niño activo */}
                     <section className="bg-gray-50 rounded-2xl border-2 border-primary/30 shadow-sm overflow-hidden">

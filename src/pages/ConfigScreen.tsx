@@ -99,10 +99,15 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({
     if (!perfilActivo) return null;
 
     return (
-        <div className="min-h-screen bg-background font-child">
+        <div 
+            className="min-h-screen font-child bg-cover bg-center bg-no-repeat"
+            style={{ backgroundImage: "url('/background-teoplay.png')" }}
+        >
 
             {/* Header */}
-            <section className="bg-white border-b border-border">
+            <section 
+                style={{ backgroundImage: "url('/background-teoplay.png')" }}
+            >    
                 <div className="max-w-4xl mx-auto px-4 pt-4 pb-3">
                     <div className="flex flex-col items-start">
                         <img src="/logo.png" alt="TEOplay" className="h-[180px] object-contain block" />

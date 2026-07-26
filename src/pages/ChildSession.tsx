@@ -345,7 +345,10 @@ const ChildSession: React.FC<ChildSessionProps> = ({ perfil, onComplete, onBack 
   const showTopBar = subPhase !== 'closure';
 
   return (
-    <div className="min-h-screen child-ui font-child">
+    <div 
+      className="min-h-screen font-child bg-cover bg-center bg-no-repeat"
+      style={{ backgroundImage: "url('/background-teoplay.png')" }}
+    >
       {showTopBar && (
         <div className="sticky top-0 z-10 bg-white/85 backdrop-blur-sm border-b border-border/50 px-4 py-3 shadow-sm">
           <div className="max-w-2xl mx-auto">
