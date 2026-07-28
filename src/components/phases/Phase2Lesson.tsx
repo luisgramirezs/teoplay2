@@ -1302,6 +1302,8 @@ const Phase2Lesson: React.FC<Phase2LessonProps> = ({ perfil, sesion, onComplete,
 
     const startTime = useRef(Date.now());
 
+    const { narrar, seccionActiva } = useNarrador(perfil.idioma, perfil.condicion);
+
     const isTEA = perfil.condicion === 'tea';
     const isDown = perfil.condicion === 'down';
     const isDislexia = perfil.condicion === 'dislexia';
@@ -1422,8 +1424,8 @@ const Phase2Lesson: React.FC<Phase2LessonProps> = ({ perfil, sesion, onComplete,
                                 <ConceptosClaveBlock
                                     conceptos={bloqueActual.conceptosClave ?? []}
                                     fontSize={fontSize}
-                                    seccionActiva={null}
-                                    onNarrar={() => { }}
+                                    seccionActiva={seccionActiva}
+                                    onNarrar={narrar}
                                     asignatura={perfil.asignatura}
                                     tema={perfil.tema}
                                     onSelectObra={handleSelectObra}
