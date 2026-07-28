@@ -67,6 +67,8 @@ function useNarrador(idioma: string, condicion: string) {
     };
 
     const narrar = (id: string, texto: string) => {
+        console.log('narrar() llamado con:', id, texto.substring(0, 30)); // TEMPORAL — diagnóstico de audio, quitar después
+
         if (!('speechSynthesis' in window)) return;
 
         if (speakTimeoutRef.current) {
