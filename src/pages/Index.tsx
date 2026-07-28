@@ -328,6 +328,7 @@ const Index: React.FC = () => {
                 <ConfigScreen
                     onGenerate={handleGenerate}
                     perfiles={perfiles}
+                    onVolverDimensiones={() => setScreen('dimensions')}
                 />
             )}
             {screen === 'session' && perfil && (
