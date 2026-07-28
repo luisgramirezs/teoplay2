@@ -1181,15 +1181,19 @@ interface Phase2LessonProps {
     sesion: SesionGenerada;
     onComplete: (tiempo: number, simplificaciones: number) => void;
     onBack?: () => void;
-    moduleId?: string;       
-    onModuleComplete?: () => void; 
-    
+    moduleId?: string;
+    onModuleComplete?: () => void;
+    /** 'modal' (default): modal de sección con "Volver", comportamiento actual sin cambios. 'guided': recorrido secuencial con Anterior/Siguiente. */
+    navMode?: 'modal' | 'guided';
+    onPrev?: () => void;
+    onNext?: () => void;
+    isLastStep?: boolean;
 }
 
 type SubFase = 'leccion' | 'reforzamiento';
 
 //const Phase2Lesson: React.FC<Phase2LessonProps> = ({ perfil, sesion, onComplete, onBack }) => {
-const Phase2Lesson: React.FC<Phase2LessonProps> = ({ perfil, sesion, onComplete, onBack, moduleId, onModuleComplete }) => {
+const Phase2Lesson: React.FC<Phase2LessonProps> = ({ perfil, sesion, onComplete, onBack, moduleId, onModuleComplete, navMode = 'modal', onPrev, onNext, isLastStep }) => {
 
     const [imagenModal, setImagenModal] = useState<string | null>(null);
 
@@ -1339,11 +1343,12 @@ const Phase2Lesson: React.FC<Phase2LessonProps> = ({ perfil, sesion, onComplete,
                     <div className="flex items-center gap-3 px-5 py-4 bg-white border-b border-slate-200 flex-shrink-0">
                         <button
                             type="button"
-                            onClick={onBack}
-                            className="inline-flex items-center gap-2 px-3 h-9 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition-colors cursor-pointer flex-shrink-0"
+                            onClick={navMode === 'guided' ? onPrev : onBack}
+                            disabled={navMode === 'guided' && !onPrev}
+                            className="inline-flex items-center gap-2 px-3 h-9 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition-colors cursor-pointer flex-shrink-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white"
                         >
                             <ArrowLeft className="w-4 h-4 text-slate-600" />
-                            <span className="text-sm font-bold text-slate-700">Volver</span>
+                            <span className="text-sm font-bold text-slate-700">{navMode === 'guided' ? 'Anterior' : 'Volver'}</span>
                         </button>
                         <div className="flex-1 min-w-0">
                             <p className="text-sm font-black text-[#0E9E8A] truncate">{perfil.tema}</p>
@@ -1400,7 +1405,10 @@ const Phase2Lesson: React.FC<Phase2LessonProps> = ({ perfil, sesion, onComplete,
                             <Phase3Games
                                 perfil={perfil}
                                 sesion={sesion}
-                                onComplete={() => { onModuleComplete?.(); onBack?.(); }}
+                                onComplete={() => {
+                                    onModuleComplete?.();
+                                    if (navMode === 'guided') { onNext?.(); } else { onBack?.(); }
+                                }}
                             />
                         )}
 
@@ -1410,7 +1418,18 @@ const Phase2Lesson: React.FC<Phase2LessonProps> = ({ perfil, sesion, onComplete,
 
                     </div>
 
-
+                    {/* Footer de navegación — modo guiado */}
+                    {navMode === 'guided' && (
+                        <div className="flex items-center justify-end px-5 py-4 bg-white border-t border-slate-200 flex-shrink-0">
+                            <button
+                                type="button"
+                                onClick={onNext}
+                                className="px-6 h-11 rounded-xl bg-[#0E9E8A] text-white font-black text-sm hover:bg-[#0A7A6A] transition-colors cursor-pointer"
+                            >
+                                {isLastStep ? 'Finalizar' : 'Siguiente →'}
+                            </button>
+                        </div>
+                    )}
 
                     {/* Modal imagen obra */}
                     {imagenModal && obraSeleccionada && (

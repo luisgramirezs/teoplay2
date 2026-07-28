@@ -4,7 +4,7 @@ import {
   User, BookOpen, Heart, FileText, Sparkles,
   ChevronRight, ChevronLeft, Upload, X, CheckCircle
 } from 'lucide-react';
-import { PerfilPersistente, Condicion, CONDICIONES, GRADOS } from '@/types';
+import { PerfilPersistente, Condicion, CONDICIONES, GRADOS, ProgresoGuiadoTema } from '@/types';
 
 // ─── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -32,6 +32,8 @@ export interface PerfilCompleto extends PerfilPersistente {
   respuestas: RespuestasOnboarding;
   perfilNeuroeducativo?: PerfilNeuroeducativo;
   fechaCreacion: number;
+  /** Progreso del modo guiado por tema (clave = perfil.tema) — persiste entre sesiones */
+  progresoGuiado?: Record<string, ProgresoGuiadoTema>;
 }
 
 // ─── Constantes ──────────────────────────────────────────────────────────────

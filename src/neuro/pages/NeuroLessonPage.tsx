@@ -10,7 +10,7 @@
  * Cada módulo renderiza una sección específica del contenido ya generado.
  */
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { ArrowLeft } from "lucide-react";
 import ModuleCard from "../components/ModuleCard";
 import type { ModuleType } from "../components/ModuleCard";
@@ -100,22 +100,6 @@ export default function NeuroLessonPage({
 
 }: NeuroLessonPageProps) {
 
-    const [lastModule, setLastModule] = useState<string | null>(null);
-
-
-    // Solo leemos el último módulo del localStorage, no el progreso
-    useEffect(() => {
-        const last = localStorage.getItem(`teoplay-last-${tema}`);
-        if (last) setLastModule(last);
-    }, [tema]);
-
-
-    const handleOpen = (moduleId: string) => {
-        localStorage.setItem(`teoplay-last-${tema}`, moduleId);
-        setLastModule(moduleId);
-        onOpenModule(moduleId);
-    };
-
     const exploredCount = completedModules.length;
     const progresoPct = Math.round((exploredCount / MODULOS.length) * 100);
     const todasCompletas = exploredCount === MODULOS.length;
@@ -189,18 +173,6 @@ export default function NeuroLessonPage({
                         </div>
                     </div>
 
-                    {/* Continuar donde quedó */}
-                    {lastModule && !todasCompletas && (
-                        <button
-                            type="button"
-                            onClick={() => handleOpen(lastModule)}
-                            className="flex-shrink-0 px-4 py-2 rounded-xl bg-[#0E9E8A] text-white font-black text-sm hover:bg-[#0A7A6A] transition-colors cursor-pointer"
-
-                        >
-                            Continuar →
-                        </button>
-                    )}
-
                     {todasCompletas && (
                         <div className="flex-shrink-0 px-4 py-2 rounded-xl bg-emerald-100 text-emerald-700 font-black text-sm">
                             🎉 ¡Todo listo!
@@ -215,7 +187,7 @@ export default function NeuroLessonPage({
                             key={modulo.id}
                             module={modulo}
                             completed={completedModules.includes(modulo.id)}
-                            onClick={() => handleOpen(modulo.id)}
+                            onClick={() => onOpenModule(modulo.id)}
                         />
                     ))}
                 </div>

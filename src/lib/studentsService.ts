@@ -6,6 +6,7 @@ import {
   getDoc,
   getDocs,
   updateDoc,
+  increment,
   query,
   where,
   serverTimestamp,
@@ -77,6 +78,7 @@ function mapAlumnoDocToPerfil(d: DocumentSnapshot<DocumentData>): PerfilCompleto
     respuestas: data.respuestas,
     perfilNeuroeducativo: data.perfilNeuroeducativo,
     fechaCreacion: data.createdAt?.toMillis?.() ?? data.createdAt ?? Date.now(),
+    progresoGuiado: data.progresoGuiado,
   } as PerfilCompleto;
 }
 
@@ -147,6 +149,43 @@ export async function actualizarPerfilNeuroeducativo(
 
   // 2. Guardar en histórico
   await guardarHistoricoPerfil(studentId, nuevoPerfil, version, 'actualización');
+}
+
+// ── Modo guiado: progreso por tema (persiste entre sesiones) ──────────────────
+
+export async function actualizarPasoGuiado(
+  studentId: string,
+  tema: string,
+  updates: { pasoActual?: number; completado?: boolean; fechaInicio?: number }
+): Promise<void> {
+  const patch: Record<string, unknown> = {
+    [`progresoGuiado.${tema}.fechaUltimaActividad`]: serverTimestamp(),
+  };
+  if (updates.pasoActual !== undefined) {
+    patch[`progresoGuiado.${tema}.pasoActual`] = updates.pasoActual;
+  }
+  if (updates.completado !== undefined) {
+    patch[`progresoGuiado.${tema}.completado`] = updates.completado;
+  }
+  if (updates.fechaInicio !== undefined) {
+    patch[`progresoGuiado.${tema}.fechaInicio`] = updates.fechaInicio;
+  }
+
+  await updateDoc(doc(db, 'alumnos', studentId), patch);
+}
+
+// Tiempo por cápsula: solo telemetría descriptiva, nunca criterio de avance ni de evaluación
+export async function incrementarTiempoCapsula(
+  studentId: string,
+  tema: string,
+  moduleId: string,
+  deltaSegundos: number
+): Promise<void> {
+  if (deltaSegundos <= 0) return;
+  await updateDoc(doc(db, 'alumnos', studentId), {
+    [`progresoGuiado.${tema}.tiempoPorCapsula.${moduleId}`]: increment(deltaSegundos),
+    [`progresoGuiado.${tema}.fechaUltimaActividad`]: serverTimestamp(),
+  });
 }
 
 // ── Guardar en student_profiles_history ───────────────────────────────────────

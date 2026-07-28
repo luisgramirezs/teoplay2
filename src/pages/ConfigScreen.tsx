@@ -8,12 +8,14 @@ import { generarSugerenciasObjetivo } from '@/lib/api';
 interface ConfigScreenProps {
     onGenerate: (perfil: PerfilNino) => void;
     perfiles: PerfilCompleto[];
+    onVolverDimensiones: () => void;
 }
 
 // ── Main ConfigScreen ────────────────────────────────────────────────────────
 const ConfigScreen: React.FC<ConfigScreenProps> = ({
     onGenerate,
     perfiles,
+    onVolverDimensiones,
 }) => {
     // Perfil activo: primero intentamos el guardado en localStorage, si no el primero de la lista
     const [perfilActivo, setPerfilActivo] = useState<PerfilCompleto | null>(() => {
@@ -67,6 +69,7 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({
             recursoContexto: recursoContexto.trim() || undefined,
             idioma,
             perfilNeuroeducativo: perfilActivo.perfilNeuroeducativo,
+            progresoGuiado: perfilActivo.progresoGuiado,
         } as PerfilNino);
     };
 
@@ -115,6 +118,7 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({
                             Aprendizaje inclusivo personalizado.
                         </h1>
                     </div>
+
                 </div>
             </section>
 
@@ -132,9 +136,18 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({
                 <form onSubmit={handleSubmit} className="space-y-6">
 
                     {/* Contexto: niño activo (solo lectura, sin selector ni botones) */}
-                    <p className="text-sm font-bold text-muted-foreground">
-                        Generando lección para: <span className="text-foreground">{perfilActivo.nombre || 'Sin nombre'}</span>
-                    </p>
+                    <div className="flex items-center justify-between gap-2 w-full">
+                        <p className="text-sm font-bold text-muted-foreground">
+                            Generando lección para: <span className="text-foreground">{perfilActivo.nombre || 'Sin nombre'}</span>
+                        </p>
+                        <button
+                            type="button"
+                            onClick={onVolverDimensiones}
+                            className="flex items-center gap-1.5 text-sm font-black text-white bg-orange-500 hover:bg-orange-600 px-4 py-2 rounded-xl shadow-sm transition-colors cursor-pointer"
+                        >
+                            Volver a Dimensiones
+                        </button>
+                    </div>
 
                     {/* Nueva lección */}
                     <section className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
@@ -209,29 +222,19 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({
                                 {errors.objetivo && <p className={errorClass}>{errors.objetivo}</p>}
                             </div>
 
-                            {/* Recurso o contexto pedagógico (opcional, colapsable) */}
-                            <div className="md:col-span-2">
-                                <button type="button"
-                                    onClick={() => setMostrarRecurso(v => !v)}
-                                    className="flex items-center gap-2 text-sm font-bold text-muted-foreground hover:text-foreground transition-colors">
-                                    {mostrarRecurso ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                                    Recurso o contexto pedagógico (opcional)
-                                </button>
-
-                                {mostrarRecurso && (
-                                    <div className="mt-2 flex flex-col">
-                                        <textarea
-                                            className={`${inputClass} resize-none min-h-[70px]`}
-                                            placeholder="Ej: instrumentos musicales"
-                                            value={recursoContexto}
-                                            onChange={e => setRecursoContexto(e.target.value)}
-                                            rows={2}
-                                        />
-                                        <p className="text-xs text-muted-foreground mt-1.5 font-semibold">
-                                            Se usa solo como contexto para ejemplos y analogías, nunca para buscar el video ni las imágenes.
-                                        </p>
-                                    </div>
-                                )}
+                            {/* Recurso o contexto pedagógico (opcional) */}
+                            <div className="md:col-span-2 flex flex-col">
+                                <label className={labelClass}>Recurso o contexto pedagógico (opcional)</label>
+                                <textarea
+                                    className={`${inputClass} resize-none min-h-[70px]`}
+                                    placeholder="Ej: instrumentos musicales"
+                                    value={recursoContexto}
+                                    onChange={e => setRecursoContexto(e.target.value)}
+                                    rows={2}
+                                />
+                                <p className="text-xs text-muted-foreground mt-1.5 font-semibold">
+                                    Se usa como complemento del contexto para ejemplos y analogías.
+                                </p>
                             </div>
 
                             {/* Idioma */}
@@ -245,7 +248,7 @@ const ConfigScreen: React.FC<ConfigScreenProps> = ({
                                                 ? 'border-primary bg-primary/10 text-primary'
                                                 : 'border-border bg-white text-muted-foreground hover:border-primary/40'
                                                 }`}>
-                                            {l === 'es' ? '🇨🇱 Español' : '🇺🇸 English'}
+                                            {l === 'es' ? '🇨o Español' : '🇺🇸 English'}
                                         </button>
                                     ))}
                                 </div>

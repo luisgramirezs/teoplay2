@@ -52,6 +52,7 @@ export interface PerfilNino {
   idioma: Idioma;
   perfilNeuroeducativo?: import('@/components/OnboardingWizard').PerfilNeuroeducativo;
   id:string;
+  progresoGuiado?: Record<string, ProgresoGuiadoTema>;
 }
 
 /** Solo los campos que persisten entre sesiones */
@@ -60,6 +61,16 @@ export interface PerfilPersistente {
   edad: number;
   grado: string;
   condicion: Condicion;
+}
+
+/** Progreso del modo guiado (recorrido secuencial de cápsulas) por tema — persiste entre sesiones */
+export interface ProgresoGuiadoTema {
+  completado: boolean;
+  pasoActual: number;
+  /** Segundos acumulados por moduleId — solo telemetría descriptiva, nunca criterio de avance */
+  tiempoPorCapsula: Record<string, number>;
+  fechaInicio: number;
+  fechaUltimaActividad: number;
 }
 
 // Game JSON types from Claude

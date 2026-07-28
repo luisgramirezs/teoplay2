@@ -9,6 +9,7 @@ import { generarSesion } from '@/lib/api';
 import { Sparkles } from 'lucide-react';
 import { ArrowLeft } from 'lucide-react';
 import NeuroLessonPage, { MODULOS} from '@/neuro/pages/NeuroLessonPage';
+import GuidedLessonFlow from '@/neuro/pages/GuidedLessonFlow';
 
 interface ChildSessionProps {
   perfil: PerfilNino;
@@ -67,6 +68,9 @@ const subPhaseToIndex: Record<SubPhase, number> = {
 const ChildSession: React.FC<ChildSessionProps> = ({ perfil, onComplete, onBack }) => {
   const [subPhase, setSubPhase] = useState<SubPhase>('phase1_emotion');
   const [perfilConInteres, setPerfilConInteres] = useState<PerfilNino>(perfil);
+  const [modoLeccion, setModoLeccion] = useState<'guiado' | 'repaso'>(
+    () => (perfilConInteres.progresoGuiado?.[perfilConInteres.tema]?.completado ? 'repaso' : 'guiado')
+  );
   const [sesion, setSesion] = useState<SesionGenerada | null>(null);
 
   const [moduloActivo, setModuloActivo] = useState<string | null>(null);
@@ -418,7 +422,19 @@ const ChildSession: React.FC<ChildSessionProps> = ({ perfil, onComplete, onBack 
           />
         )}
 
-        {subPhase === 'phase2' && sesion && !moduloActivo && (
+        {subPhase === 'phase2' && sesion && modoLeccion === 'guiado' && (
+            <GuidedLessonFlow
+                perfil={perfilConInteres}
+                sesion={sesion}
+                progresoGuiadoInicial={perfilConInteres.progresoGuiado?.[perfilConInteres.tema]}
+                onGuidedComplete={() => setModoLeccion('repaso')}
+                onModuleComplete={(moduleId) => {
+                    setModulosCompletados(prev => [...new Set([...prev, moduleId])]);
+                }}
+            />
+        )}
+
+        {subPhase === 'phase2' && sesion && modoLeccion === 'repaso' && !moduloActivo && (
             <NeuroLessonPage
                 tema={perfilConInteres.tema}
                 asignatura={perfilConInteres.asignatura}
@@ -427,15 +443,16 @@ const ChildSession: React.FC<ChildSessionProps> = ({ perfil, onComplete, onBack 
                 onOpenModule={(moduleId) => setModuloActivo(moduleId)}
                 onBack={() => setSubPhase('phase1_interest')}
                 // ESTO CONECTA EL BOTÓN HACIA LOS JUEGOS
-                onContinue={() => handlePhase2Complete(Date.now())} 
+                onContinue={() => handlePhase2Complete(Date.now())}
             />
         )}
 
-        {subPhase === 'phase2' && sesion && moduloActivo && (
+        {subPhase === 'phase2' && sesion && modoLeccion === 'repaso' && moduloActivo && (
             <Phase2Lesson
                 perfil={perfilConInteres}
                 sesion={sesion}
                 moduleId={moduloActivo}
+                navMode="modal"
                 onComplete={(_tiempo, simplificaciones) => {
                     // Acumulamos "Saber más" de este módulo, actualizamos progreso y devolvemos al menú (NeuroLessonPage)
                     setSimplificacionesAcumuladas(prev => prev + simplificaciones);
