@@ -256,6 +256,9 @@ const ConceptosClaveBlock: React.FC<{
 
     const [paso, setPaso] = useState(0);
     const firmaConceptosRef = useRef('');
+    const imagenCacheRef = useRef<Record<string, string | null>>({});
+    const fetchingRef = useRef<Set<string>>(new Set());
+    const [, forceUpdate] = useState(0);
 
     useEffect(() => {
         const firma = (conceptos ?? []).map(c => c.nombre).join('|');
@@ -265,11 +268,36 @@ const ConceptosClaveBlock: React.FC<{
         }
     }, [conceptos]);
 
-    if (!conceptos?.length) return null;
+    const total = conceptos?.length ?? 0;
+    const pasoActivo = total > 0 ? Math.min(paso, total - 1) : 0;
+    const concepto = total > 0 ? conceptos[pasoActivo] : null;
+    const queryParaEfecto = concepto
+        ? buildConceptoWikimediaQuery(perfil.asignatura, perfil.tema, concepto.nombre)
+        : null;
 
-    const total = conceptos.length;
-    const pasoActivo = Math.min(paso, total - 1);
-    const concepto = conceptos[pasoActivo];
+    // Carga automática de imagen por concepto — Wikimedia primero, resolveVisual() como respaldo.
+    // Cacheada por query (asignatura + tema + nombre), no por posición: sobrevive a cambios de
+    // paso/orden y no depende de que el array de conceptos permanezca estable.
+    useEffect(() => {
+        if (!queryParaEfecto) return;
+        if (queryParaEfecto in imagenCacheRef.current) return;
+        if (fetchingRef.current.has(queryParaEfecto)) return;
+
+        fetchingRef.current.add(queryParaEfecto);
+        let cancelado = false;
+
+        buscarImagenConcepto(queryParaEfecto).then(url => {
+            fetchingRef.current.delete(queryParaEfecto);
+            if (cancelado) return;
+            imagenCacheRef.current[queryParaEfecto] = url;
+            forceUpdate(v => v + 1);
+        });
+
+        return () => { cancelado = true; };
+    }, [queryParaEfecto]);
+
+    if (!concepto) return null;
+
     const pal = cardPalette[pasoActivo % cardPalette.length];
     //const Icon = resolveLucideIcon(concepto.icono);
     const visual = resolveVisual(
@@ -277,6 +305,11 @@ const ConceptosClaveBlock: React.FC<{
         concepto.nombre ||
         concepto.etiqueta
     );
+
+    const query = buildConceptoWikimediaQuery(perfil.asignatura, perfil.tema, concepto.nombre);
+    const imagenResultado = imagenCacheRef.current[query]; // string=encontrada, null=no encontrada, undefined=cargando
+    const imagenUrl = typeof imagenResultado === 'string' ? imagenResultado : null;
+    const imagenLista = imagenResultado !== undefined;
 
     const fuenteEjemplo =
         concepto.ejemploPedagogico ||
@@ -306,46 +339,45 @@ const ConceptosClaveBlock: React.FC<{
                     {concepto.nombre}
                 </h3>
 
-                <button
-                    type="button"
-                    onClick={() =>
-                        onSelectObra?.({
-                            titulo: concepto.nombre,
-                            autor: 'Wikimedia Commons',
-                            esConcepto: true,
-                            query: buildConceptoWikimediaQuery(perfil.asignatura, perfil.tema, concepto.nombre),
-                        })
-                    }
-                    className={`
-                        w-28 h-28
-                        rounded-full
-                        ${pal.iconBg}
-                        flex items-center justify-center
-                        mb-5
-                        transition-all
-                        hover:scale-105
-                        active:scale-95
-                        hover:shadow-md
-                    `}
-                >
-                    <div className="flex flex-col items-center justify-center">
-                        <span className="text-4xl">
-                            🔎
-                        </span>
-
-                        <span
-                            className={`
-                                text-[10px]
-                                font-black
-                                uppercase
-                                mt-1
-                                ${pal.iconText}
-                            `}
-                        >
-                            Ver
-                        </span>
+                {imagenUrl ? (
+                    <button
+                        type="button"
+                        onClick={() =>
+                            onSelectObra?.({
+                                titulo: concepto.nombre,
+                                autor: 'Wikimedia Commons',
+                                esConcepto: true,
+                                query,
+                            })
+                        }
+                        className="w-28 h-28 rounded-full overflow-hidden border border-slate-200 flex items-center justify-center mb-5 transition-all hover:scale-105 active:scale-95 hover:shadow-md"
+                        title="Ver imagen completa"
+                    >
+                        <img
+                            src={imagenUrl}
+                            alt={concepto.nombre}
+                            className="w-full h-full object-cover"
+                        />
+                    </button>
+                ) : (
+                    <div
+                        className={`
+                            w-28 h-28
+                            rounded-full
+                            ${pal.iconBg}
+                            flex items-center justify-center
+                            mb-5
+                        `}
+                    >
+                        {!imagenLista ? (
+                            <div className="w-7 h-7 rounded-full border-4 border-slate-200 border-t-teal-500 animate-spin" />
+                        ) : visual.type === 'icon' ? (
+                            <visual.icon className={`w-12 h-12 ${pal.iconText}`} />
+                        ) : (
+                            <span className={`text-4xl font-black ${pal.iconText}`}>{visual.letter}</span>
+                        )}
                     </div>
-                </button>
+                )}
 
                 <p
                     className="text-[15px] text-slate-700 font-medium leading-7 mb-6"
