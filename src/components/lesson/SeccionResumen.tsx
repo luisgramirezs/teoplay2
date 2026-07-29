@@ -1,16 +1,39 @@
 ﻿import React from 'react';
 import type { ExplicacionBloque } from '@/types';
+import { useNarrador } from '@/hooks/use-narrador';
+import BtnNarrar from './BtnNarrar';
 
 interface Pertinencia { importancia: string; utilidadVida: string; mundoReal: string; }
 
 interface Props {
     pertinencia: Pertinencia | null;
     bloque: ExplicacionBloque;
+    condicion: string;
+    idioma: string;
 }
 
-export default function SeccionResumen({ pertinencia, bloque }: Props) {
+export default function SeccionResumen({ pertinencia, bloque, condicion, idioma }: Props) {
+    const { narrar, seccionActiva } = useNarrador(idioma, condicion);
+
+    const textoNarracion = [
+        bloque.resumen,
+        pertinencia?.importancia,
+        pertinencia?.utilidadVida,
+        pertinencia?.mundoReal,
+    ].filter(Boolean).join('. ');
+
     return (
         <div className="space-y-4">
+            {textoNarracion && (
+                <div className="flex justify-end">
+                    <BtnNarrar
+                        id="resumen-completo"
+                        texto={textoNarracion}
+                        seccionActiva={seccionActiva}
+                        onNarrar={narrar}
+                    />
+                </div>
+            )}
             {bloque.resumen && (
                 <div className="rounded-2xl bg-slate-50 border border-slate-200 px-4 py-3">
                     <p className="text-[11px] font-black text-slate-500 uppercase tracking-wide mb-1">📋 Resumen</p>

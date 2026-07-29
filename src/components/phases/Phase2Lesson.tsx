@@ -1431,7 +1431,7 @@ const Phase2Lesson: React.FC<Phase2LessonProps> = ({ perfil, sesion, onComplete,
                         )}
 
                         {moduleId === 'summary' && (
-                            <SeccionResumen pertinencia={sesion.pertinencia ?? null} bloque={bloqueActual} />
+                            <SeccionResumen pertinencia={sesion.pertinencia ?? null} bloque={bloqueActual} condicion={perfil.condicion} idioma={perfil.idioma} />
                         )}
 
                     </div>

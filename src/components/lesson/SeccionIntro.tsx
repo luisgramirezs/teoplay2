@@ -1,5 +1,7 @@
 ﻿import React from 'react';
 import type { ExplicacionBloque } from '@/types';
+import { useNarrador } from '@/hooks/use-narrador';
+import BtnNarrar from './BtnNarrar';
 
 interface Props {
     bloque: ExplicacionBloque;
@@ -8,13 +10,29 @@ interface Props {
     fontSize: string;
 }
 
-export default function SeccionIntro({ bloque, fontSize }: Props) {
+export default function SeccionIntro({ bloque, condicion, idioma, fontSize }: Props) {
+    const { narrar, seccionActiva } = useNarrador(idioma, condicion);
+
     const introFrase = typeof bloque.intro === 'string' ? bloque.intro : bloque.intro?.fraseEnganche || '';
     const introCuerpo = typeof bloque.intro !== 'string' ? bloque.intro?.cuerpo : '';
     const introAncla = typeof bloque.intro !== 'string' ? bloque.intro?.ejemploAncla : '';
 
+    const textoNarracion = [introFrase, introAncla, introCuerpo, bloque.resumen]
+        .filter(Boolean)
+        .join('. ');
+
     return (
         <div className="space-y-5">
+            {textoNarracion && (
+                <div className="flex justify-end">
+                    <BtnNarrar
+                        id="intro-completa"
+                        texto={textoNarracion}
+                        seccionActiva={seccionActiva}
+                        onNarrar={narrar}
+                    />
+                </div>
+            )}
             {introFrase && (
                 <h2 className="text-2xl font-black text-slate-800 leading-tight">{introFrase}</h2>
             )}
