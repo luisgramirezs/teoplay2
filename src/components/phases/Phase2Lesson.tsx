@@ -1,7 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
-    Volume2, CheckCircle,
-    BookOpen, PencilLine, Monitor, Layers, ArrowLeft
+    CheckCircle,
+    BookOpen, PencilLine, Monitor, Layers, ArrowLeft, ArrowRight
 } from 'lucide-react';
 import {
     PerfilNino, SesionGenerada, ASIGNATURAS,
@@ -25,118 +25,8 @@ import SeccionVisual from '../lesson/SeccionVisual';
 import SeccionVideo from '../lesson/SeccionVideo';
 import SeccionResumen from '../lesson/SeccionResumen';
 import Phase3Games from '@/components/phases/Phase3Games';
-
-
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Hook de narración por sección — toggle on/off, una sola voz activa
-// ─────────────────────────────────────────────────────────────────────────────
-function useNarrador(idioma: string, condicion: string) {
-    const [seccionActiva, setSeccionActiva] = React.useState<string | null>(null);
-    const utteranceRef = React.useRef<SpeechSynthesisUtterance | null>(null);
-    const speakTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-    const vocesListasRef = React.useRef(false);
-
-    // Precarga de voces: en Chrome, getVoices() puede devolver [] hasta que
-    // el navegador termine de cargarlas de forma asíncrona (evento voiceschanged).
-    React.useEffect(() => {
-        if (!('speechSynthesis' in window)) return;
-        if (window.speechSynthesis.getVoices().length > 0) {
-            vocesListasRef.current = true;
-            return;
-        }
-        const handleVoicesChanged = () => {
-            vocesListasRef.current = true;
-        };
-        window.speechSynthesis.addEventListener('voiceschanged', handleVoicesChanged);
-        return () => window.speechSynthesis.removeEventListener('voiceschanged', handleVoicesChanged);
-    }, []);
-
-    const reproducir = (id: string, texto: string) => {
-        const u = new SpeechSynthesisUtterance(texto);
-        utteranceRef.current = u; // referencia persistente: evita que Chrome libere el utterance antes de tiempo
-        u.lang = idioma === 'es' ? 'es-ES' : 'en-US';
-        u.rate = condicion === 'tea' ? 0.8 : 0.9;
-        u.onstart = () => setSeccionActiva(id);
-        u.onend = () => setSeccionActiva(null);
-        u.onerror = (event) => {
-            console.error('Error de narración:', event.error);
-            setSeccionActiva(null);
-        };
-        window.speechSynthesis.speak(u);
-    };
-
-    const narrar = (id: string, texto: string) => {
-        console.log('narrar() llamado con:', id, texto.substring(0, 30)); // TEMPORAL — diagnóstico de audio, quitar después
-
-        if (!('speechSynthesis' in window)) return;
-
-        if (speakTimeoutRef.current) {
-            clearTimeout(speakTimeoutRef.current);
-            speakTimeoutRef.current = null;
-        }
-
-        window.speechSynthesis.cancel();
-
-        if (seccionActiva === id) {
-            setSeccionActiva(null);
-            return;
-        }
-
-        // Delay entre cancel() y speak(): evita la race condition de Chrome
-        // donde un speak() inmediatamente después de cancel() se pierde.
-        speakTimeoutRef.current = setTimeout(() => {
-            speakTimeoutRef.current = null;
-            if (vocesListasRef.current || window.speechSynthesis.getVoices().length > 0) {
-                reproducir(id, texto);
-            } else {
-                const handleVoicesChanged = () => {
-                    window.speechSynthesis.removeEventListener('voiceschanged', handleVoicesChanged);
-                    reproducir(id, texto);
-                };
-                window.speechSynthesis.addEventListener('voiceschanged', handleVoicesChanged);
-            }
-        }, 80);
-    };
-
-    const detener = () => {
-        if (speakTimeoutRef.current) {
-            clearTimeout(speakTimeoutRef.current);
-            speakTimeoutRef.current = null;
-        }
-        window.speechSynthesis?.cancel();
-        setSeccionActiva(null);
-    };
-
-    return { narrar, detener, seccionActiva };
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Mini botón de narración por secciones
-// ─────────────────────────────────────────────────────────────────────────────
-const BtnNarrar: React.FC<{
-    id: string;
-    texto: string;
-    seccionActiva: string | null;
-    onNarrar: (id: string, texto: string) => void;
-}> = ({ id, texto, seccionActiva, onNarrar }) => {
-    const activo = seccionActiva === id;
-
-    return (
-        <button
-            type="button"
-            onClick={() => onNarrar(id, texto)}
-            className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${activo
-                    ? 'bg-accent/20 text-accent border border-accent/40'
-                    : 'bg-muted text-muted-foreground border border-border hover:text-accent hover:border-accent/40'
-                }`}
-            title={activo ? 'Detener narración' : 'Escuchar esta sección'}
-        >
-            <Volume2 className={`w-3 h-3 ${activo ? 'animate-pulse' : ''}`} />
-            {activo ? 'Detener' : 'Escuchar'}
-        </button>
-    );
-};
+import { useNarrador } from '@/hooks/use-narrador';
+import BtnNarrar from '../lesson/BtnNarrar';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -363,141 +253,182 @@ const ConceptosClaveBlock: React.FC<{
     onSelectObra,
     perfil,
 }) => {
-    
+
+    const [paso, setPaso] = useState(0);
+    const firmaConceptosRef = useRef('');
+
+    useEffect(() => {
+        const firma = (conceptos ?? []).map(c => c.nombre).join('|');
+        if (firma !== firmaConceptosRef.current) {
+            firmaConceptosRef.current = firma;
+            setPaso(0);
+        }
+    }, [conceptos]);
+
     if (!conceptos?.length) return null;
 
+    const total = conceptos.length;
+    const pasoActivo = Math.min(paso, total - 1);
+    const concepto = conceptos[pasoActivo];
+    const pal = cardPalette[pasoActivo % cardPalette.length];
+    //const Icon = resolveLucideIcon(concepto.icono);
+    const visual = resolveVisual(
+        concepto.icono ||
+        concepto.nombre ||
+        concepto.etiqueta
+    );
+
+    const fuenteEjemplo =
+        concepto.ejemploPedagogico ||
+        concepto.componentes ||
+        concepto.miembros ||
+        concepto.elementos ||
+        concepto.uso ||
+        '';
+
+    const ejemploTexto = concepto.ejemploPedagogico
+        ? concepto.ejemploPedagogico.trim()
+        : fuenteEjemplo
+            .replace(/\\n/g, '\n')
+            .split('\n')
+            .filter(l => l.trim())
+            .slice(0, 4)
+            .join(', ');
+
     return (
-        <div
-            className="grid gap-4"
-            style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}
-        >
-            {conceptos.map((concepto, i) => {
-                const pal = cardPalette[i % cardPalette.length];
-                //const Icon = resolveLucideIcon(concepto.icono);
-                const visual = resolveVisual(
-                    concepto.icono ||
-                    concepto.nombre ||
-                    concepto.etiqueta
-                );
+        <div className="flex flex-col gap-4">
+            <div className="bg-white rounded-[26px] border border-slate-200 shadow-sm px-5 py-5 flex flex-col items-center text-center min-h-[300px]">
+                <div className={`w-10 h-10 rounded-full ${pal.step} text-white text-base font-black flex items-center justify-center mb-4`}>
+                    {pasoActivo + 1}
+                </div>
 
-                const fuenteEjemplo =
-                    concepto.ejemploPedagogico ||
-                    concepto.componentes ||
-                    concepto.miembros ||
-                    concepto.elementos ||
-                    concepto.uso ||
-                    '';
+                <h3 className={`text-[22px] font-black ${pal.nameText} mb-5`}>
+                    {concepto.nombre}
+                </h3>
 
-                const ejemploTexto = concepto.ejemploPedagogico
-                    ? concepto.ejemploPedagogico.trim()
-                    : fuenteEjemplo
-                        .replace(/\\n/g, '\n')
-                        .split('\n')
-                        .filter(l => l.trim())
-                        .slice(0, 4)
-                        .join(', ');
+                <button
+                    type="button"
+                    onClick={() =>
+                        onSelectObra?.({
+                            titulo: concepto.nombre,
+                            autor: 'Wikimedia Commons',
+                            esConcepto: true,
+                            query: buildConceptoWikimediaQuery(perfil.asignatura, perfil.tema, concepto.nombre),
+                        })
+                    }
+                    className={`
+                        w-28 h-28
+                        rounded-full
+                        ${pal.iconBg}
+                        flex items-center justify-center
+                        mb-5
+                        transition-all
+                        hover:scale-105
+                        active:scale-95
+                        hover:shadow-md
+                    `}
+                >
+                    <div className="flex flex-col items-center justify-center">
+                        <span className="text-4xl">
+                            🔎
+                        </span>
 
-                return (
-                    <div
-                        key={i}
-                        className="bg-white rounded-[26px] border border-slate-200 shadow-sm px-5 py-5 flex flex-col items-center text-center min-h-[300px]"
-                    >
-                        <div className={`w-10 h-10 rounded-full ${pal.step} text-white text-base font-black flex items-center justify-center mb-4`}>
-                            {i + 1}
-                        </div>
-
-                        <h3 className={`text-[22px] font-black ${pal.nameText} mb-5`}>
-                            {concepto.nombre}
-                        </h3>
-                        
-                        <button
-                            type="button"
-                            onClick={() =>
-                                onSelectObra?.({
-                                    titulo: concepto.nombre,
-                                    autor: 'Wikimedia Commons',
-                                    esConcepto: true,  
-                                    query: buildConceptoWikimediaQuery(perfil.asignatura, perfil.tema, concepto.nombre),
-                                })
-                            }
+                        <span
                             className={`
-                                w-28 h-28
-                                rounded-full
-                                ${pal.iconBg}
-                                flex items-center justify-center
-                                mb-5
-                                transition-all
-                                hover:scale-105
-                                active:scale-95
-                                hover:shadow-md
+                                text-[10px]
+                                font-black
+                                uppercase
+                                mt-1
+                                ${pal.iconText}
                             `}
                         >
-                            <div className="flex flex-col items-center justify-center">
-                                <span className="text-4xl">
-                                    🔎
-                                </span>
+                            Ver
+                        </span>
+                    </div>
+                </button>
 
-                                <span
-                                    className={`
-                                        text-[10px]
-                                        font-black
-                                        uppercase
-                                        mt-1
-                                        ${pal.iconText}
-                                    `}
-                                >
-                                    Ver
-                                </span>
-                            </div>
-                        </button>
+                <p
+                    className="text-[15px] text-slate-700 font-medium leading-7 mb-6"
+                    style={{ fontSize }}
+                >
+                    {concepto.explicacionSimple}
+                </p>
 
-                        <p
-                            className="text-[15px] text-slate-700 font-medium leading-7 mb-6"
-                            style={{ fontSize }}
-                        >
-                            {concepto.explicacionSimple}
+                {concepto.formula && (
+                    <div className="w-full rounded-2xl bg-[#F6F3FF] border border-purple-100 px-4 py-3 mb-4">
+                        <p className="text-[11px] font-black text-[#5b40d6] uppercase tracking-wide mb-2">
+                            Fórmula
                         </p>
-
-                        {concepto.formula && (
-                            <div className="w-full rounded-2xl bg-[#F6F3FF] border border-purple-100 px-4 py-3 mb-4">
-                                <p className="text-[11px] font-black text-[#5b40d6] uppercase tracking-wide mb-2">
-                                    Fórmula
-                                </p>
-                                <div className="flex items-center gap-1 flex-wrap justify-center">
-                                    {concepto.formula.split('+').map((parte, idx, arr) => (
-                                        <React.Fragment key={idx}>
-                                            <span className="px-2 py-1 rounded-lg text-[11px] font-black border bg-white text-slate-700 border-slate-200">
-                                                {parte.trim()}
-                                            </span>
-                                            {idx < arr.length - 1 && (
-                                                <span className="text-[#5b40d6] font-black text-xs">+</span>
-                                            )}
-                                        </React.Fragment>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {ejemploTexto && (
-                            <div className={`mt-auto w-full rounded-2xl ${pal.exampleBg} px-4 py-4`}>
-                                <p className={`text-sm font-black mb-1 ${pal.nameText}`}>Ejemplo</p>
-                                <p className="text-[13px] text-slate-700 font-medium leading-6 text-left">
-                                    {ejemploTexto}
-                                </p>
-                            </div>
-                        )}
-
-                        <div className="mt-4">
-                            <BtnNarrar
-                                id={`concepto-${i}`}
-                                texto={[concepto.nombre, concepto.explicacionSimple, ejemploTexto].filter(Boolean).join('. ')}
-                                seccionActiva={seccionActiva}
-                                onNarrar={onNarrar}
-                            />
+                        <div className="flex items-center gap-1 flex-wrap justify-center">
+                            {concepto.formula.split('+').map((parte, idx, arr) => (
+                                <React.Fragment key={idx}>
+                                    <span className="px-2 py-1 rounded-lg text-[11px] font-black border bg-white text-slate-700 border-slate-200">
+                                        {parte.trim()}
+                                    </span>
+                                    {idx < arr.length - 1 && (
+                                        <span className="text-[#5b40d6] font-black text-xs">+</span>
+                                    )}
+                                </React.Fragment>
+                            ))}
                         </div>
                     </div>
-                );
-            })}
+                )}
+
+                {ejemploTexto && (
+                    <div className={`mt-auto w-full rounded-2xl ${pal.exampleBg} px-4 py-4`}>
+                        <p className={`text-sm font-black mb-1 ${pal.nameText}`}>Ejemplo</p>
+                        <p className="text-[13px] text-slate-700 font-medium leading-6 text-left">
+                            {ejemploTexto}
+                        </p>
+                    </div>
+                )}
+
+                <div className="mt-4">
+                    <BtnNarrar
+                        id={`concepto-${pasoActivo}`}
+                        texto={[concepto.nombre, concepto.explicacionSimple, ejemploTexto].filter(Boolean).join('. ')}
+                        seccionActiva={seccionActiva}
+                        onNarrar={onNarrar}
+                    />
+                </div>
+            </div>
+
+            {/* Sub-navegación local: Anterior/Siguiente entre conceptos */}
+            {total > 1 && (
+                <div className="flex items-center justify-between gap-3">
+                    <button
+                        type="button"
+                        onClick={() => setPaso(p => Math.max(0, p - 1))}
+                        disabled={pasoActivo === 0}
+                        className="inline-flex items-center gap-2 px-3 h-9 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition-colors cursor-pointer flex-shrink-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white"
+                    >
+                        <ArrowLeft className="w-4 h-4 text-slate-600" />
+                        <span className="text-sm font-bold text-slate-700">Anterior</span>
+                    </button>
+
+                    <div className="flex items-center gap-2 flex-1 justify-center min-w-0">
+                        <div className="flex gap-1.5 w-full max-w-[160px]">
+                            {conceptos.map((_, idx) => (
+                                <div
+                                    key={idx}
+                                    className={`h-1.5 flex-1 rounded-full transition-all ${idx <= pasoActivo ? 'bg-[#0E9E8A]' : 'bg-slate-200'}`}
+                                />
+                            ))}
+                        </div>
+                        <span className="text-xs font-bold text-slate-400 flex-shrink-0">{pasoActivo + 1} / {total}</span>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={() => setPaso(p => Math.min(total - 1, p + 1))}
+                        disabled={pasoActivo === total - 1}
+                        className="inline-flex items-center gap-2 px-4 h-9 rounded-xl bg-[#0E9E8A] text-white font-black text-sm hover:bg-[#0A7A6A] transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
+                    >
+                        Siguiente
+                        <ArrowRight className="w-4 h-4" />
+                    </button>
+                </div>
+            )}
         </div>
     );
 };
