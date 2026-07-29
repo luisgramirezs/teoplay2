@@ -330,98 +330,98 @@ const ConceptosClaveBlock: React.FC<{
 
     return (
         <div className="flex flex-col gap-4">
-            <div className="bg-white rounded-[26px] border border-slate-200 shadow-sm px-5 py-5 flex flex-col items-center text-center min-h-[300px]">
-                <div className={`w-10 h-10 rounded-full ${pal.step} text-white text-base font-black flex items-center justify-center mb-4`}>
-                    {pasoActivo + 1}
+            <div className="bg-white rounded-[26px] border border-slate-200 shadow-sm p-5 md:p-6 flex flex-col md:flex-row gap-5 md:gap-6 min-h-[300px]">
+                {/* Columna izquierda: contenido textual */}
+                <div className="flex-1 min-w-0 flex flex-col items-start text-left">
+                    <div className={`w-10 h-10 rounded-full ${pal.step} text-white text-base font-black flex items-center justify-center mb-4`}>
+                        {pasoActivo + 1}
+                    </div>
+
+                    <h3 className={`text-[22px] font-black ${pal.nameText} mb-4`}>
+                        {concepto.nombre}
+                    </h3>
+
+                    <p
+                        className="text-[15px] text-slate-700 font-medium leading-7 mb-4"
+                        style={{ fontSize }}
+                    >
+                        {concepto.explicacionSimple}
+                    </p>
+
+                    {concepto.formula && (
+                        <div className="w-full rounded-2xl bg-[#F6F3FF] border border-purple-100 px-4 py-3 mb-4">
+                            <p className="text-[11px] font-black text-[#5b40d6] uppercase tracking-wide mb-2">
+                                Fórmula
+                            </p>
+                            <div className="flex items-center gap-1 flex-wrap justify-start">
+                                {concepto.formula.split('+').map((parte, idx, arr) => (
+                                    <React.Fragment key={idx}>
+                                        <span className="px-2 py-1 rounded-lg text-[11px] font-black border bg-white text-slate-700 border-slate-200">
+                                            {parte.trim()}
+                                        </span>
+                                        {idx < arr.length - 1 && (
+                                            <span className="text-[#5b40d6] font-black text-xs">+</span>
+                                        )}
+                                    </React.Fragment>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {ejemploTexto && (
+                        <div className={`mt-auto w-full rounded-2xl ${pal.exampleBg} px-4 py-4`}>
+                            <p className={`text-sm font-black mb-1 ${pal.nameText}`}>Ejemplo</p>
+                            <p className="text-[13px] text-slate-700 font-medium leading-6 text-left">
+                                {ejemploTexto}
+                            </p>
+                        </div>
+                    )}
+
+                    <div className="mt-4">
+                        <BtnNarrar
+                            id={`concepto-${pasoActivo}`}
+                            texto={[concepto.nombre, concepto.explicacionSimple, ejemploTexto].filter(Boolean).join('. ')}
+                            seccionActiva={seccionActiva}
+                            onNarrar={onNarrar}
+                        />
+                    </div>
                 </div>
 
-                <h3 className={`text-[22px] font-black ${pal.nameText} mb-5`}>
-                    {concepto.nombre}
-                </h3>
-
-                {imagenUrl ? (
-                    <button
-                        type="button"
-                        onClick={() =>
-                            onSelectObra?.({
-                                titulo: concepto.nombre,
-                                autor: 'Wikimedia Commons',
-                                esConcepto: true,
-                                query,
-                            })
-                        }
-                        className="w-28 h-28 rounded-full overflow-hidden border border-slate-200 flex items-center justify-center mb-5 transition-all hover:scale-105 active:scale-95 hover:shadow-md"
-                        title="Ver imagen completa"
-                    >
-                        <img
-                            src={imagenUrl}
-                            alt={concepto.nombre}
-                            className="w-full h-full object-cover"
-                        />
-                    </button>
-                ) : (
-                    <div
-                        className={`
-                            w-28 h-28
-                            rounded-full
-                            ${pal.iconBg}
-                            flex items-center justify-center
-                            mb-5
-                        `}
-                    >
-                        {!imagenLista ? (
-                            <div className="w-7 h-7 rounded-full border-4 border-slate-200 border-t-teal-500 animate-spin" />
-                        ) : visual.type === 'icon' ? (
-                            <visual.icon className={`w-12 h-12 ${pal.iconText}`} />
-                        ) : (
-                            <span className={`text-4xl font-black ${pal.iconText}`}>{visual.letter}</span>
-                        )}
-                    </div>
-                )}
-
-                <p
-                    className="text-[15px] text-slate-700 font-medium leading-7 mb-6"
-                    style={{ fontSize }}
-                >
-                    {concepto.explicacionSimple}
-                </p>
-
-                {concepto.formula && (
-                    <div className="w-full rounded-2xl bg-[#F6F3FF] border border-purple-100 px-4 py-3 mb-4">
-                        <p className="text-[11px] font-black text-[#5b40d6] uppercase tracking-wide mb-2">
-                            Fórmula
-                        </p>
-                        <div className="flex items-center gap-1 flex-wrap justify-center">
-                            {concepto.formula.split('+').map((parte, idx, arr) => (
-                                <React.Fragment key={idx}>
-                                    <span className="px-2 py-1 rounded-lg text-[11px] font-black border bg-white text-slate-700 border-slate-200">
-                                        {parte.trim()}
-                                    </span>
-                                    {idx < arr.length - 1 && (
-                                        <span className="text-[#5b40d6] font-black text-xs">+</span>
-                                    )}
-                                </React.Fragment>
-                            ))}
+                {/* Columna derecha: imagen de apoyo */}
+                <div className="w-full md:w-1/2 flex-shrink-0">
+                    {imagenUrl ? (
+                        <button
+                            type="button"
+                            onClick={() =>
+                                onSelectObra?.({
+                                    titulo: concepto.nombre,
+                                    autor: 'Wikimedia Commons',
+                                    esConcepto: true,
+                                    query,
+                                })
+                            }
+                            className="w-full h-56 md:h-full rounded-[20px] overflow-hidden border border-slate-200 block transition-all hover:shadow-md"
+                            title="Ver imagen completa"
+                        >
+                            <img
+                                src={imagenUrl}
+                                alt={concepto.nombre}
+                                className="w-full h-full object-cover"
+                            />
+                        </button>
+                    ) : (
+                        <div
+                            className={`w-full h-56 md:h-full rounded-[20px] ${pal.iconBg} flex items-center justify-center`}
+                        >
+                            {!imagenLista ? (
+                                <div className="w-8 h-8 rounded-full border-4 border-slate-200 border-t-teal-500 animate-spin" />
+                            ) : visual.type === 'icon' ? (
+                                <visual.icon className={`w-16 h-16 ${pal.iconText}`} />
+                            ) : (
+                                <span className={`text-6xl font-black ${pal.iconText}`}>{visual.letter}</span>
+                            )}
                         </div>
-                    </div>
-                )}
-
-                {ejemploTexto && (
-                    <div className={`mt-auto w-full rounded-2xl ${pal.exampleBg} px-4 py-4`}>
-                        <p className={`text-sm font-black mb-1 ${pal.nameText}`}>Ejemplo</p>
-                        <p className="text-[13px] text-slate-700 font-medium leading-6 text-left">
-                            {ejemploTexto}
-                        </p>
-                    </div>
-                )}
-
-                <div className="mt-4">
-                    <BtnNarrar
-                        id={`concepto-${pasoActivo}`}
-                        texto={[concepto.nombre, concepto.explicacionSimple, ejemploTexto].filter(Boolean).join('. ')}
-                        seccionActiva={seccionActiva}
-                        onNarrar={onNarrar}
-                    />
+                    )}
                 </div>
             </div>
 
