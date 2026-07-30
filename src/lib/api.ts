@@ -109,7 +109,8 @@ function buildPrompt(perfil: PerfilNino): string {
             "ejemploPedagogico": "",
             "icono": "",
             "colorRamp": "gray",
-            "tipoEntidad": "persona | lugar | evento | objeto | proceso"
+            "tipoEntidad": "persona | lugar | evento | objeto | proceso",
+            "fraseVisual": ""
           }
         ],
  
@@ -198,7 +199,8 @@ function buildPrompt(perfil: PerfilNino): string {
             "ejemploPedagogico": "",
             "icono": "",
             "colorRamp": "gray",
-            "tipoEntidad": "persona | lugar | evento | objeto | proceso"
+            "tipoEntidad": "persona | lugar | evento | objeto | proceso",
+            "fraseVisual": ""
           }
         ],
 
@@ -241,7 +243,8 @@ function buildPrompt(perfil: PerfilNino): string {
             "ejemploPedagogico": "",
             "icono": "",
             "colorRamp": "gray",
-            "tipoEntidad": "persona | lugar | evento | objeto | proceso"
+            "tipoEntidad": "persona | lugar | evento | objeto | proceso",
+            "fraseVisual": ""
           }
         ],
 
@@ -381,6 +384,7 @@ function buildPrompt(perfil: PerfilNino): string {
         `- Evita conceptos vacíos, genéricos o redundantes.`,
         `- Cada concepto debe tener como mínimo: "nombre", "explicacionSimple", "icono" y una pista estructural útil entre "formula", "elementos", "componentes", "miembros", "uso" o "necesidad".`,
         `- "tipoEntidad" clasifica QUÉ ES el concepto para mejorar la búsqueda de su imagen: "persona" (figura real con nombre propio: Gaitán, Newton, un autor), "lugar" (sitio geográfico o edificio), "evento" (suceso puntual: batalla, revolución), "objeto" (cosa física, órgano, instrumento, artefacto), "proceso" (fenómeno, ciclo, procedimiento). Elige el más específico; usa "persona" únicamente cuando sea un nombre propio real, no un cargo o grupo.`,
+        `- "fraseVisual" es OBLIGATORIA en inglés cuando "tipoEntidad" sea "evento" o "proceso" y el nombre del concepto sea abstracto o genérico (ej. "Causas", "Consecuencias", "Impacto", "Desarrollo", "Fermentación"). Debe describir una escena, lugar o momento concreto y fotografiable — 2 a 5 palabras — NUNCA una traducción o paráfrasis del nombre del concepto. Si el concepto ya es concreto y visual por sí mismo, deja "fraseVisual" vacío.`,
         '- Cada "conceptoClave" debe incluir "ejemploPedagogico":',
         '- Debe ser un ejemplo breve, concreto y útil para aterrizar el concepto.',
         '- Debe ser un ejemplo académico, concreto y aclaratorio del concepto.',
@@ -401,6 +405,11 @@ function buildPrompt(perfil: PerfilNino): string {
         '- Júpiter -> "Es un gigante gaseoso y el planeta más grande del sistema solar."',
         '- Dividendo -> "Si repartes 12 dulces entre 4 amigos, 12 es el dividendo."',
         '- Evaporación -> "Cuando el sol calienta el agua del mar, parte sube como vapor."',
+        '',
+        'Ejemplos de "fraseVisual" (solo para tipoEntidad "evento" o "proceso"):',
+        '- Concepto "Causas" (tema "El Bogotazo") -> "Bogotá riot 1948" (NO "causes of the event": sigue siendo abstracto, no es una escena buscable)',
+        '- Concepto "Consecuencias" (tema "Revolución Industrial") -> "Industrial Revolution factory smoke"',
+        '- Concepto "Fermentación" (tema "Producción de queso") -> "cheese fermentation vat"',
         '',
         'Responde SOLO con este JSON válido, sin texto fuera:',
         estructuraJson,

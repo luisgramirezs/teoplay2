@@ -205,6 +205,7 @@ export interface ConceptoClave {
     colorRamp?: 'blue' | 'green' | 'amber' | 'purple' | 'teal' | 'coral' | 'pink' | 'gray';
     apoyoGramatical?: any;
     tipoEntidad?: 'persona' | 'lugar' | 'evento' | 'objeto' | 'proceso';
+    fraseVisual?: string;
 }
 
 export interface VisualSugerido {

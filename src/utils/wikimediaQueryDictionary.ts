@@ -439,11 +439,23 @@ const TODOS: Record<string, Record<string, string>> = {
 
 // ── Función principal ─────────────────────────────────────────────────────────
 
+// Normaliza para comparar (minúsculas, sin tildes) — usado solo para detectar
+// que fraseVisual no sea una repetición disfrazada del nombre del concepto.
+const normalizarTexto = (s: string) =>
+    s.toLowerCase().trim()
+        .replace(/[áàäâ]/g, 'a')
+        .replace(/[éèëê]/g, 'e')
+        .replace(/[íìïî]/g, 'i')
+        .replace(/[óòöô]/g, 'o')
+        .replace(/[úùüû]/g, 'u')
+        .replace(/ñ/g, 'n');
+
 export function buildConceptoWikimediaQuery(
     asignatura: string,
     tema: string,
     concepto: string,
-    tipoEntidad?: 'persona' | 'lugar' | 'evento' | 'objeto' | 'proceso'
+    tipoEntidad?: 'persona' | 'lugar' | 'evento' | 'objeto' | 'proceso',
+    fraseVisual?: string
 ): string {
     const a = asignatura.toLowerCase().trim();
     const c = concepto.toLowerCase().trim();
@@ -471,7 +483,17 @@ export function buildConceptoWikimediaQuery(
         return `${concepto} portrait`;
     }
 
-    // 3b. Fallback — siempre incluye el tema para dar contexto
+    // 3b. Evento/proceso abstracto con fraseVisual propuesta por la IA: se usa tal cual,
+    // sin concatenar tema. Doble candado: solo aplica para estos tipoEntidad Y solo si
+    // fraseVisual pasa la guarda (no vacía, no una repetición disfrazada del concepto).
+    if (tipoEntidad === 'evento' || tipoEntidad === 'proceso') {
+        const frase = fraseVisual?.trim();
+        if (frase && normalizarTexto(frase) !== normalizarTexto(concepto)) {
+            return frase;
+        }
+    }
+
+    // 3c. Fallback — siempre incluye el tema para dar contexto
     const fallbacks: Record<string, string> = {
         ciencias: `${concepto} biology science diagram -surgery -patient -clinical -autopsy`,
         historia: `${concepto} ${tema}`,

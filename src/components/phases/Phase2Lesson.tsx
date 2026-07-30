@@ -125,6 +125,7 @@ function normalizar(raw: unknown): ExplicacionBloque {
                             tipoEntidad: (typeof cc.tipoEntidad === 'string' && ['persona', 'lugar', 'evento', 'objeto', 'proceso'].includes(cc.tipoEntidad))
                                 ? (cc.tipoEntidad as ConceptoClave['tipoEntidad'])
                                 : undefined,
+                            fraseVisual: typeof cc.fraseVisual === 'string' ? cc.fraseVisual : undefined,
                         };
                     }
                     return null;
@@ -275,7 +276,7 @@ const ConceptosClaveBlock: React.FC<{
     const pasoActivo = total > 0 ? Math.min(paso, total - 1) : 0;
     const concepto = total > 0 ? conceptos[pasoActivo] : null;
     const queryParaEfecto = concepto
-        ? buildConceptoWikimediaQuery(perfil.asignatura, perfil.tema, concepto.nombre, concepto.tipoEntidad)
+        ? buildConceptoWikimediaQuery(perfil.asignatura, perfil.tema, concepto.nombre, concepto.tipoEntidad, concepto.fraseVisual)
         : null;
 
     // Carga automática de imagen por concepto — Wikimedia primero, resolveVisual() como respaldo.
@@ -309,7 +310,7 @@ const ConceptosClaveBlock: React.FC<{
         concepto.etiqueta
     );
 
-    const query = buildConceptoWikimediaQuery(perfil.asignatura, perfil.tema, concepto.nombre, concepto.tipoEntidad);
+    const query = buildConceptoWikimediaQuery(perfil.asignatura, perfil.tema, concepto.nombre, concepto.tipoEntidad, concepto.fraseVisual);
     const imagenResultado = imagenCacheRef.current[query]; // string=encontrada, null=no encontrada, undefined=cargando
     const imagenUrl = typeof imagenResultado === 'string' ? imagenResultado : null;
     const imagenLista = imagenResultado !== undefined;
