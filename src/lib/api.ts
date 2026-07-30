@@ -108,7 +108,8 @@ function buildPrompt(perfil: PerfilNino): string {
             "miembros": "",
             "ejemploPedagogico": "",
             "icono": "",
-            "colorRamp": "gray"
+            "colorRamp": "gray",
+            "tipoEntidad": "persona | lugar | evento | objeto | proceso"
           }
         ],
  
@@ -196,7 +197,8 @@ function buildPrompt(perfil: PerfilNino): string {
             "miembros": "",
             "ejemploPedagogico": "",
             "icono": "",
-            "colorRamp": "gray"
+            "colorRamp": "gray",
+            "tipoEntidad": "persona | lugar | evento | objeto | proceso"
           }
         ],
 
@@ -238,7 +240,8 @@ function buildPrompt(perfil: PerfilNino): string {
             "miembros": "",
             "ejemploPedagogico": "",
             "icono": "",
-            "colorRamp": "gray"
+            "colorRamp": "gray",
+            "tipoEntidad": "persona | lugar | evento | objeto | proceso"
           }
         ],
 
@@ -377,6 +380,7 @@ function buildPrompt(perfil: PerfilNino): string {
         `- Si el tema tiene una estructura, debes mostrar esa estructura completa.`,
         `- Evita conceptos vacíos, genéricos o redundantes.`,
         `- Cada concepto debe tener como mínimo: "nombre", "explicacionSimple", "icono" y una pista estructural útil entre "formula", "elementos", "componentes", "miembros", "uso" o "necesidad".`,
+        `- "tipoEntidad" clasifica QUÉ ES el concepto para mejorar la búsqueda de su imagen: "persona" (figura real con nombre propio: Gaitán, Newton, un autor), "lugar" (sitio geográfico o edificio), "evento" (suceso puntual: batalla, revolución), "objeto" (cosa física, órgano, instrumento, artefacto), "proceso" (fenómeno, ciclo, procedimiento). Elige el más específico; usa "persona" únicamente cuando sea un nombre propio real, no un cargo o grupo.`,
         '- Cada "conceptoClave" debe incluir "ejemploPedagogico":',
         '- Debe ser un ejemplo breve, concreto y útil para aterrizar el concepto.',
         '- Debe ser un ejemplo académico, concreto y aclaratorio del concepto.',

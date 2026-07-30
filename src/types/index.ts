@@ -204,6 +204,7 @@ export interface ConceptoClave {
     icono?: string;
     colorRamp?: 'blue' | 'green' | 'amber' | 'purple' | 'teal' | 'coral' | 'pink' | 'gray';
     apoyoGramatical?: any;
+    tipoEntidad?: 'persona' | 'lugar' | 'evento' | 'objeto' | 'proceso';
 }
 
 export interface VisualSugerido {

@@ -122,6 +122,9 @@ function normalizar(raw: unknown): ExplicacionBloque {
                             icono: typeof cc.icono === 'string' ? cc.icono : '',
                             colorRamp: COLORES_PERMITIDOS.includes(rawColor as any) ? (rawColor as ColorRamp) : 'gray',
                             apoyoGramatical: (r.apoyoGramatical as any) ?? null,
+                            tipoEntidad: (typeof cc.tipoEntidad === 'string' && ['persona', 'lugar', 'evento', 'objeto', 'proceso'].includes(cc.tipoEntidad))
+                                ? (cc.tipoEntidad as ConceptoClave['tipoEntidad'])
+                                : undefined,
                         };
                     }
                     return null;
@@ -272,7 +275,7 @@ const ConceptosClaveBlock: React.FC<{
     const pasoActivo = total > 0 ? Math.min(paso, total - 1) : 0;
     const concepto = total > 0 ? conceptos[pasoActivo] : null;
     const queryParaEfecto = concepto
-        ? buildConceptoWikimediaQuery(perfil.asignatura, perfil.tema, concepto.nombre)
+        ? buildConceptoWikimediaQuery(perfil.asignatura, perfil.tema, concepto.nombre, concepto.tipoEntidad)
         : null;
 
     // Carga automática de imagen por concepto — Wikimedia primero, resolveVisual() como respaldo.
@@ -306,7 +309,7 @@ const ConceptosClaveBlock: React.FC<{
         concepto.etiqueta
     );
 
-    const query = buildConceptoWikimediaQuery(perfil.asignatura, perfil.tema, concepto.nombre);
+    const query = buildConceptoWikimediaQuery(perfil.asignatura, perfil.tema, concepto.nombre, concepto.tipoEntidad);
     const imagenResultado = imagenCacheRef.current[query]; // string=encontrada, null=no encontrada, undefined=cargando
     const imagenUrl = typeof imagenResultado === 'string' ? imagenResultado : null;
     const imagenLista = imagenResultado !== undefined;

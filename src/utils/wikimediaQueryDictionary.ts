@@ -442,7 +442,8 @@ const TODOS: Record<string, Record<string, string>> = {
 export function buildConceptoWikimediaQuery(
     asignatura: string,
     tema: string,
-    concepto: string
+    concepto: string,
+    tipoEntidad?: 'persona' | 'lugar' | 'evento' | 'objeto' | 'proceso'
 ): string {
     const a = asignatura.toLowerCase().trim();
     const c = concepto.toLowerCase().trim();
@@ -464,9 +465,15 @@ export function buildConceptoWikimediaQuery(
         return base;
     }
 
-    // 3. Fallback — siempre incluye el tema para dar contexto
+    // 3a. Persona sin cablear: retrato específico, sin diluir con el tema
+    // (concatenar el tema arrastra archivos de otras figuras del mismo evento/época)
+    if (tipoEntidad === 'persona') {
+        return `${concepto} portrait`;
+    }
+
+    // 3b. Fallback — siempre incluye el tema para dar contexto
     const fallbacks: Record<string, string> = {
-        ciencias: `${concepto} biology science diagram`,
+        ciencias: `${concepto} biology science diagram -surgery -patient -clinical -autopsy`,
         historia: `${concepto} ${tema}`,
         sociales: `${concepto} ${tema}`,        // ← "Poder Judicial Colombia"
         matematicas: `${concepto} math diagram`,
