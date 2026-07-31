@@ -16,7 +16,8 @@ import ExamplesBlock from '../lesson/ExamplesBlock';
 import { buscarImagenWikimedia } from '@/lib/api';
 import GramaticalBlock from '../lesson/GramaticalBlock';
 import { buscarImagenConcepto } from '@/lib/api';
-import { buildConceptoWikimediaQuery } from '@/utils/wikimediaQueryDictionary';
+import { buildConceptoWikimediaQuery, estaEnDiccionarioCiencias } from '@/utils/wikimediaQueryDictionary';
+import { obtenerOGenerarApoyoVisualCiencias } from '@/lib/apoyoVisualIAService';
 import { buscarVideoYoutube } from '@/utils/youtubeSearch';
 
 
@@ -279,18 +280,45 @@ const ConceptosClaveBlock: React.FC<{
         ? buildConceptoWikimediaQuery(perfil.asignatura, perfil.tema, concepto.nombre, concepto.tipoEntidad, concepto.fraseVisual)
         : null;
 
-    // Carga automática de imagen por concepto — Wikimedia primero, resolveVisual() como respaldo.
+    // Piloto ciencias: si el concepto no está en el diccionario curado, no es una persona
+    // (las personas siempre van por retrato real en Wikimedia, nunca por IA) y la asignatura
+    // es "ciencias", se genera apoyo visual por IA en vez de buscar en Wikimedia.
+    const usaGeneracionIA = !!concepto
+        && perfil.asignatura === 'ciencias'
+        && !estaEnDiccionarioCiencias(concepto.nombre)
+        && concepto.tipoEntidad !== 'persona';
+
+    // Primitivos extraídos de concepto — normalizar() reconstruye conceptosClave en cada
+    // render del padre (mismo patrón que motivó firmaConceptosRef), así que concepto NUNCA
+    // se usa directamente dentro del efecto: solo estos valores por contenido, para que una
+    // referencia nueva con el mismo contenido no dispare el efecto (evita cancelar y perder
+    // una generación de IA en curso si el usuario interactúa con otra parte de la pantalla).
+    const nombreConcepto = concepto?.nombre;
+    const explicacionConcepto = concepto?.explicacionSimple;
+    const tipoEntidadConcepto = concepto?.tipoEntidad;
+
+    // Carga automática de imagen por concepto — Wikimedia (o IA para ciencias sin cablear)
+    // primero, resolveVisual() como respaldo.
     // Cacheada por query (asignatura + tema + nombre), no por posición: sobrevive a cambios de
     // paso/orden y no depende de que el array de conceptos permanezca estable.
     useEffect(() => {
-        if (!queryParaEfecto) return;
+        if (!queryParaEfecto || !nombreConcepto) return;
         if (queryParaEfecto in imagenCacheRef.current) return;
         if (fetchingRef.current.has(queryParaEfecto)) return;
 
         fetchingRef.current.add(queryParaEfecto);
         let cancelado = false;
 
-        buscarImagenConcepto(queryParaEfecto).then(url => {
+        const promesaImagen = usaGeneracionIA
+            ? obtenerOGenerarApoyoVisualCiencias(
+                  perfil.asignatura,
+                  perfil.tema,
+                  { nombre: nombreConcepto, explicacionSimple: explicacionConcepto ?? '' },
+                  perfil.objetivo
+              )
+            : buscarImagenConcepto(queryParaEfecto);
+
+        promesaImagen.then(url => {
             fetchingRef.current.delete(queryParaEfecto);
             if (cancelado) return;
             imagenCacheRef.current[queryParaEfecto] = url;
@@ -298,7 +326,7 @@ const ConceptosClaveBlock: React.FC<{
         });
 
         return () => { cancelado = true; };
-    }, [queryParaEfecto]);
+    }, [queryParaEfecto, nombreConcepto, explicacionConcepto, tipoEntidadConcepto, usaGeneracionIA, perfil.asignatura, perfil.objetivo, perfil.tema]);
 
     if (!concepto) return null;
 

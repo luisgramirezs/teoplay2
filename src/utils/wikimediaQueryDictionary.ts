@@ -437,11 +437,25 @@ const TODOS: Record<string, Record<string, string>> = {
     tecnologia: TECNOLOGIA,
 };
 
+// ── Chequeo de pertenencia al diccionario de ciencias ───────────────────────
+// Usado por el piloto de generación de apoyo visual por IA (solo ciencias):
+// si el concepto ya tiene entrada curada acá, sigue por Wikimedia como
+// siempre; si no, es candidato a generación por IA. Misma lógica de match
+// exacto/parcial que los pasos 1 y 2 de buildConceptoWikimediaQuery, sin
+// tocarlos.
+
+export function estaEnDiccionarioCiencias(concepto: string): boolean {
+    const c = concepto.toLowerCase().trim();
+    if (CIENCIAS[c]) return true;
+    return Object.keys(CIENCIAS).some(k => c.includes(k) || k.includes(c));
+}
+
 // ── Función principal ─────────────────────────────────────────────────────────
 
-// Normaliza para comparar (minúsculas, sin tildes) — usado solo para detectar
-// que fraseVisual no sea una repetición disfrazada del nombre del concepto.
-const normalizarTexto = (s: string) =>
+// Normaliza para comparar (minúsculas, sin tildes) — usado para detectar que
+// fraseVisual no sea una repetición disfrazada del concepto, y reutilizado por
+// apoyoVisualIAService.ts para construir la clave de caché determinística.
+export const normalizarTexto = (s: string) =>
     s.toLowerCase().trim()
         .replace(/[áàäâ]/g, 'a')
         .replace(/[éèëê]/g, 'e')
