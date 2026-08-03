@@ -336,13 +336,6 @@ const ConceptosClaveBlock: React.FC<{
         : null;
     const tienePiezaGramatical = !!piezaGramaticalMatch;
 
-    // TEMPORAL — debug bug de matching en producción, remover después de diagnosticar.
-    console.log('🔍 DEBUG apoyoGramatical:', apoyoGramatical);
-    console.log('🔍 DEBUG roles disponibles:', apoyoGramatical?.piezas?.map(p => p.rol));
-    console.log('🔍 DEBUG concepto?.nombre:', concepto?.nombre);
-    console.log('🔍 DEBUG nombreNormConcepto:', nombreNormConcepto);
-    console.log('🔍 DEBUG piezaGramaticalMatch:', piezaGramaticalMatch);
-
     // Pictograma: uno solo por lección (no por concepto/pieza) — ilustra la
     // oración canónica de apoyoGramatical.ejemplos[0], reutilizada por todos
     // los conceptos con pieza gramatical asociada en esta misma lección.
@@ -1546,6 +1539,7 @@ const Phase2Lesson: React.FC<Phase2LessonProps> = ({ perfil, sesion, onComplete,
                                     tema={perfil.tema}
                                     onSelectObra={handleSelectObra}
                                     perfil={perfil}
+                                    apoyoGramatical={bloqueActual.apoyoGramatical}
                                 />
                                 {bloqueActual.apoyoGramatical && (
                                     <GramaticalBlock
