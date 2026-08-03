@@ -451,7 +451,7 @@ export async function generarSesion(perfil: PerfilNino): Promise<SesionGenerada>
         },
         body: JSON.stringify({
             model: 'gpt-4o',
-            max_tokens: 6000,
+            max_tokens: 12000,
             response_format: { type: 'json_object' },
             messages: [
                 { role: 'system', content: SYSTEM_PROMPT },
