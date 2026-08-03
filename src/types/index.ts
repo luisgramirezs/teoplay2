@@ -203,9 +203,9 @@ export interface ConceptoClave {
     explicacionSimple: string;
     icono?: string;
     colorRamp?: 'blue' | 'green' | 'amber' | 'purple' | 'teal' | 'coral' | 'pink' | 'gray';
-    apoyoGramatical?: any;
     tipoEntidad?: 'persona' | 'lugar' | 'evento' | 'objeto' | 'proceso';
     fraseVisual?: string;
+    practicaDirigida?: string;
 }
 
 export interface VisualSugerido {

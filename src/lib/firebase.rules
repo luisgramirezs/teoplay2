@@ -169,28 +169,24 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // ── Piloto: apoyo visual generado por IA (solo ciencias) ────────────────────
-    // Colección compartida entre todos los usuarios — no es propiedad de un
-    // alumno/usuario individual, es caché de contenido reutilizable por clave
-    // determinística (asignatura+tema+concepto). Inmutable una vez creada.
+    // ── Piloto: apoyo visual generado por IA (ciencias y estructuras gramaticales) ──
     match /apoyoVisualIA/{claveId} {
       allow read: if request.auth != null;
 
       allow create: if request.auth != null
-        && request.resource.data.keys().hasAll(['url', 'prompt', 'modelo', 'asignatura', 'tema', 'concepto', 'createdAt'])
-        && request.resource.data.asignatura == 'ciencias';
+        && request.resource.data.keys().hasAll(['url', 'prompt', 'modelo', 'contexto', 'asignatura', 'tema', 'concepto', 'createdAt'])
+        && request.resource.data.contexto in ['ciencias', 'gramatica'];
 
       allow update, delete: if false;
     }
 
     // ── Piloto: tope diario de generaciones de apoyo visual por IA ──────────────
-    // Contador compartido (no por usuario), doc ID = "ciencias-{YYYY-MM-DD}".
     match /limitesGeneracion/{limiteId} {
       allow read: if request.auth != null;
 
       allow create, update: if request.auth != null
-        && request.resource.data.keys().hasAll(['count', 'fecha', 'asignatura'])
-        && request.resource.data.asignatura == 'ciencias'
+        && request.resource.data.keys().hasAll(['count', 'fecha', 'contexto'])
+        && request.resource.data.contexto in ['ciencias', 'gramatica']
         && request.resource.data.count is int;
 
       allow delete: if false;

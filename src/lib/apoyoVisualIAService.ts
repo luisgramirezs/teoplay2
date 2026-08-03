@@ -12,10 +12,18 @@ import { normalizarTexto } from '@/utils/wikimediaQueryDictionary';
 import type { ConceptoClave } from '@/types';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Piloto: generación de apoyo visual por IA (gpt-image-1) — SOLO ciencias.
-// Precedencia y alcance decididos en sesión: ver ConceptosClaveBlock en
-// Phase2Lesson.tsx para las 3 condiciones que activan esta ruta.
+// Generación de apoyo visual por IA (gpt-image-1) — pipeline compartido entre
+// el piloto de ciencias y el de pictogramas gramaticales (idiomas).
+// "contexto" separa SOLO el cupo diario (limitesGeneracion) entre ambos
+// pilotos — la clave de caché y la ruta de Storage NO llevan contexto, para
+// preservar exactamente el esquema y la caché ya generada por el piloto de
+// ciencias (asignatura/tema/concepto ya evitan colisión por sí solos: la
+// asignatura de ciencias nunca coincide con un idioma real).
+// Precedencia y alcance de ciencias decididos en sesión: ver ConceptosClaveBlock
+// en Phase2Lesson.tsx para las 3 condiciones que activan esa ruta.
 // ─────────────────────────────────────────────────────────────────────────────
+
+type Contexto = 'ciencias' | 'gramatica';
 
 const LIMITE_DIARIO = 40;
 const TIMEOUT_MS = 25000;
@@ -23,12 +31,13 @@ const TIMEOUT_MS = 25000;
 type ConceptoParaPrompt = Pick<ConceptoClave, 'nombre' | 'explicacionSimple'>;
 
 // ── Clave de caché ──────────────────────────────────────────────────────────
-// Determinística por asignatura+tema+concepto normalizado, compartida entre
-// todos los niños (nunca incluye perfil individual ni condición).
+// Determinística por partes normalizadas, compartida entre todos los niños
+// (nunca incluye perfil individual ni condición). Mismo esquema para ambos
+// pilotos — sin prefijo de contexto, para no invalidar la caché ya generada.
 
-function construirClaveCache(asignatura: string, tema: string, concepto: string): string {
-    const partes = [asignatura, tema, concepto].map(normalizarTexto);
+function construirClaveCache(partes: string[]): string {
     return partes
+        .map(normalizarTexto)
         .join('__')
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-+|-+$/g, '');
@@ -46,7 +55,7 @@ async function obtenerApoyoVisualCacheado(clave: string): Promise<string | null>
 
 async function guardarApoyoVisualCache(
     clave: string,
-    datos: { url: string; prompt: string; asignatura: string; tema: string; concepto: string }
+    datos: { url: string; prompt: string; contexto: Contexto; asignatura: string; tema: string; concepto: string }
 ): Promise<void> {
     const refDoc = doc(db, 'apoyoVisualIA', clave);
     await setDoc(refDoc, {
@@ -57,13 +66,16 @@ async function guardarApoyoVisualCache(
 }
 
 // ── Tope de costo diario ────────────────────────────────────────────────────
-// Doc limitesGeneracion/ciencias-{YYYY-MM-DD} (UTC). Transacción para evitar
+// Doc limitesGeneracion/{contexto}-{YYYY-MM-DD} (UTC). Transacción para evitar
 // condiciones de carrera entre generaciones concurrentes. Ante cualquier error
 // de la transacción, se asume "sin cupo" (fail-safe hacia el respaldo).
+// Cada contexto tiene su propio contador — ciencias y gramática no comparten
+// presupuesto diario. Para ciencias, contexto='ciencias' produce el mismo doc
+// id de siempre (ciencias-{fecha}).
 
-async function reservarCupoGeneracion(): Promise<boolean> {
+async function reservarCupoGeneracion(contexto: Contexto): Promise<boolean> {
     const fecha = new Date().toISOString().slice(0, 10);
-    const refDoc = doc(db, 'limitesGeneracion', `ciencias-${fecha}`);
+    const refDoc = doc(db, 'limitesGeneracion', `${contexto}-${fecha}`);
 
     try {
         return await runTransaction(db, async (tx) => {
@@ -72,7 +84,7 @@ async function reservarCupoGeneracion(): Promise<boolean> {
 
             if (actual >= LIMITE_DIARIO) return false;
 
-            tx.set(refDoc, { count: actual + 1, fecha, asignatura: 'ciencias' }, { merge: true });
+            tx.set(refDoc, { count: actual + 1, fecha, contexto }, { merge: true });
             return true;
         });
     } catch (err) {
@@ -81,9 +93,9 @@ async function reservarCupoGeneracion(): Promise<boolean> {
     }
 }
 
-// ── Prompt ───────────────────────────────────────────────────────────────────
+// ── Prompts ──────────────────────────────────────────────────────────────────
 
-function construirPrompt(tema: string, objetivo: string, concepto: ConceptoParaPrompt): string {
+function construirPromptCiencias(tema: string, objetivo: string, concepto: ConceptoParaPrompt): string {
     return [
         'Ilustración educativa infantil de ciencias naturales, estilo diagrama plano y simple,',
         'para material didáctico de una plataforma de aprendizaje inclusivo para niños con',
@@ -120,6 +132,55 @@ function construirPrompt(tema: string, objetivo: string, concepto: ConceptoParaP
         '- NUNCA patrones repetitivos densos, parpadeo visual ni alto contraste',
         '  estroboscópico (sensibilidad sensorial / fotosensibilidad).',
         '- Sin violencia, sin armas, sin contenido bélico aunque el tema lo mencione.',
+        '',
+        'FORMATO: imagen cuadrada, fondo no transparente.',
+    ].join('\n');
+}
+
+// Pictograma gramatical: estilo señalética pública/AAC (plano, 2 colores, sin
+// fotorrealismo), con fidelidad literal a la oración exacta que se enseña —
+// diseño acordado en sesión (evaluación TEA/TDAH/dislexia).
+function construirPromptGramatical(tema: string, oracionEjemplo: string): string {
+    return [
+        'Pictograma educativo tipo señalética pública (como símbolos de aeropuerto, baño,',
+        'o sistemas de comunicación aumentativa/alternativa AAC), para material didáctico de',
+        'una plataforma de aprendizaje de idiomas inclusiva para niños con neurodiversidad',
+        '(TEA, TDAH, dislexia).',
+        '',
+        `ESTRUCTURA GRAMATICAL DE LA LECCIÓN: "${tema}"`,
+        `ORACIÓN EXACTA A REPRESENTAR: "${oracionEjemplo}"`,
+        '',
+        'FIDELIDAD DE CONTENIDO — OBLIGATORIA:',
+        '- Representa LITERALMENTE la escena de la oración exacta de arriba: identifica quién',
+        '  realiza la acción (edad aproximada — niño, niña o adulto — y género, según lo que',
+        '  la oración indique o implique claramente por pronombre o nombre propio), qué acción',
+        '  hace, y cualquier objeto o complemento que la oración mencione.',
+        '- NUNCA cambies edad, género, número de personajes ni el tipo de acción respecto a lo',
+        '  que dice la oración. Si la oración dice "the girl", el pictograma muestra una niña —',
+        '  nunca un niño ni un adulto.',
+        '- Si la oración no especifica ni implica edad/género, usa una figura humana neutra y',
+        '  genérica.',
+        '',
+        'ESTILO OBLIGATORIO (señalética / pictograma plano):',
+        '- Silueta o forma sólida simple, sin relleno de textura ni detalle interno — como un',
+        '  símbolo ISO de baño/aeropuerto o un símbolo de comunicación AAC: reconocible de un',
+        '  vistazo, sin ambigüedad.',
+        '- Máximo 2 colores sólidos en toda la imagen (una figura de un color sobre un fondo',
+        '  liso de otro color), alto contraste figura-fondo. Sin gradientes ni sombreado',
+        '  realista.',
+        '- Rostro esquemático como mucho (óvalo simple) — nunca rasgos faciales detallados ni',
+        '  expresiones elaboradas.',
+        '- Composición centrada en una sola acción/escena, sin elementos decorativos que no',
+        '  aporten a identificar la acción.',
+        '',
+        'PROHIBICIONES ESTRICTAS:',
+        '- NUNCA fotorrealista ni fotografía real: solo pictograma plano/vectorial.',
+        '- NUNCA texto, letras ni números dentro de la imagen, en ningún idioma.',
+        '- NUNCA rostros reconocibles ni personas reales.',
+        '- NUNCA mascotas antropomorfizadas, estética "kawaii" ni personajes de caricatura.',
+        '- NUNCA contenido perturbador, violento o que pueda generar ansiedad en un niño.',
+        '- NUNCA patrones repetitivos densos ni alto contraste estroboscópico (sensibilidad',
+        '  sensorial / fotosensibilidad).',
         '',
         'FORMATO: imagen cuadrada, fondo no transparente.',
     ].join('\n');
@@ -168,7 +229,36 @@ async function subirImagenAStorage(base64: string, clave: string): Promise<strin
     return getDownloadURL(storageRef);
 }
 
-// ── Orquestador ──────────────────────────────────────────────────────────────
+// ── Orquestador genérico (compartido por ambos contextos) ───────────────────
+
+async function obtenerOGenerarApoyoVisual(
+    contexto: Contexto,
+    clavePartes: string[],
+    prompt: string,
+    datosCache: { asignatura: string; tema: string; concepto: string }
+): Promise<string | null> {
+    const clave = construirClaveCache(clavePartes);
+
+    try {
+        const cacheada = await obtenerApoyoVisualCacheado(clave);
+        if (cacheada) return cacheada;
+
+        const hayCupo = await reservarCupoGeneracion(contexto);
+        if (!hayCupo) return null;
+
+        const base64 = await generarImagenGptImage1(prompt);
+        const url = await subirImagenAStorage(base64, clave);
+
+        await guardarApoyoVisualCache(clave, { url, prompt, contexto, ...datosCache });
+
+        return url;
+    } catch (err) {
+        console.error(`Error en obtenerOGenerarApoyoVisual (${contexto}):`, err);
+        return null;
+    }
+}
+
+// ── Orquestador: ciencias (wrapper delgado — mismo comportamiento de siempre) ─
 
 export async function obtenerOGenerarApoyoVisualCiencias(
     asignatura: string,
@@ -176,30 +266,30 @@ export async function obtenerOGenerarApoyoVisualCiencias(
     concepto: ConceptoParaPrompt,
     objetivo: string
 ): Promise<string | null> {
-    const clave = construirClaveCache(asignatura, tema, concepto.nombre);
+    const prompt = construirPromptCiencias(tema, objetivo, concepto);
+    return obtenerOGenerarApoyoVisual(
+        'ciencias',
+        [asignatura, tema, concepto.nombre],
+        prompt,
+        { asignatura, tema, concepto: concepto.nombre }
+    );
+}
 
-    try {
-        const cacheada = await obtenerApoyoVisualCacheado(clave);
-        if (cacheada) return cacheada;
+// ── Orquestador: pictograma gramatical ──────────────────────────────────────
+// Un solo pictograma por lección (no por concepto/pieza): ilustra la oración
+// canónica de apoyoGramatical.ejemplos[0], reutilizada por todos los conceptos
+// con pieza gramatical asociada en esa misma lección.
 
-        const hayCupo = await reservarCupoGeneracion();
-        if (!hayCupo) return null;
-
-        const prompt = construirPrompt(tema, objetivo, concepto);
-        const base64 = await generarImagenGptImage1(prompt);
-        const url = await subirImagenAStorage(base64, clave);
-
-        await guardarApoyoVisualCache(clave, {
-            url,
-            prompt,
-            asignatura,
-            tema,
-            concepto: concepto.nombre,
-        });
-
-        return url;
-    } catch (err) {
-        console.error('Error en obtenerOGenerarApoyoVisualCiencias:', err);
-        return null;
-    }
+export async function obtenerOGenerarPictogramaGramatical(
+    asignatura: string,
+    tema: string,
+    oracionEjemplo: string
+): Promise<string | null> {
+    const prompt = construirPromptGramatical(tema, oracionEjemplo);
+    return obtenerOGenerarApoyoVisual(
+        'gramatica',
+        [asignatura, tema, oracionEjemplo],
+        prompt,
+        { asignatura, tema, concepto: oracionEjemplo }
+    );
 }

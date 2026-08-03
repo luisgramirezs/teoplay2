@@ -14,10 +14,10 @@ import { resolveVisual } from "@/utils/iconResolver";
 import ApoyoVisualBlock from '../lesson/ApoyoVisualBlock';
 import ExamplesBlock from '../lesson/ExamplesBlock';
 import { buscarImagenWikimedia } from '@/lib/api';
-import GramaticalBlock from '../lesson/GramaticalBlock';
+import GramaticalBlock, { PiezaCard } from '../lesson/GramaticalBlock';
 import { buscarImagenConcepto } from '@/lib/api';
-import { buildConceptoWikimediaQuery, estaEnDiccionarioCiencias } from '@/utils/wikimediaQueryDictionary';
-import { obtenerOGenerarApoyoVisualCiencias } from '@/lib/apoyoVisualIAService';
+import { buildConceptoWikimediaQuery, estaEnDiccionarioCiencias, normalizarTexto } from '@/utils/wikimediaQueryDictionary';
+import { obtenerOGenerarApoyoVisualCiencias, obtenerOGenerarPictogramaGramatical } from '@/lib/apoyoVisualIAService';
 import { buscarVideoYoutube } from '@/utils/youtubeSearch';
 
 
@@ -91,7 +91,7 @@ const handleOpenWikimedia = async (obra: any) => {
 const COLORES_PERMITIDOS = ["gray", "blue", "green", "amber", "purple", "teal", "coral", "pink"] as const;
 type ColorRamp = typeof COLORES_PERMITIDOS[number];
 
-function normalizar(raw: unknown): ExplicacionBloque {
+export function normalizar(raw: unknown): ExplicacionBloque {
     if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
         const r = raw as Record<string, unknown>;
 
@@ -122,11 +122,11 @@ function normalizar(raw: unknown): ExplicacionBloque {
                             //explicacionSimple: typeof cc.explicacionSimple === 'string' ? cc.explicacionSimple : '',
                             icono: typeof cc.icono === 'string' ? cc.icono : '',
                             colorRamp: COLORES_PERMITIDOS.includes(rawColor as any) ? (rawColor as ColorRamp) : 'gray',
-                            apoyoGramatical: (r.apoyoGramatical as any) ?? null,
                             tipoEntidad: (typeof cc.tipoEntidad === 'string' && ['persona', 'lugar', 'evento', 'objeto', 'proceso'].includes(cc.tipoEntidad))
                                 ? (cc.tipoEntidad as ConceptoClave['tipoEntidad'])
                                 : undefined,
                             fraseVisual: typeof cc.fraseVisual === 'string' ? cc.fraseVisual : undefined,
+                            practicaDirigida: typeof cc.practicaDirigida === 'string' ? cc.practicaDirigida : undefined,
                         };
                     }
                     return null;
@@ -198,6 +198,52 @@ function normalizar(raw: unknown): ExplicacionBloque {
             }
         }
 
+        // 5. Procesar Apoyo Gramatical
+        const PIEZA_COLORES_VALIDOS = ['orange', 'blue', 'green', 'purple', 'pink', 'teal'] as const;
+        type PiezaColor = typeof PIEZA_COLORES_VALIDOS[number];
+        const esPiezaColorValido = (c: string): c is PiezaColor =>
+            (PIEZA_COLORES_VALIDOS as readonly string[]).includes(c);
+        let apoyoGramatical: ApoyoGramatical | null = null;
+        if (typeof r.apoyoGramatical === 'object' && r.apoyoGramatical !== null) {
+            const ag = r.apoyoGramatical as Record<string, unknown>;
+            const piezas = Array.isArray(ag.piezas)
+                ? ag.piezas
+                    .map((p: unknown) => {
+                        if (typeof p !== 'object' || p === null) return null;
+                        const pp = p as Record<string, unknown>;
+                        const rawColor = typeof pp.color === 'string' ? pp.color : 'blue';
+                        return {
+                            rol: typeof pp.rol === 'string' ? pp.rol : '',
+                            valores: Array.isArray(pp.valores) ? pp.valores.map(String) : [],
+                            etiqueta: typeof pp.etiqueta === 'string' ? pp.etiqueta : '',
+                            color: esPiezaColorValido(rawColor) ? rawColor : 'blue',
+                        };
+                    })
+                    .filter((p): p is NonNullable<typeof p> => p !== null)
+                : [];
+            const ejemplosGramaticales = Array.isArray(ag.ejemplos)
+                ? ag.ejemplos
+                    .map((e: unknown) => {
+                        if (typeof e !== 'object' || e === null) return null;
+                        const ee = e as Record<string, unknown>;
+                        return {
+                            oracion: typeof ee.oracion === 'string' ? ee.oracion : '',
+                            traduccion: typeof ee.traduccion === 'string' ? ee.traduccion : '',
+                        };
+                    })
+                    .filter((e): e is NonNullable<typeof e> => e !== null)
+                : [];
+
+            apoyoGramatical = {
+                titulo: typeof ag.titulo === 'string' ? ag.titulo : '',
+                idioma: typeof ag.idioma === 'string' ? ag.idioma : '',
+                piezas,
+                reglas: Array.isArray(ag.reglas) ? ag.reglas.map(String) : [],
+                ejemplos: ejemplosGramaticales,
+                nota: typeof ag.nota === 'string' ? ag.nota : undefined,
+            };
+        }
+
         // Return final
         return {
             objetivo: typeof r.objetivo === 'string' ? r.objetivo : '',
@@ -210,6 +256,7 @@ function normalizar(raw: unknown): ExplicacionBloque {
             resumen: typeof r.resumen === 'string' ? r.resumen : '',
             visualSugerido,
             chequeoCobertura: Array.isArray(r.chequeoCobertura) ? r.chequeoCobertura.map(String) : [],
+            apoyoGramatical,
         };
     }
 
@@ -225,6 +272,7 @@ function normalizar(raw: unknown): ExplicacionBloque {
         visualSugerido: undefined,
         apoyoVisual: undefined,
         chequeoCobertura: [],
+        apoyoGramatical: null,
     };
 }
 
@@ -246,10 +294,9 @@ const ConceptosClaveBlock: React.FC<{
     onNarrar: (id: string, texto: string) => void;
     onSelectObra?: (obra: any) => void;
     perfil: PerfilNino;
-    asignatura: any; 
+    asignatura: any;
     tema: string;
-
-
+    apoyoGramatical?: ApoyoGramatical | null;
 }> = ({
     conceptos,
     fontSize,
@@ -257,12 +304,15 @@ const ConceptosClaveBlock: React.FC<{
     onNarrar,
     onSelectObra,
     perfil,
+    apoyoGramatical = null,
 }) => {
 
     const [paso, setPaso] = useState(0);
     const firmaConceptosRef = useRef('');
     const imagenCacheRef = useRef<Record<string, string | null>>({});
     const fetchingRef = useRef<Set<string>>(new Set());
+    const pictogramaCacheRef = useRef<Record<string, string | null>>({});
+    const pictogramaFetchingRef = useRef<Set<string>>(new Set());
     const [, forceUpdate] = useState(0);
 
     useEffect(() => {
@@ -276,6 +326,24 @@ const ConceptosClaveBlock: React.FC<{
     const total = conceptos?.length ?? 0;
     const pasoActivo = total > 0 ? Math.min(paso, total - 1) : 0;
     const concepto = total > 0 ? conceptos[pasoActivo] : null;
+
+    // Apoyo gramatical: si el nombre del concepto coincide (normalizado) con el rol
+    // de una pieza de apoyoGramatical, esa pieza ES el apoyo visual de este concepto
+    // — nunca buscamos imagen/ícono en ese caso (ver guard del efecto más abajo).
+    const nombreNormConcepto = concepto ? normalizarTexto(concepto.nombre) : '';
+    const piezaGramaticalMatch = concepto && apoyoGramatical?.piezas?.length
+        ? apoyoGramatical.piezas.find(p => normalizarTexto(p.rol) === nombreNormConcepto) ?? null
+        : null;
+    const tienePiezaGramatical = !!piezaGramaticalMatch;
+
+    // Pictograma: uno solo por lección (no por concepto/pieza) — ilustra la
+    // oración canónica de apoyoGramatical.ejemplos[0], reutilizada por todos
+    // los conceptos con pieza gramatical asociada en esta misma lección.
+    const oracionEjemploGramatical = apoyoGramatical?.ejemplos?.[0]?.oracion ?? '';
+    const clavePictograma = oracionEjemploGramatical
+        ? `${perfil.asignatura}__${perfil.tema}__${oracionEjemploGramatical}`
+        : null;
+
     const queryParaEfecto = concepto
         ? buildConceptoWikimediaQuery(perfil.asignatura, perfil.tema, concepto.nombre, concepto.tipoEntidad, concepto.fraseVisual)
         : null;
@@ -302,6 +370,7 @@ const ConceptosClaveBlock: React.FC<{
     // Cacheada por query (asignatura + tema + nombre), no por posición: sobrevive a cambios de
     // paso/orden y no depende de que el array de conceptos permanezca estable.
     useEffect(() => {
+        if (tienePiezaGramatical) return;
         if (!queryParaEfecto || !nombreConcepto) return;
         if (queryParaEfecto in imagenCacheRef.current) return;
         if (fetchingRef.current.has(queryParaEfecto)) return;
@@ -326,7 +395,29 @@ const ConceptosClaveBlock: React.FC<{
         });
 
         return () => { cancelado = true; };
-    }, [queryParaEfecto, nombreConcepto, explicacionConcepto, tipoEntidadConcepto, usaGeneracionIA, perfil.asignatura, perfil.objetivo, perfil.tema]);
+    }, [queryParaEfecto, nombreConcepto, explicacionConcepto, tipoEntidadConcepto, usaGeneracionIA, perfil.asignatura, perfil.objetivo, perfil.tema, tienePiezaGramatical]);
+
+    // Carga/generación del pictograma gramatical — independiente de qué concepto
+    // esté activo (misma clave mientras la lección no cambie), así que navegar
+    // entre conceptos ("Sujeto" → "Verbo") no dispara una nueva generación.
+    useEffect(() => {
+        if (!tienePiezaGramatical || !clavePictograma) return;
+        if (clavePictograma in pictogramaCacheRef.current) return;
+        if (pictogramaFetchingRef.current.has(clavePictograma)) return;
+
+        pictogramaFetchingRef.current.add(clavePictograma);
+        let cancelado = false;
+
+        obtenerOGenerarPictogramaGramatical(perfil.asignatura, perfil.tema, oracionEjemploGramatical)
+            .then(url => {
+                pictogramaFetchingRef.current.delete(clavePictograma);
+                if (cancelado) return;
+                pictogramaCacheRef.current[clavePictograma] = url;
+                forceUpdate(v => v + 1);
+            });
+
+        return () => { cancelado = true; };
+    }, [tienePiezaGramatical, clavePictograma, oracionEjemploGramatical, perfil.asignatura, perfil.tema]);
 
     if (!concepto) return null;
 
@@ -342,6 +433,11 @@ const ConceptosClaveBlock: React.FC<{
     const imagenResultado = imagenCacheRef.current[query]; // string=encontrada, null=no encontrada, undefined=cargando
     const imagenUrl = typeof imagenResultado === 'string' ? imagenResultado : null;
     const imagenLista = imagenResultado !== undefined;
+
+    const pictogramaResultado = clavePictograma ? pictogramaCacheRef.current[clavePictograma] : undefined;
+    const pictogramaUrl = typeof pictogramaResultado === 'string' ? pictogramaResultado : null;
+    const pictogramaListo = pictogramaResultado !== undefined;
+    const mostrarCajaPictograma = !!clavePictograma && (!pictogramaListo || !!pictogramaUrl);
 
     const fuenteEjemplo =
         concepto.ejemploPedagogico ||
@@ -419,9 +515,26 @@ const ConceptosClaveBlock: React.FC<{
                     </div>
                 </div>
 
-                {/* Columna derecha: imagen de apoyo */}
+                {/* Columna derecha: apoyo gramatical (pictograma + pieza), imagen o ícono */}
                 <div className="w-full md:w-1/2 flex-shrink-0">
-                    {imagenUrl ? (
+                    {piezaGramaticalMatch ? (
+                        <div className="w-full h-56 md:h-full flex flex-col gap-3">
+                            {mostrarCajaPictograma && (
+                                <div className="w-full flex-1 min-h-0 rounded-[20px] overflow-hidden border border-slate-200 bg-slate-50 flex items-center justify-center">
+                                    {pictogramaUrl ? (
+                                        <img
+                                            src={pictogramaUrl}
+                                            alt={oracionEjemploGramatical || piezaGramaticalMatch.rol}
+                                            className="w-full h-full object-contain"
+                                        />
+                                    ) : (
+                                        <div className="w-8 h-8 rounded-full border-4 border-slate-200 border-t-purple-500 animate-spin" />
+                                    )}
+                                </div>
+                            )}
+                            <PiezaCard pieza={piezaGramaticalMatch} index={0} total={1} />
+                        </div>
+                    ) : imagenUrl ? (
                         <button
                             type="button"
                             onClick={() =>
@@ -541,6 +654,7 @@ const ExplicacionRenderer: React.FC<{
                 perfil={perfil}
                 asignatura={perfil.asignatura}
                 tema={perfil.tema}
+                apoyoGramatical={bloque.apoyoGramatical}
             />
 
         ) : bloque.pasos.length > 0 ? (

@@ -10,33 +10,12 @@
  */
 
 import React, { useState } from 'react';
-
-// ─── Tipos ────────────────────────────────────────────────────────────────────
-
-export interface PiezaGramatical {
-  rol: string;           // "Sujeto", "Auxiliar", "Participio pasado"
-  valores: string[];     // ["She", "He", "It"] o ["has"] o ["eaten", "gone"]
-  etiqueta: string;      // "3ra persona singular" / "usa HAS con She/He/It"
-  color: 'orange' | 'blue' | 'green' | 'purple' | 'pink' | 'teal';
-}
-
-export interface EjemploGramatical {
-  oracion: string;       // "She has eaten."
-  traduccion: string;    // "Ella ha comido."
-}
-
-export interface ApoyoGramatical {
-  titulo: string;                  // "Present Perfect"
-  idioma: string;                  // "inglés" | "francés" | "español"
-  piezas: PiezaGramatical[];
-  reglas: string[];                // ["She/He/It → HAS", "I/You/We/They → HAVE"]
-  ejemplos: EjemploGramatical[];
-  nota?: string;                   // nota pedagógica opcional
-}
+import { PiezaGramatical, EjemploGramatical, ApoyoGramatical } from '@/types';
+import { normalizarTexto } from '@/utils/wikimediaQueryDictionary';
 
 // ─── Paleta de colores por pieza ──────────────────────────────────────────────
 
-const COLORES: Record<PiezaGramatical['color'], {
+export const COLORES: Record<PiezaGramatical['color'], {
   bg: string; border: string; text: string; badge: string; badgeText: string; dot: string;
 }> = {
   orange: {
@@ -65,12 +44,48 @@ const COLORES: Record<PiezaGramatical['color'], {
   },
 };
 
+// ─── Color determinístico por rol ────────────────────────────────────────────
+// El mismo rol (ej. "sujeto") debe verse siempre con el mismo color en toda la
+// app — es un mapeo no-verbal estable, valioso para dislexia. Por eso el color
+// se calcula aquí a partir del rol y NUNCA se toma de "pieza.color" (que la IA
+// asigna por rotación/posición y varía entre generaciones).
+const ROLES_COLOR_FIJO: Record<string, PiezaGramatical['color']> = {
+  sujeto: 'blue',
+  verbo: 'orange',
+  'verbo principal': 'orange',
+  'verbo auxiliar': 'purple',
+  auxiliar: 'purple',
+  complemento: 'green',
+  objeto: 'green',
+  'objeto directo': 'green',
+  'objeto indirecto': 'teal',
+  adverbio: 'teal',
+  adjetivo: 'pink',
+  preposicion: 'pink',
+  articulo: 'pink',
+  pronombre: 'blue',
+  'participio pasado': 'purple',
+};
+
+const COLORES_ORDEN: PiezaGramatical['color'][] = ['orange', 'blue', 'green', 'purple', 'pink', 'teal'];
+
+const hashColor = (s: string): PiezaGramatical['color'] => {
+  let hash = 0;
+  for (let i = 0; i < s.length; i++) hash = (hash * 31 + s.charCodeAt(i)) >>> 0;
+  return COLORES_ORDEN[hash % COLORES_ORDEN.length];
+};
+
+export const colorParaRol = (rol: string): PiezaGramatical['color'] => {
+  const normalizado = normalizarTexto(rol);
+  return ROLES_COLOR_FIJO[normalizado] ?? hashColor(normalizado);
+};
+
 // ─── Subcomponente: Pieza gramatical ─────────────────────────────────────────
 
-const PiezaCard: React.FC<{ pieza: PiezaGramatical; index: number; total: number }> = ({
+export const PiezaCard: React.FC<{ pieza: PiezaGramatical; index: number; total: number }> = ({
   pieza, index, total,
 }) => {
-  const pal = COLORES[pieza.color] ?? COLORES.blue;
+  const pal = COLORES[colorParaRol(pieza.rol)];
 
   return (
     <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -161,7 +176,7 @@ const ConstructorOracion: React.FC<{
       {/* Selectores por pieza */}
       <div className="space-y-2 mb-4">
         {piezas.map((pieza, i) => {
-          const pal = COLORES[pieza.color] ?? COLORES.blue;
+          const pal = COLORES[colorParaRol(pieza.rol)];
           return (
             <div key={i} className="flex items-center gap-2 flex-wrap">
               <span className={`text-[10px] font-black uppercase w-24 flex-shrink-0 ${pal.text}`}>
@@ -239,7 +254,7 @@ const EjemplosArmados: React.FC<{
             {piezas.map((p, j) => (
               <div
                 key={j}
-                className={`w-2 h-2 rounded-full ${COLORES[p.color]?.dot ?? 'bg-slate-300'}`}
+                className={`w-2 h-2 rounded-full ${COLORES[colorParaRol(p.rol)].dot}`}
               />
             ))}
           </div>
@@ -316,4 +331,3 @@ const GramaticalBlock: React.FC<GramaticalBlockProps> = ({
 };
 
 export default GramaticalBlock;
-export type { ApoyoGramatical };
