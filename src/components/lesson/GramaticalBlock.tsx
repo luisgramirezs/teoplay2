@@ -12,6 +12,8 @@
 import React, { useState } from 'react';
 import { PiezaGramatical, EjemploGramatical, ApoyoGramatical } from '@/types';
 import { normalizarTexto } from '@/utils/wikimediaQueryDictionary';
+import { useNarrador } from '@/hooks/use-narrador';
+import BtnNarrar from './BtnNarrar';
 
 // ─── Paleta de colores por pieza ──────────────────────────────────────────────
 
@@ -79,6 +81,28 @@ export const colorParaRol = (rol: string): PiezaGramatical['color'] => {
   const normalizado = normalizarTexto(rol);
   return ROLES_COLOR_FIJO[normalizado] ?? hashColor(normalizado);
 };
+
+// ─── Idioma del apoyoGramatical → tag BCP-47 (síntesis de voz) ──────────────
+// apoyoGramatical.idioma es texto libre en español (ej. "inglés") — nunca se
+// usa perfil.idioma (idioma de interfaz del niño) para narrar contenido en el
+// idioma que se está enseñando, o se pronunciaría con acento/fonética errónea.
+const IDIOMA_A_BCP47: Record<string, string> = {
+  ingles: 'en-US',
+  frances: 'fr-FR',
+  espanol: 'es-ES',
+  portugues: 'pt-PT',
+};
+
+function mapIdiomaABCP47(idioma: string): string {
+  return IDIOMA_A_BCP47[normalizarTexto(idioma)] ?? 'en-US';
+}
+
+// Para narrar: quita la traducción entre paréntesis al final del valor
+// (ej. "I (yo)" → "I") — la traducción se MUESTRA siempre en pantalla, pero
+// nunca se narra con la voz del idioma enseñado (sonaría mal pronunciada).
+function extraerTextoIdiomaEnsenado(valor: string): string {
+  return valor.replace(/\s*\([^)]*\)\s*$/, '').trim();
+}
 
 // ─── Subcomponente: Pieza gramatical ─────────────────────────────────────────
 
@@ -155,11 +179,17 @@ const ReglasBlock: React.FC<{ reglas: string[] }> = ({ reglas }) => {
 const ConstructorOracion: React.FC<{
   piezas: PiezaGramatical[];
   idioma: string;
-}> = ({ piezas, idioma }) => {
+  narrar: (id: string, texto: string, langOverride?: string) => void;
+  idiomaBCP47: string;
+}> = ({ piezas, idioma, narrar, idiomaBCP47 }) => {
   const [seleccion, setSeleccion] = useState<Record<number, string>>({});
 
   const oracionArmada = piezas
     .map((p, i) => seleccion[i] ?? '___')
+    .join(' ');
+
+  const oracionArmadaSoloIdioma = piezas
+    .map((p, i) => (seleccion[i] ? extraerTextoIdiomaEnsenado(seleccion[i]) : '___'))
     .join(' ');
 
   const completa = piezas.every((_, i) => !!seleccion[i]);
@@ -187,7 +217,10 @@ const ConstructorOracion: React.FC<{
                   <button
                     key={j}
                     type="button"
-                    onClick={() => setSeleccion(s => ({ ...s, [i]: val }))}
+                    onClick={() => {
+                      setSeleccion(s => ({ ...s, [i]: val }));
+                      narrar(`pieza-${i}-${j}`, extraerTextoIdiomaEnsenado(val), idiomaBCP47);
+                    }}
                     className={`px-2.5 py-1 rounded-xl text-sm font-black border-2 transition-all cursor-pointer
                       ${seleccion[i] === val
                         ? `${pal.badge} ${pal.badgeText} border-transparent scale-105`
@@ -211,13 +244,27 @@ const ConstructorOracion: React.FC<{
           {oracionArmada}
         </p>
         {completa && (
-          <button
-            type="button"
-            onClick={() => setSeleccion({})}
-            className="mt-2 text-[10px] font-bold text-purple-500 hover:text-purple-700 underline cursor-pointer"
-          >
-            Limpiar y volver a intentar
-          </button>
+          <>
+            <p className="mt-2 text-xs font-bold text-green-700">
+              ✅ ¡Muy bien! Así se arma la oración.
+            </p>
+            <div className="mt-2 flex items-center justify-center gap-3 flex-wrap">
+              <button
+                type="button"
+                onClick={() => narrar('oracion-armada-completa', oracionArmadaSoloIdioma, idiomaBCP47)}
+                className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-600 hover:text-purple-800 cursor-pointer"
+              >
+                🔊 Escuchar oración completa
+              </button>
+              <button
+                type="button"
+                onClick={() => setSeleccion({})}
+                className="text-[10px] font-bold text-purple-500 hover:text-purple-700 underline cursor-pointer"
+              >
+                Limpiar y volver a intentar
+              </button>
+            </div>
+          </>
         )}
       </div>
     </div>
@@ -229,7 +276,10 @@ const ConstructorOracion: React.FC<{
 const EjemplosArmados: React.FC<{
   ejemplos: EjemploGramatical[];
   piezas: PiezaGramatical[];
-}> = ({ ejemplos, piezas }) => {
+  narrar: (id: string, texto: string, langOverride?: string) => void;
+  seccionActiva: string | null;
+  idiomaBCP47: string;
+}> = ({ ejemplos, piezas, narrar, seccionActiva, idiomaBCP47 }) => {
   if (!ejemplos?.length) return null;
 
   return (
@@ -249,14 +299,22 @@ const EjemplosArmados: React.FC<{
             <p className="text-sm font-black text-slate-800 italic">{ej.oracion}</p>
             <p className="text-xs font-medium text-slate-500 mt-0.5">{ej.traduccion}</p>
           </div>
-          {/* Color dots matching piezas */}
-          <div className="flex gap-1 flex-shrink-0">
-            {piezas.map((p, j) => (
-              <div
-                key={j}
-                className={`w-2 h-2 rounded-full ${COLORES[colorParaRol(p.rol)].dot}`}
-              />
-            ))}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <BtnNarrar
+              id={`ejemplo-${i}`}
+              texto={ej.oracion}
+              seccionActiva={seccionActiva}
+              onNarrar={(id, texto) => narrar(id, texto, idiomaBCP47)}
+            />
+            {/* Color dots matching piezas */}
+            <div className="flex gap-1">
+              {piezas.map((p, j) => (
+                <div
+                  key={j}
+                  className={`w-2 h-2 rounded-full ${COLORES[colorParaRol(p.rol)].dot}`}
+                />
+              ))}
+            </div>
           </div>
         </div>
       ))}
@@ -275,6 +333,10 @@ const GramaticalBlock: React.FC<GramaticalBlockProps> = ({
   apoyoGramatical,
   condicion = 'general',
 }) => {
+  // Hooks siempre antes de cualquier return condicional (Reglas de Hooks de React).
+  const { narrar, seccionActiva } = useNarrador('en', condicion);
+  const idiomaBCP47 = mapIdiomaABCP47(apoyoGramatical?.idioma ?? '');
+
   if (!apoyoGramatical?.piezas?.length) return null;
 
   const { titulo, idioma, piezas, reglas, ejemplos, nota } = apoyoGramatical;
@@ -312,10 +374,10 @@ const GramaticalBlock: React.FC<GramaticalBlockProps> = ({
         <ReglasBlock reglas={reglas} />
 
         {/* Constructor interactivo */}
-        <ConstructorOracion piezas={piezas} idioma={idioma} />
+        <ConstructorOracion piezas={piezas} idioma={idioma} narrar={narrar} idiomaBCP47={idiomaBCP47} />
 
         {/* Ejemplos */}
-        <EjemplosArmados ejemplos={ejemplos} piezas={piezas} />
+        <EjemplosArmados ejemplos={ejemplos} piezas={piezas} narrar={narrar} seccionActiva={seccionActiva} idiomaBCP47={idiomaBCP47} />
 
         {/* Nota pedagógica */}
         {nota && (

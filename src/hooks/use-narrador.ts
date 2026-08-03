@@ -24,10 +24,10 @@ export function useNarrador(idioma: string, condicion: string) {
         return () => window.speechSynthesis.removeEventListener('voiceschanged', handleVoicesChanged);
     }, []);
 
-    const reproducir = (id: string, texto: string) => {
+    const reproducir = (id: string, texto: string, langOverride?: string) => {
         const u = new SpeechSynthesisUtterance(texto);
         utteranceRef.current = u; // referencia persistente: evita que Chrome libere el utterance antes de tiempo
-        u.lang = idioma === 'es' ? 'es-ES' : 'en-US';
+        u.lang = langOverride ?? (idioma === 'es' ? 'es-ES' : 'en-US');
         u.rate = condicion === 'tea' ? 0.8 : 0.9;
         u.onstart = () => setSeccionActiva(id);
         u.onend = () => setSeccionActiva(null);
@@ -38,7 +38,7 @@ export function useNarrador(idioma: string, condicion: string) {
         window.speechSynthesis.speak(u);
     };
 
-    const narrar = (id: string, texto: string) => {
+    const narrar = (id: string, texto: string, langOverride?: string) => {
         if (!('speechSynthesis' in window)) return;
 
         if (speakTimeoutRef.current) {
@@ -58,11 +58,11 @@ export function useNarrador(idioma: string, condicion: string) {
         speakTimeoutRef.current = setTimeout(() => {
             speakTimeoutRef.current = null;
             if (vocesListasRef.current || window.speechSynthesis.getVoices().length > 0) {
-                reproducir(id, texto);
+                reproducir(id, texto, langOverride);
             } else {
                 const handleVoicesChanged = () => {
                     window.speechSynthesis.removeEventListener('voiceschanged', handleVoicesChanged);
-                    reproducir(id, texto);
+                    reproducir(id, texto, langOverride);
                 };
                 window.speechSynthesis.addEventListener('voiceschanged', handleVoicesChanged);
             }
