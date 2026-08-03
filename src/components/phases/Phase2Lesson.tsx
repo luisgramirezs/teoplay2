@@ -18,6 +18,8 @@ import GramaticalBlock, { PiezaCard } from '../lesson/GramaticalBlock';
 import { buscarImagenConcepto } from '@/lib/api';
 import { buildConceptoWikimediaQuery, estaEnDiccionarioCiencias, normalizarTexto } from '@/utils/wikimediaQueryDictionary';
 import { obtenerOGenerarApoyoVisualCiencias, obtenerOGenerarPictogramaGramatical } from '@/lib/apoyoVisualIAService';
+import { mapIdiomaABCP47 } from '@/utils/idiomaBCP47';
+import { RATE_NARRACION_LENTA } from '@/hooks/use-narrador';
 import { buscarVideoYoutube } from '@/utils/youtubeSearch';
 
 
@@ -127,6 +129,7 @@ export function normalizar(raw: unknown): ExplicacionBloque {
                                 : undefined,
                             fraseVisual: typeof cc.fraseVisual === 'string' ? cc.fraseVisual : undefined,
                             practicaDirigida: typeof cc.practicaDirigida === 'string' ? cc.practicaDirigida : undefined,
+                            fragmentoEnOracion: typeof cc.fragmentoEnOracion === 'string' ? cc.fragmentoEnOracion : undefined,
                         };
                     }
                     return null;
@@ -287,11 +290,29 @@ const cardPalette = [
     { step: 'bg-[#0E9E8A]', iconBg: 'bg-[#E0F5F2]', iconText: 'text-[#0E9E8A]', nameText: 'text-[#0E9E8A]', exampleBg: 'bg-[#E0F5F2]' },
 ];
 
+// Resalta fragmentoEnOracion (subcadena literal) dentro de la oración canónica
+// del pictograma — si no se encuentra (la IA no siguió la regla al pie de la
+// letra), devuelve la oración sin resaltar, nunca rompe la UI.
+function resaltarFragmento(oracion: string, fragmento: string): React.ReactNode {
+    if (!fragmento) return oracion;
+    const idx = oracion.indexOf(fragmento);
+    if (idx === -1) return oracion;
+    return (
+        <>
+            {oracion.slice(0, idx)}
+            <strong className="text-purple-700 underline decoration-2 underline-offset-2">
+                {oracion.slice(idx, idx + fragmento.length)}
+            </strong>
+            {oracion.slice(idx + fragmento.length)}
+        </>
+    );
+}
+
 const ConceptosClaveBlock: React.FC<{
     conceptos: NonNullable<ExplicacionBloque['conceptosClave']>;
     fontSize: string;
     seccionActiva: string | null;
-    onNarrar: (id: string, texto: string) => void;
+    onNarrar: (id: string, texto: string, langOverride?: string, rateOverride?: number) => void;
     onSelectObra?: (obra: any) => void;
     perfil: PerfilNino;
     asignatura: any;
@@ -340,6 +361,7 @@ const ConceptosClaveBlock: React.FC<{
     // oración canónica de apoyoGramatical.ejemplos[0], reutilizada por todos
     // los conceptos con pieza gramatical asociada en esta misma lección.
     const oracionEjemploGramatical = apoyoGramatical?.ejemplos?.[0]?.oracion ?? '';
+    const idiomaBCP47 = mapIdiomaABCP47(apoyoGramatical?.idioma ?? '');
     const clavePictograma = oracionEjemploGramatical
         ? `${perfil.asignatura}__${perfil.tema}__${oracionEjemploGramatical}`
         : null;
@@ -439,6 +461,9 @@ const ConceptosClaveBlock: React.FC<{
     const pictogramaListo = pictogramaResultado !== undefined;
     const mostrarCajaPictograma = !!clavePictograma && (!pictogramaListo || !!pictogramaUrl);
 
+    const mostrarEjemploGramatical = tienePiezaGramatical && !!oracionEjemploGramatical;
+    const fragmentoResaltado = concepto.fragmentoEnOracion ?? '';
+
     const fuenteEjemplo =
         concepto.ejemploPedagogico ||
         concepto.componentes ||
@@ -496,14 +521,29 @@ const ConceptosClaveBlock: React.FC<{
                         </div>
                     )}
 
-                    {ejemploTexto && (
+                    {mostrarEjemploGramatical ? (
+                        <div className={`mt-auto w-full rounded-2xl ${pal.exampleBg} px-4 py-4`}>
+                            <div className="flex items-center justify-between gap-2 mb-1">
+                                <p className={`text-sm font-black ${pal.nameText}`}>Ejemplo</p>
+                                <BtnNarrar
+                                    id={`ejemplo-oracion-${pasoActivo}`}
+                                    texto={oracionEjemploGramatical}
+                                    seccionActiva={seccionActiva}
+                                    onNarrar={(id, texto) => onNarrar(id, texto, idiomaBCP47, RATE_NARRACION_LENTA)}
+                                />
+                            </div>
+                            <p className="text-[13px] text-slate-700 font-medium leading-6 text-left">
+                                {resaltarFragmento(oracionEjemploGramatical, fragmentoResaltado)}
+                            </p>
+                        </div>
+                    ) : ejemploTexto ? (
                         <div className={`mt-auto w-full rounded-2xl ${pal.exampleBg} px-4 py-4`}>
                             <p className={`text-sm font-black mb-1 ${pal.nameText}`}>Ejemplo</p>
                             <p className="text-[13px] text-slate-700 font-medium leading-6 text-left">
                                 {ejemploTexto}
                             </p>
                         </div>
-                    )}
+                    ) : null}
 
                     <div className="mt-4">
                         <BtnNarrar

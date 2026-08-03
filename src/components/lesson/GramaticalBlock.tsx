@@ -13,6 +13,7 @@ import React, { useState } from 'react';
 import { PiezaGramatical, EjemploGramatical, ApoyoGramatical } from '@/types';
 import { normalizarTexto } from '@/utils/wikimediaQueryDictionary';
 import { useNarrador } from '@/hooks/use-narrador';
+import { mapIdiomaABCP47 } from '@/utils/idiomaBCP47';
 import BtnNarrar from './BtnNarrar';
 
 // ─── Paleta de colores por pieza ──────────────────────────────────────────────
@@ -81,21 +82,6 @@ export const colorParaRol = (rol: string): PiezaGramatical['color'] => {
   const normalizado = normalizarTexto(rol);
   return ROLES_COLOR_FIJO[normalizado] ?? hashColor(normalizado);
 };
-
-// ─── Idioma del apoyoGramatical → tag BCP-47 (síntesis de voz) ──────────────
-// apoyoGramatical.idioma es texto libre en español (ej. "inglés") — nunca se
-// usa perfil.idioma (idioma de interfaz del niño) para narrar contenido en el
-// idioma que se está enseñando, o se pronunciaría con acento/fonética errónea.
-const IDIOMA_A_BCP47: Record<string, string> = {
-  ingles: 'en-US',
-  frances: 'fr-FR',
-  espanol: 'es-ES',
-  portugues: 'pt-PT',
-};
-
-function mapIdiomaABCP47(idioma: string): string {
-  return IDIOMA_A_BCP47[normalizarTexto(idioma)] ?? 'en-US';
-}
 
 // Para narrar: quita la traducción entre paréntesis al final del valor
 // (ej. "I (yo)" → "I") — la traducción se MUESTRA siempre en pantalla, pero

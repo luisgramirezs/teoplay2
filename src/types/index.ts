@@ -206,6 +206,7 @@ export interface ConceptoClave {
     tipoEntidad?: 'persona' | 'lugar' | 'evento' | 'objeto' | 'proceso';
     fraseVisual?: string;
     practicaDirigida?: string;
+    fragmentoEnOracion?: string;
 }
 
 export interface VisualSugerido {
