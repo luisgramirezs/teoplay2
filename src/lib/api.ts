@@ -160,7 +160,7 @@ function buildPrompt(perfil: PerfilNino): string {
           "titulo": "",
           "idioma": "",
           "piezas": [
-            { "rol": "", "valores": [""], "etiqueta": "", "color": "orange | blue | green | purple | pink | teal" }
+            { "rol": "", "valores": [{ "texto": "", "correspondeA": "" }], "etiqueta": "", "color": "orange | blue | green | purple | pink | teal" }
           ],
           "reglas": [""],
           "ejemplos": [
@@ -217,7 +217,7 @@ function buildPrompt(perfil: PerfilNino): string {
           "titulo": "",
           "idioma": "",
           "piezas": [
-            { "rol": "", "valores": [""], "etiqueta": "", "color": "orange | blue | green | purple | pink | teal" }
+            { "rol": "", "valores": [{ "texto": "", "correspondeA": "" }], "etiqueta": "", "color": "orange | blue | green | purple | pink | teal" }
           ],
           "reglas": [""],
           "ejemplos": [
@@ -264,7 +264,7 @@ function buildPrompt(perfil: PerfilNino): string {
           "titulo": "",
           "idioma": "",
           "piezas": [
-            { "rol": "", "valores": [""], "etiqueta": "", "color": "orange | blue | green | purple | pink | teal" }
+            { "rol": "", "valores": [{ "texto": "", "correspondeA": "" }], "etiqueta": "", "color": "orange | blue | green | purple | pink | teal" }
           ],
           "reglas": [""],
           "ejemplos": [
@@ -363,7 +363,8 @@ function buildPrompt(perfil: PerfilNino): string {
         `27g. Bajo la misma condición: cada conceptoClave debe incluir "fragmentoEnOracion" — la palabra o frase EXACTA (subcadena literal, carácter por carácter, sin reformular) que aparece dentro de "apoyoGramatical.ejemplos[0].oracion" y que instancia el rol de ese concepto. Ej.: si la oración es "I will visit my parents", el concepto "Sujeto" → fragmentoEnOracion: "I"; "Auxiliar" → "will"; "Verbo principal" → "visit". Bajo esta misma condición, deja "ejemploPedagogico" vacío ("") — queda reemplazado por fragmentoEnOracion, para no generar contenido redundante que no se muestra.`,
         `28. Para "apoyoGramatical.piezas": incluye TODAS las partes de la estructura (sujeto, auxiliar, verbo principal, complemento, etc.) con sus valores reales del idioma.`,
         `28b. Cuando el rol de una pieza sea de tipo pronombre/sujeto, "piezas[].valores" DEBE incluir el paradigma pronominal personal COMPLETO del idioma que se enseña — para inglés, como mínimo: I, you, he, she, it, we, they (7 formas, sin omitir ninguna, especialmente "they"). Para otros idiomas, el paradigma equivalente completo.`,
-        `29. "piezas[].valores" debe contener ejemplos concretos y reales del idioma — no descripciones abstractas. Cada valor, SIN EXCEPCIÓN, debe incluir su traducción entre paréntesis al final, en el idioma de instrucción del niño (ej. "I (yo)", "you (tú)", "walked (caminó)") — nunca dejes un valor sin su traducción, ni siquiera algunos: debe ser 100% consistente en todos los valores de todas las piezas.`,
+        `29. "piezas[].valores[].texto" debe contener ejemplos concretos y reales del idioma — no descripciones abstractas. Cada "texto", SIN EXCEPCIÓN, debe incluir su traducción entre paréntesis al final, en el idioma de instrucción del niño (ej. "I (yo)", "you (tú)", "walked (caminó)") — nunca dejes un valor sin su traducción, ni siquiera algunos: debe ser 100% consistente en todos los valores de todas las piezas.`,
+        `29b. "piezas[].valores[].correspondeA" se usa SOLO cuando los valores de esa pieza corresponden a distintos sujetos o condiciones (conjugación verbal, concordancia, alomorfos) — ej. pieza "verbo to be" con valores "am"/"is"/"are": cada uno debe llevar "correspondeA" con el sujeto exacto en el idioma enseñado ("I", "he / she / it", "you / we / they"), usando el mismo texto literal que la pieza de sujeto/pronombre equivalente, sin traducir de nuevo. Si varios valores comparten la misma condición (ej. "walks", "eats", "runs" con "he / she / it"), repite el mismo "correspondeA" en cada uno — el frontend los agrupa automáticamente. Si la pieza tiene valores libres sin condición (complemento, objeto), omite "correspondeA" o déjalo vacío en TODOS los valores de esa pieza — nunca parcialmente.`,
         `30. "piezas[].etiqueta" debe explicar CUÁNDO o POR QUÉ se usa esa pieza — no solo nombrarla.`,
         `31. "apoyoGramatical.reglas" debe contener máximo 4 reglas claras, cortas y en el idioma de la lección.`,
         `32. "apoyoGramatical.ejemplos" debe contener entre 3 y 5 oraciones completas reales con su traducción.`,

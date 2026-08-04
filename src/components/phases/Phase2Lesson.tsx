@@ -215,9 +215,23 @@ export function normalizar(raw: unknown): ExplicacionBloque {
                         if (typeof p !== 'object' || p === null) return null;
                         const pp = p as Record<string, unknown>;
                         const rawColor = typeof pp.color === 'string' ? pp.color : 'blue';
+                        const valores = Array.isArray(pp.valores)
+                            ? pp.valores.map((v: unknown) => {
+                                if (typeof v === 'object' && v !== null) {
+                                    const vv = v as Record<string, unknown>;
+                                    const correspondeA = typeof vv.correspondeA === 'string' ? vv.correspondeA.trim() : '';
+                                    return {
+                                        texto: typeof vv.texto === 'string' ? vv.texto : '',
+                                        correspondeA: correspondeA || undefined,
+                                    };
+                                }
+                                // Compatibilidad con sesiones guardadas antes del cambio a {texto, correspondeA}.
+                                return { texto: String(v) };
+                            })
+                            : [];
                         return {
                             rol: typeof pp.rol === 'string' ? pp.rol : '',
-                            valores: Array.isArray(pp.valores) ? pp.valores.map(String) : [],
+                            valores,
                             etiqueta: typeof pp.etiqueta === 'string' ? pp.etiqueta : '',
                             color: esPiezaColorValido(rawColor) ? rawColor : 'blue',
                         };
@@ -501,6 +515,24 @@ const ConceptosClaveBlock: React.FC<{
                         {concepto.explicacionSimple}
                     </p>
 
+                    {mostrarEjemploGramatical && (
+                        <>
+                            {concepto.practicaDirigida && (
+                                <p className="text-[13px] text-slate-600 font-semibold leading-6 mb-3">
+                                    {concepto.practicaDirigida}
+                                </p>
+                            )}
+                            <div className="mb-4">
+                                <BtnNarrar
+                                    id={`concepto-${pasoActivo}`}
+                                    texto={[concepto.nombre, concepto.explicacionSimple, concepto.practicaDirigida].filter(Boolean).join('. ')}
+                                    seccionActiva={seccionActiva}
+                                    onNarrar={onNarrar}
+                                />
+                            </div>
+                        </>
+                    )}
+
                     {concepto.formula && (
                         <div className="w-full rounded-2xl bg-[#F6F3FF] border border-purple-100 px-4 py-3 mb-4">
                             <p className="text-[11px] font-black text-[#5b40d6] uppercase tracking-wide mb-2">
@@ -535,6 +567,11 @@ const ConceptosClaveBlock: React.FC<{
                             <p className="text-[13px] text-slate-700 font-medium leading-6 text-left">
                                 {resaltarFragmento(oracionEjemploGramatical, fragmentoResaltado)}
                             </p>
+                            {apoyoGramatical?.ejemplos?.[0]?.traduccion && (
+                                <p className="text-[12px] text-slate-500 font-medium leading-6 text-left mt-1">
+                                    {apoyoGramatical.ejemplos[0].traduccion}
+                                </p>
+                            )}
                         </div>
                     ) : ejemploTexto ? (
                         <div className={`mt-auto w-full rounded-2xl ${pal.exampleBg} px-4 py-4`}>
@@ -545,14 +582,16 @@ const ConceptosClaveBlock: React.FC<{
                         </div>
                     ) : null}
 
-                    <div className="mt-4">
-                        <BtnNarrar
-                            id={`concepto-${pasoActivo}`}
-                            texto={[concepto.nombre, concepto.explicacionSimple, ejemploTexto].filter(Boolean).join('. ')}
-                            seccionActiva={seccionActiva}
-                            onNarrar={onNarrar}
-                        />
-                    </div>
+                    {!mostrarEjemploGramatical && (
+                        <div className="mt-4">
+                            <BtnNarrar
+                                id={`concepto-${pasoActivo}`}
+                                texto={[concepto.nombre, concepto.explicacionSimple, ejemploTexto].filter(Boolean).join('. ')}
+                                seccionActiva={seccionActiva}
+                                onNarrar={onNarrar}
+                            />
+                        </div>
+                    )}
                 </div>
 
                 {/* Columna derecha: apoyo gramatical (pictograma + pieza), imagen o ícono */}

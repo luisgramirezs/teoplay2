@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 // Rate fijo para narraciones donde el niño necesita percibir claramente la
 // pronunciación (ej. audio dedicado de una oración modelo) — más lento que
 // cualquier rate condicional del resto de la app (0.8 TEA / 0.9 general).
-export const RATE_NARRACION_LENTA = 0.65;
+export const RATE_NARRACION_LENTA = 0.55;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Hook de narración por sección — toggle on/off, una sola voz activa

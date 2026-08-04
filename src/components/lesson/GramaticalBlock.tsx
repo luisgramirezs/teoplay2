@@ -12,7 +12,7 @@
 import React, { useState } from 'react';
 import { PiezaGramatical, EjemploGramatical, ApoyoGramatical } from '@/types';
 import { normalizarTexto } from '@/utils/wikimediaQueryDictionary';
-import { useNarrador } from '@/hooks/use-narrador';
+import { useNarrador, RATE_NARRACION_LENTA } from '@/hooks/use-narrador';
 import { mapIdiomaABCP47 } from '@/utils/idiomaBCP47';
 import BtnNarrar from './BtnNarrar';
 
@@ -96,6 +96,27 @@ export const PiezaCard: React.FC<{ pieza: PiezaGramatical; index: number; total:
   pieza, index, total,
 }) => {
   const pal = COLORES[colorParaRol(pieza.rol)];
+  const tieneAgrupacion = pieza.valores.some(v => v.correspondeA);
+
+  // Agrupa por correspondeA preservando el orden de primera aparición — varios
+  // valores que compartan la misma condición (ej. "walks"/"eats"/"runs" con
+  // "he / she / it") caen en una sola tarjetita.
+  const grupos: { condicion: string; formas: string[] }[] = [];
+  const sueltos: string[] = [];
+  if (tieneAgrupacion) {
+    const indice = new Map<string, number>();
+    for (const v of pieza.valores) {
+      if (v.correspondeA) {
+        if (!indice.has(v.correspondeA)) {
+          indice.set(v.correspondeA, grupos.length);
+          grupos.push({ condicion: v.correspondeA, formas: [] });
+        }
+        grupos[indice.get(v.correspondeA)!].formas.push(v.texto);
+      } else {
+        sueltos.push(v.texto);
+      }
+    }
+  }
 
   return (
     <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -107,16 +128,43 @@ export const PiezaCard: React.FC<{ pieza: PiezaGramatical; index: number; total:
         </span>
 
         {/* Valores */}
-        <div className="flex flex-wrap gap-1.5">
-          {pieza.valores.map((val, i) => (
-            <span
-              key={i}
-              className={`px-2.5 py-1 rounded-xl text-sm font-black border ${pal.border} bg-white ${pal.text}`}
-            >
-              {val}
-            </span>
-          ))}
-        </div>
+        {tieneAgrupacion ? (
+          <>
+            <p className={`text-[10px] font-bold ${pal.text} uppercase tracking-wide`}>
+              Usa cada opción según corresponda
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {grupos.map((g, i) => (
+                <div
+                  key={i}
+                  className={`rounded-xl border-2 ${pal.border} bg-white px-2.5 py-1.5 flex flex-col items-center gap-0.5`}
+                >
+                  <span className={`text-sm font-black ${pal.text}`}>{g.formas.join(' / ')}</span>
+                  <span className="text-[10px] font-semibold text-slate-500">{g.condicion}</span>
+                </div>
+              ))}
+              {sueltos.map((s, i) => (
+                <span
+                  key={i}
+                  className={`px-2.5 py-1 rounded-xl text-sm font-black border ${pal.border} bg-white ${pal.text}`}
+                >
+                  {s}
+                </span>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="flex flex-wrap gap-1.5">
+            {pieza.valores.map((v, i) => (
+              <span
+                key={i}
+                className={`px-2.5 py-1 rounded-xl text-sm font-black border ${pal.border} bg-white ${pal.text}`}
+              >
+                {v.texto}
+              </span>
+            ))}
+          </div>
+        )}
 
         {/* Etiqueta explicativa */}
         <p className={`text-[11px] font-semibold ${pal.text} leading-tight`}>
@@ -199,21 +247,21 @@ const ConstructorOracion: React.FC<{
                 {pieza.rol}:
               </span>
               <div className="flex flex-wrap gap-1.5">
-                {pieza.valores.map((val, j) => (
+                {pieza.valores.map((v, j) => (
                   <button
                     key={j}
                     type="button"
                     onClick={() => {
-                      setSeleccion(s => ({ ...s, [i]: val }));
-                      narrar(`pieza-${i}-${j}`, extraerTextoIdiomaEnsenado(val), idiomaBCP47);
+                      setSeleccion(s => ({ ...s, [i]: v.texto }));
+                      narrar(`pieza-${i}-${j}`, extraerTextoIdiomaEnsenado(v.texto), idiomaBCP47);
                     }}
                     className={`px-2.5 py-1 rounded-xl text-sm font-black border-2 transition-all cursor-pointer
-                      ${seleccion[i] === val
+                      ${seleccion[i] === v.texto
                         ? `${pal.badge} ${pal.badgeText} border-transparent scale-105`
                         : `bg-white ${pal.text} ${pal.border} hover:scale-105`
                       }`}
                   >
-                    {val}
+                    {v.texto}
                   </button>
                 ))}
               </div>
@@ -262,7 +310,7 @@ const ConstructorOracion: React.FC<{
 const EjemplosArmados: React.FC<{
   ejemplos: EjemploGramatical[];
   piezas: PiezaGramatical[];
-  narrar: (id: string, texto: string, langOverride?: string) => void;
+  narrar: (id: string, texto: string, langOverride?: string, rateOverride?: number) => void;
   seccionActiva: string | null;
   idiomaBCP47: string;
 }> = ({ ejemplos, piezas, narrar, seccionActiva, idiomaBCP47 }) => {
@@ -290,7 +338,7 @@ const EjemplosArmados: React.FC<{
               id={`ejemplo-${i}`}
               texto={ej.oracion}
               seccionActiva={seccionActiva}
-              onNarrar={(id, texto) => narrar(id, texto, idiomaBCP47)}
+              onNarrar={(id, texto) => narrar(id, texto, idiomaBCP47, RATE_NARRACION_LENTA)}
             />
             {/* Color dots matching piezas */}
             <div className="flex gap-1">

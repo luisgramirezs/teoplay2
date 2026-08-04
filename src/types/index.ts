@@ -438,9 +438,17 @@ export const PERFIL_STORAGE_KEY = 'teoplay_perfil';
 export const PERFILES_STORAGE_KEY = 'teoplay_perfiles';
 export const PERFIL_ACTIVO_KEY = 'teoplay_perfil_activo';
 
+export interface ValorPieza {
+    texto: string;
+    // Sujeto/condición al que corresponde este valor (ej. "I", "he / she / it").
+    // Solo se usa cuando la pieza tiene valores condicionados (conjugación,
+    // concordancia); ausente en piezas de valores libres (complemento, objeto).
+    correspondeA?: string;
+}
+
 export interface PiezaGramatical {
     rol: string;
-    valores: string[];
+    valores: ValorPieza[];
     etiqueta: string;
     color: 'orange' | 'blue' | 'green' | 'purple' | 'pink' | 'teal';
 }

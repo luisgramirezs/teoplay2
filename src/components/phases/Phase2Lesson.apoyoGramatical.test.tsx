@@ -15,9 +15,28 @@ const rawSesionGramatical = {
     titulo: "Presente simple — 3ra persona",
     idioma: "inglés",
     piezas: [
-      { rol: "Sujeto", valores: ["She", "He", "It"], etiqueta: "3ra persona singular", color: "blue" },
-      { rol: "Verbo principal + s", valores: ["walks", "eats", "runs"], etiqueta: "Se agrega -s al verbo", color: "orange" },
-      { rol: "Complemento", valores: ["to school", "an apple", "fast"], etiqueta: "Completa la acción", color: "green" },
+      {
+        rol: "Sujeto",
+        valores: [{ texto: "She" }, { texto: "He" }, { texto: "It" }],
+        etiqueta: "3ra persona singular",
+        color: "blue",
+      },
+      {
+        rol: "Verbo principal + s",
+        valores: [
+          { texto: "walks", correspondeA: "he / she / it" },
+          { texto: "eats", correspondeA: "he / she / it" },
+          { texto: "runs", correspondeA: "he / she / it" },
+        ],
+        etiqueta: "Se agrega -s al verbo",
+        color: "orange",
+      },
+      {
+        rol: "Complemento",
+        valores: [{ texto: "to school" }, { texto: "an apple" }, { texto: "fast" }],
+        etiqueta: "Completa la acción",
+        color: "green",
+      },
     ],
     reglas: ["Con he/she/it el verbo termina en -s."],
     ejemplos: [{ oracion: "She walks to school.", traduccion: "Ella camina a la escuela." }],
@@ -33,7 +52,7 @@ describe("normalizar() — apoyoGramatical", () => {
     expect(bloque.apoyoGramatical?.piezas).toHaveLength(3);
     expect(bloque.apoyoGramatical?.piezas[0]).toEqual({
       rol: "Sujeto",
-      valores: ["She", "He", "It"],
+      valores: [{ texto: "She" }, { texto: "He" }, { texto: "It" }],
       etiqueta: "3ra persona singular",
       color: "blue",
     });
@@ -55,7 +74,10 @@ describe("GramaticalBlock — montaje con datos reales de normalizar()", () => {
     expect(screen.getByText("Sujeto")).toBeInTheDocument();
     expect(screen.getAllByText("She").length).toBeGreaterThan(0);
     expect(screen.getByText("Verbo principal + s")).toBeInTheDocument();
-    expect(screen.getAllByText("walks").length).toBeGreaterThan(0);
+    // Valores condicionados (correspondeA compartido) se agrupan en una sola tarjetita.
+    expect(screen.getByText("walks / eats / runs")).toBeInTheDocument();
+    expect(screen.getAllByText("he / she / it").length).toBeGreaterThan(0);
+    expect(screen.getByText("Usa cada opción según corresponda")).toBeInTheDocument();
     expect(screen.getByText(/Con he\/she\/it el verbo termina en -s\./)).toBeInTheDocument();
   });
 
