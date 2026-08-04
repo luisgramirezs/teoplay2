@@ -44,6 +44,33 @@ const rawSesionGramatical = {
   },
 };
 
+const conceptosClaveFixture = [
+  {
+    nombre: "Sujeto",
+    formula: "",
+    elementos: "",
+    componentes: "",
+    miembros: "",
+    uso: "",
+    necesidad: "",
+    ejemploPedagogico: "",
+    explicacionSimple: "Quien realiza la acción.",
+    fragmentoEnOracion: "She",
+  },
+  {
+    nombre: "Verbo principal + s",
+    formula: "",
+    elementos: "",
+    componentes: "",
+    miembros: "",
+    uso: "",
+    necesidad: "",
+    ejemploPedagogico: "",
+    explicacionSimple: "La acción que se realiza.",
+    fragmentoEnOracion: "walks",
+  },
+];
+
 describe("normalizar() — apoyoGramatical", () => {
   it("propaga apoyoGramatical al bloque normalizado (regresión del bug donde llegaba undefined)", () => {
     const bloque = normalizar(rawSesionGramatical);
@@ -65,20 +92,31 @@ describe("normalizar() — apoyoGramatical", () => {
 });
 
 describe("GramaticalBlock — montaje con datos reales de normalizar()", () => {
-  it("renderiza las piezas gramaticales reales, no un placeholder vacío", () => {
+  it("renderiza la Segunda Sección (Fórmula, Veamos un ejemplo, Recuerda, Ejemplo completo + cierre)", () => {
     const bloque = normalizar(rawSesionGramatical);
     expect(bloque.apoyoGramatical).not.toBeNull();
 
-    render(<GramaticalBlock apoyoGramatical={bloque.apoyoGramatical!} />);
+    render(<GramaticalBlock apoyoGramatical={bloque.apoyoGramatical!} conceptos={conceptosClaveFixture} />);
 
-    expect(screen.getByText("Sujeto")).toBeInTheDocument();
+    // Pieza 1 — Fórmula con íconos y pregunta guía
+    expect(screen.getAllByText("Sujeto").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("¿Quién?").length).toBeGreaterThan(0);
+
+    // Pieza 2 — Veamos un ejemplo (fragmento real vía fragmentoEnOracion)
+    expect(screen.getByText("Veamos un ejemplo")).toBeInTheDocument();
     expect(screen.getAllByText("She").length).toBeGreaterThan(0);
-    expect(screen.getByText("Verbo principal + s")).toBeInTheDocument();
-    // Valores condicionados (correspondeA compartido) se agrupan en una sola tarjetita.
-    expect(screen.getByText("walks / eats / runs")).toBeInTheDocument();
-    expect(screen.getAllByText("he / she / it").length).toBeGreaterThan(0);
-    expect(screen.getByText("Usa cada opción según corresponda")).toBeInTheDocument();
-    expect(screen.getByText(/Con he\/she\/it el verbo termina en -s\./)).toBeInTheDocument();
+    expect(screen.getAllByText("walks").length).toBeGreaterThan(0);
+
+    // Pieza 3 — ¡Recuerda! (grupos de Cambio 1)
+    expect(screen.getByText("¡Recuerda!")).toBeInTheDocument();
+    expect(screen.getByText(/walks \/ eats \/ runs → he \/ she \/ it/)).toBeInTheDocument();
+
+    // Pieza 4 — Ejemplo completo interlineado + cierre con roles reales
+    expect(screen.getByText("Ejemplo completo")).toBeInTheDocument();
+    expect(screen.getByText(/Unimos Sujeto \+ Verbo principal \+ s \+ Complemento en el orden correcto/)).toBeInTheDocument();
+
+    // Reglas importantes ya no se renderiza (reemplazada por las piezas nuevas)
+    expect(screen.queryByText(/Con he\/she\/it el verbo termina en -s\./)).not.toBeInTheDocument();
   });
 
   it("no renderiza nada si apoyoGramatical no tiene piezas (evita placeholder vacío)", () => {

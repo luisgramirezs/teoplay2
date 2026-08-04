@@ -1064,6 +1064,9 @@ const ExplicacionRenderer: React.FC<{
                         <GramaticalBlock
                             apoyoGramatical={bloque.apoyoGramatical}
                             condicion={condicion}
+                            conceptos={bloque.conceptosClave}
+                            asignatura={perfil.asignatura}
+                            tema={perfil.tema}
                         />
                     )}
 
@@ -1624,6 +1627,9 @@ const Phase2Lesson: React.FC<Phase2LessonProps> = ({ perfil, sesion, onComplete,
                                     <GramaticalBlock
                                         apoyoGramatical={bloqueActual.apoyoGramatical}
                                         condicion={perfil.condicion}
+                                        conceptos={bloqueActual.conceptosClave}
+                                        asignatura={perfil.asignatura}
+                                        tema={perfil.tema}
                                     />
                                 )}
                             </div>

@@ -2,18 +2,22 @@
  * GramaticalBlock.tsx
  *
  * Componente React para visualizar estructuras gramaticales de idiomas.
- * Renderiza: piezas de la oración + reglas de uso + ejemplos armados.
+ * Renderiza: fórmula con íconos, ejemplo guiado con pictograma, resumen
+ * "¡Recuerda!", ejemplo interlineado + cierre, constructor interactivo y
+ * ejemplos completos.
  *
  * Funciona para inglés, francés, español y cualquier idioma.
  * Los datos vienen de sesion.apoyoGramatical (generado por OpenAI).
  * Este componente NUNCA genera SVG — siempre renderiza React puro.
  */
 
-import React, { useState } from 'react';
-import { PiezaGramatical, EjemploGramatical, ApoyoGramatical } from '@/types';
+import React, { useState, useEffect } from 'react';
+import { User, Heart, Footprints, MapPin, HelpCircle, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { PiezaGramatical, EjemploGramatical, ApoyoGramatical, ConceptoClave } from '@/types';
 import { normalizarTexto } from '@/utils/wikimediaQueryDictionary';
 import { useNarrador, RATE_NARRACION_LENTA } from '@/hooks/use-narrador';
 import { mapIdiomaABCP47 } from '@/utils/idiomaBCP47';
+import { obtenerOGenerarPictogramaGramatical } from '@/lib/apoyoVisualIAService';
 import BtnNarrar from './BtnNarrar';
 
 // ─── Paleta de colores por pieza ──────────────────────────────────────────────
@@ -90,33 +94,120 @@ function extraerTextoIdiomaEnsenado(valor: string): string {
   return valor.replace(/\s*\([^)]*\)\s*$/, '').trim();
 }
 
-// ─── Subcomponente: Pieza gramatical ─────────────────────────────────────────
+// ─── Agrupación de valores condicionados (Cambio 1 — reutilizada por PiezaCard
+// y por la caja "¡Recuerda!") ─────────────────────────────────────────────────
+
+interface GrupoValor {
+  condicion: string;
+  formas: string[];
+}
+
+function agruparValoresPorCondicion(pieza: PiezaGramatical): { grupos: GrupoValor[]; sueltos: string[] } {
+  const grupos: GrupoValor[] = [];
+  const sueltos: string[] = [];
+  const indice = new Map<string, number>();
+  for (const v of pieza.valores) {
+    if (v.correspondeA) {
+      if (!indice.has(v.correspondeA)) {
+        indice.set(v.correspondeA, grupos.length);
+        grupos.push({ condicion: v.correspondeA, formas: [] });
+      }
+      grupos[indice.get(v.correspondeA)!].formas.push(v.texto);
+    } else {
+      sueltos.push(v.texto);
+    }
+  }
+  return { grupos, sueltos };
+}
+
+// ─── Diccionario de ícono + pregunta guía por rol ────────────────────────────
+// Matching por palabra clave sobre el rol normalizado — genérico, no atado a
+// inglés. Si ningún patrón coincide, respaldo genérico (nunca rompe el render).
+
+interface InfoRol {
+  icon: React.ComponentType<{ className?: string }>;
+  pregunta: string;
+}
+
+const DICCIONARIO_ROL: { test: (rolNormalizado: string) => boolean; info: InfoRol }[] = [
+  { test: n => n.includes('sujeto'), info: { icon: User, pregunta: '¿Quién?' } },
+  { test: n => n.includes('auxiliar') || (n.includes('verbo') && n.includes('be')), info: { icon: Heart, pregunta: '¿Cómo está?' } },
+  { test: n => n.includes('verbo') && (n.includes('principal') || n.includes('ing')), info: { icon: Footprints, pregunta: '¿Qué está haciendo?' } },
+  { test: n => n.includes('complemento'), info: { icon: MapPin, pregunta: '¿Dónde?' } },
+];
+
+const INFO_ROL_RESPALDO: InfoRol = { icon: HelpCircle, pregunta: '¿Qué es?' };
+
+function infoParaRol(rol: string): InfoRol {
+  const normalizado = normalizarTexto(rol);
+  return DICCIONARIO_ROL.find(d => d.test(normalizado))?.info ?? INFO_ROL_RESPALDO;
+}
+
+// ─── Matching rol↔concepto (mismo criterio que ConceptosClaveBlock) ──────────
+// Reutilizado por "Veamos un ejemplo" y por el ejemplo interlineado.
+
+function fragmentoParaPieza(pieza: PiezaGramatical, conceptos: ConceptoClave[]): string {
+  const rolNormalizado = normalizarTexto(pieza.rol);
+  const concepto = conceptos.find(c => normalizarTexto(c.nombre) === rolNormalizado);
+  return concepto?.fragmentoEnOracion?.trim() ?? '';
+}
+
+// ─── Segmentación de la oración canónica por fragmento de pieza ──────────────
+// Generaliza la idea de "resaltar un fragmento" a N fragmentos: ubica cada uno
+// por posición real en el texto (no por orden de piezas[], que puede no
+// coincidir con el orden textual) y descarta solapamientos defensivamente.
+
+interface SegmentoOracion {
+  texto: string;
+  pieza?: PiezaGramatical;
+}
+
+function segmentarOracion(
+  oracion: string,
+  piezas: PiezaGramatical[],
+  conceptos: ConceptoClave[]
+): SegmentoOracion[] {
+  type Coincidencia = { idx: number; len: number; pieza: PiezaGramatical };
+
+  const coincidencias: Coincidencia[] = piezas
+    .map((pieza): Coincidencia | null => {
+      const fragmento = fragmentoParaPieza(pieza, conceptos);
+      if (!fragmento) return null;
+      const idx = oracion.indexOf(fragmento);
+      if (idx === -1) return null;
+      return { idx, len: fragmento.length, pieza };
+    })
+    .filter((m): m is Coincidencia => m !== null)
+    .sort((a, b) => a.idx - b.idx);
+
+  const limpias: Coincidencia[] = [];
+  let cursor = 0;
+  for (const m of coincidencias) {
+    if (m.idx < cursor) continue; // se solapa con una coincidencia anterior — se omite
+    limpias.push(m);
+    cursor = m.idx + m.len;
+  }
+
+  const segmentos: SegmentoOracion[] = [];
+  let pos = 0;
+  for (const m of limpias) {
+    if (m.idx > pos) segmentos.push({ texto: oracion.slice(pos, m.idx) });
+    segmentos.push({ texto: oracion.slice(m.idx, m.idx + m.len), pieza: m.pieza });
+    pos = m.idx + m.len;
+  }
+  if (pos < oracion.length) segmentos.push({ texto: oracion.slice(pos) });
+  return segmentos;
+}
+
+// ─── Subcomponente: Pieza gramatical (Primera Sección — SIN CAMBIOS de cara
+// afuera, sigue exportado y usado por ConceptosClaveBlock) ───────────────────
 
 export const PiezaCard: React.FC<{ pieza: PiezaGramatical; index: number; total: number }> = ({
   pieza, index, total,
 }) => {
   const pal = COLORES[colorParaRol(pieza.rol)];
-  const tieneAgrupacion = pieza.valores.some(v => v.correspondeA);
-
-  // Agrupa por correspondeA preservando el orden de primera aparición — varios
-  // valores que compartan la misma condición (ej. "walks"/"eats"/"runs" con
-  // "he / she / it") caen en una sola tarjetita.
-  const grupos: { condicion: string; formas: string[] }[] = [];
-  const sueltos: string[] = [];
-  if (tieneAgrupacion) {
-    const indice = new Map<string, number>();
-    for (const v of pieza.valores) {
-      if (v.correspondeA) {
-        if (!indice.has(v.correspondeA)) {
-          indice.set(v.correspondeA, grupos.length);
-          grupos.push({ condicion: v.correspondeA, formas: [] });
-        }
-        grupos[indice.get(v.correspondeA)!].formas.push(v.texto);
-      } else {
-        sueltos.push(v.texto);
-      }
-    }
-  }
+  const { grupos, sueltos } = agruparValoresPorCondicion(pieza);
+  const tieneAgrupacion = grupos.length > 0;
 
   return (
     <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -180,34 +271,197 @@ export const PiezaCard: React.FC<{ pieza: PiezaGramatical; index: number; total:
   );
 };
 
-// ─── Subcomponente: Reglas de uso ────────────────────────────────────────────
+// ─── Segunda Sección — Pieza 1: Fórmula con íconos ───────────────────────────
 
-const ReglasBlock: React.FC<{ reglas: string[] }> = ({ reglas }) => {
-  if (!reglas?.length) return null;
+const FormulaIconos: React.FC<{ piezas: PiezaGramatical[] }> = ({ piezas }) => {
+  if (!piezas.length) return null;
 
   return (
-    <div className="rounded-2xl bg-amber-50 border-2 border-amber-200 p-4">
-      <div className="flex items-center gap-2 mb-3">
-        <span className="text-base">📌</span>
-        <p className="text-[11px] font-black text-amber-800 uppercase tracking-wide">
-          Reglas importantes
-        </p>
-      </div>
-      <div className="space-y-2">
-        {reglas.map((regla, i) => (
-          <div key={i} className="flex items-start gap-2">
-            <div className="w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center flex-shrink-0 mt-0.5">
-              <span className="text-white text-[10px] font-black">{i + 1}</span>
-            </div>
-            <p className="text-sm font-bold text-amber-900 leading-snug">{regla}</p>
-          </div>
-        ))}
+    <div className="rounded-2xl bg-[#F6F3FF] border border-purple-100 px-4 py-4">
+      <div className="flex items-center gap-2 flex-wrap">
+        {piezas.map((pieza, i) => {
+          const { icon: Icon, pregunta } = infoParaRol(pieza.rol);
+          const pal = COLORES[colorParaRol(pieza.rol)];
+          return (
+            <React.Fragment key={i}>
+              <div className={`flex flex-col items-center gap-1 rounded-xl border-2 ${pal.border} ${pal.bg} px-3 py-2 min-w-[84px]`}>
+                <Icon className={`w-5 h-5 ${pal.text}`} />
+                <span className={`text-[11px] font-black ${pal.text} text-center leading-tight`}>{pieza.rol}</span>
+                <span className="text-[10px] font-semibold text-slate-500 text-center">{pregunta}</span>
+              </div>
+              {i < piezas.length - 1 && (
+                <span className="text-[#5b40d6] font-black text-lg flex-shrink-0">+</span>
+              )}
+            </React.Fragment>
+          );
+        })}
       </div>
     </div>
   );
 };
 
-// ─── Subcomponente: Constructor interactivo ───────────────────────────────────
+// ─── Segunda Sección — Pieza 2: "Veamos un ejemplo" ──────────────────────────
+
+const VeamosUnEjemplo: React.FC<{
+  piezas: PiezaGramatical[];
+  conceptos: ConceptoClave[];
+  oracion: string;
+  pictogramaUrl: string | null | undefined; // undefined = cargando, null = sin imagen
+}> = ({ piezas, conceptos, oracion, pictogramaUrl }) => {
+  const pasos = piezas
+    .map(pieza => ({ pieza, fragmento: fragmentoParaPieza(pieza, conceptos) }))
+    .filter(p => !!p.fragmento);
+
+  if (!pasos.length) return null;
+
+  const mostrarPictograma = pictogramaUrl !== null;
+
+  return (
+    <div className="rounded-2xl border-2 border-teal-200 bg-[#E8FBF8] p-4">
+      <p className="text-[11px] font-black text-teal-800 uppercase tracking-wide mb-3">
+        Veamos un ejemplo
+      </p>
+      <div className="flex flex-col md:flex-row gap-4 items-center">
+        {mostrarPictograma && (
+          <div className="w-full md:w-40 h-32 md:h-40 flex-shrink-0 rounded-2xl overflow-hidden border border-teal-200 bg-white flex items-center justify-center">
+            {pictogramaUrl ? (
+              <img src={pictogramaUrl} alt={oracion} className="w-full h-full object-contain" />
+            ) : (
+              <div className="w-8 h-8 rounded-full border-4 border-slate-200 border-t-teal-500 animate-spin" />
+            )}
+          </div>
+        )}
+        <div className="flex-1 flex flex-wrap items-center gap-2 justify-center md:justify-start">
+          {pasos.map(({ pieza, fragmento }, i) => {
+            const { icon: Icon } = infoParaRol(pieza.rol);
+            const pal = COLORES[colorParaRol(pieza.rol)];
+            return (
+              <React.Fragment key={i}>
+                <div className={`flex flex-col items-center gap-1 rounded-xl border-2 ${pal.border} ${pal.bg} px-3 py-2 min-w-[90px]`}>
+                  <Icon className={`w-4 h-4 ${pal.text}`} />
+                  <span className={`text-sm font-black ${pal.text}`}>{fragmento}</span>
+                  <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wide">{pieza.rol}</span>
+                </div>
+                {i < pasos.length - 1 && (
+                  <ArrowRight className="w-4 h-4 text-teal-400 flex-shrink-0" />
+                )}
+              </React.Fragment>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── Segunda Sección — Pieza 3: "¡Recuerda!" ─────────────────────────────────
+
+const RecuerdaBlock: React.FC<{ piezas: PiezaGramatical[] }> = ({ piezas }) => {
+  const piezasConGrupos = piezas
+    .map(pieza => ({ pieza, ...agruparValoresPorCondicion(pieza) }))
+    .filter(x => x.grupos.length > 0);
+
+  if (!piezasConGrupos.length) return null;
+
+  return (
+    <div className="rounded-2xl bg-amber-50 border-2 border-amber-200 p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-base">💡</span>
+        <p className="text-[11px] font-black text-amber-800 uppercase tracking-wide">
+          ¡Recuerda!
+        </p>
+      </div>
+      <div className="space-y-3">
+        {piezasConGrupos.map(({ pieza, grupos }, i) => {
+          const pal = COLORES[colorParaRol(pieza.rol)];
+          return (
+            <div key={i} className="space-y-1.5">
+              <div className="flex flex-wrap gap-1.5">
+                {grupos.map((g, j) => (
+                  <span
+                    key={j}
+                    className={`px-2 py-1 rounded-lg text-[11px] font-black border ${pal.border} bg-white ${pal.text}`}
+                  >
+                    {g.formas.join(' / ')} → {g.condicion}
+                  </span>
+                ))}
+              </div>
+              <p className="text-[11px] font-semibold text-amber-900 leading-snug">
+                {pieza.etiqueta}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// ─── Segunda Sección — Pieza 4(a): Ejemplo completo interlineado ─────────────
+
+const EjemploCompletoInterlineado: React.FC<{
+  oracion: string;
+  piezas: PiezaGramatical[];
+  conceptos: ConceptoClave[];
+  seccionActiva: string | null;
+  narrar: (id: string, texto: string, langOverride?: string) => void;
+  idiomaBCP47: string;
+}> = ({ oracion, piezas, conceptos, seccionActiva, narrar, idiomaBCP47 }) => {
+  if (!oracion) return null;
+  const segmentos = segmentarOracion(oracion, piezas, conceptos);
+
+  return (
+    <div className="flex-[3] min-w-0 rounded-2xl border border-slate-200 bg-white p-4">
+      <div className="flex items-center justify-between gap-2 mb-3">
+        <p className="text-[11px] font-black text-slate-600 uppercase tracking-wide">
+          Ejemplo completo
+        </p>
+        <BtnNarrar
+          id="ejemplo-completo-interlineado"
+          texto={oracion}
+          seccionActiva={seccionActiva}
+          onNarrar={(id, texto) => narrar(id, texto, idiomaBCP47)}
+        />
+      </div>
+      <div className="flex flex-wrap items-start gap-y-3">
+        {segmentos.map((seg, i) =>
+          seg.pieza ? (
+            <div key={i} className="flex flex-col items-center px-0.5">
+              <span className={`text-sm font-black ${COLORES[colorParaRol(seg.pieza.rol)].text}`}>
+                {seg.texto}
+              </span>
+              <span className="text-[9px] font-bold text-slate-400 whitespace-nowrap">
+                {infoParaRol(seg.pieza.rol).pregunta}
+              </span>
+            </div>
+          ) : (
+            <span key={i} className="text-sm font-medium text-slate-500 self-center whitespace-pre">
+              {seg.texto}
+            </span>
+          )
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ─── Segunda Sección — Pieza 4(b): "Así se forma una oración" ───────────────
+
+const AsiSeForma: React.FC<{ piezas: PiezaGramatical[] }> = ({ piezas }) => {
+  if (!piezas.length) return null;
+  const roles = piezas.map(p => p.rol).join(' + ');
+
+  return (
+    <div className="flex-[2] min-w-0 rounded-2xl bg-green-50 border-2 border-green-200 p-4 flex flex-col items-center justify-center text-center gap-2">
+      <CheckCircle2 className="w-6 h-6 text-green-600" />
+      <p className="text-[13px] font-bold text-green-800 leading-snug">
+        Unimos {roles} en el orden correcto para formar la oración.
+      </p>
+    </div>
+  );
+};
+
+// ─── Tercera Sección — Constructor interactivo (SIN CAMBIOS) ────────────────
 // El niño selecciona un valor de cada pieza y arma su propia oración
 
 const ConstructorOracion: React.FC<{
@@ -305,7 +559,7 @@ const ConstructorOracion: React.FC<{
   );
 };
 
-// ─── Subcomponente: Ejemplos armados ─────────────────────────────────────────
+// ─── Tercera Sección — Ejemplos armados (SIN CAMBIOS) ────────────────────────
 
 const EjemplosArmados: React.FC<{
   ejemplos: EjemploGramatical[];
@@ -361,19 +615,44 @@ const EjemplosArmados: React.FC<{
 interface GramaticalBlockProps {
   apoyoGramatical: ApoyoGramatical;
   condicion?: string;
+  conceptos?: ConceptoClave[];
+  asignatura?: string;
+  tema?: string;
 }
 
 const GramaticalBlock: React.FC<GramaticalBlockProps> = ({
   apoyoGramatical,
   condicion = 'general',
+  conceptos = [],
+  asignatura = '',
+  tema = '',
 }) => {
   // Hooks siempre antes de cualquier return condicional (Reglas de Hooks de React).
   const { narrar, seccionActiva } = useNarrador('en', condicion);
   const idiomaBCP47 = mapIdiomaABCP47(apoyoGramatical?.idioma ?? '');
+  const oracionCanonica = apoyoGramatical?.ejemplos?.[0]?.oracion ?? '';
+
+  // Pictograma único de la lección — mismo asignatura/tema/oración que ya usa
+  // ConceptosClaveBlock, para pegarle a la MISMA clave de caché en Firestore y
+  // no disparar una generación nueva.
+  const [pictogramaUrl, setPictogramaUrl] = useState<string | null | undefined>(null);
+
+  useEffect(() => {
+    if (!asignatura || !tema || !oracionCanonica) {
+      setPictogramaUrl(null);
+      return;
+    }
+    let cancelado = false;
+    setPictogramaUrl(undefined);
+    obtenerOGenerarPictogramaGramatical(asignatura, tema, oracionCanonica).then(url => {
+      if (!cancelado) setPictogramaUrl(url);
+    });
+    return () => { cancelado = true; };
+  }, [asignatura, tema, oracionCanonica]);
 
   if (!apoyoGramatical?.piezas?.length) return null;
 
-  const { titulo, idioma, piezas, reglas, ejemplos, nota } = apoyoGramatical;
+  const { titulo, idioma, piezas, ejemplos, nota } = apoyoGramatical;
 
   return (
     <div className="w-full rounded-[26px] border border-slate-200 bg-white shadow-sm overflow-hidden">
@@ -392,25 +671,32 @@ const GramaticalBlock: React.FC<GramaticalBlockProps> = ({
       </div>
 
       <div className="p-5 space-y-5">
-        {/* Piezas de la oración */}
-        <div>
-          <p className="text-[11px] font-black text-slate-500 uppercase tracking-wide mb-3">
-            ¿Cómo se forma?
-          </p>
-          <div className="flex flex-wrap gap-2 items-start">
-            {piezas.map((pieza, i) => (
-              <PiezaCard key={i} pieza={pieza} index={i} total={piezas.length} />
-            ))}
-          </div>
+        {/* Segunda Sección: Estructura */}
+        <FormulaIconos piezas={piezas} />
+
+        <VeamosUnEjemplo
+          piezas={piezas}
+          conceptos={conceptos}
+          oracion={oracionCanonica}
+          pictogramaUrl={pictogramaUrl}
+        />
+
+        <RecuerdaBlock piezas={piezas} />
+
+        <div className="flex flex-col md:flex-row gap-3">
+          <EjemploCompletoInterlineado
+            oracion={oracionCanonica}
+            piezas={piezas}
+            conceptos={conceptos}
+            seccionActiva={seccionActiva}
+            narrar={narrar}
+            idiomaBCP47={idiomaBCP47}
+          />
+          <AsiSeForma piezas={piezas} />
         </div>
 
-        {/* Reglas */}
-        <ReglasBlock reglas={reglas} />
-
-        {/* Constructor interactivo */}
+        {/* Tercera Sección: sin cambios */}
         <ConstructorOracion piezas={piezas} idioma={idioma} narrar={narrar} idiomaBCP47={idiomaBCP47} />
-
-        {/* Ejemplos */}
         <EjemplosArmados ejemplos={ejemplos} piezas={piezas} narrar={narrar} seccionActiva={seccionActiva} idiomaBCP47={idiomaBCP47} />
 
         {/* Nota pedagógica */}
