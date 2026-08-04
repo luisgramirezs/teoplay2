@@ -12,8 +12,8 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { User, Heart, Footprints, MapPin, HelpCircle, ArrowRight, CheckCircle2 } from 'lucide-react';
-import { PiezaGramatical, EjemploGramatical, ApoyoGramatical, ConceptoClave } from '@/types';
+import { User, Heart, Footprints, MapPin, HelpCircle, ArrowRight, CheckCircle2, Volume2, RotateCcw } from 'lucide-react';
+import { PiezaGramatical, EjemploGramatical, ApoyoGramatical, ConceptoClave, ValorPieza } from '@/types';
 import { normalizarTexto } from '@/utils/wikimediaQueryDictionary';
 import { useNarrador, RATE_NARRACION_LENTA } from '@/hooks/use-narrador';
 import { mapIdiomaABCP47 } from '@/utils/idiomaBCP47';
@@ -92,6 +92,43 @@ export const colorParaRol = (rol: string): PiezaGramatical['color'] => {
 // nunca se narra con la voz del idioma enseñado (sonaría mal pronunciada).
 function extraerTextoIdiomaEnsenado(valor: string): string {
   return valor.replace(/\s*\([^)]*\)\s*$/, '').trim();
+}
+
+// Inverso de extraerTextoIdiomaEnsenado: solo la traducción entre paréntesis
+// (ej. "They (ellos)" → "ellos") — usado por el Constructor para mostrar la
+// traducción SOLO cuando la oración arma es correcta (Cambio 2).
+function extraerTraduccion(valor: string): string {
+  const match = valor.match(/\(([^)]*)\)\s*$/);
+  return match ? match[1].trim() : '';
+}
+
+// ─── Validación de concordancia real vía correspondeA (Constructor) ─────────
+// "correspondeA" es texto libre tipo "you / we / they" — se divide en tokens
+// normalizados para comparar, nunca como string completo.
+function dividirCondicion(correspondeA: string): string[] {
+  return correspondeA
+    .split(/\s*[/,|]\s*|\s+y\s+|\s+o\s+|\s+and\s+|\s+or\s+/i)
+    .map(t => normalizarTexto(t.trim()))
+    .filter(Boolean);
+}
+
+// Genérico: no asume cuál pieza es "el sujeto" — para cada pieza seleccionada
+// con correspondeA, exige que ALGUNA OTRA pieza seleccionada tenga un texto
+// (sin traducción) que coincida con uno de los tokens de esa condición.
+// Piezas sin correspondeA (valores libres) se consideran automáticamente
+// compatibles — no hay nada que validar entre ellas.
+function concordanciaValida(piezas: PiezaGramatical[], seleccion: Record<number, ValorPieza>): boolean {
+  return piezas.every((_, i) => {
+    const seleccionada = seleccion[i];
+    if (!seleccionada?.correspondeA) return true;
+
+    const tokens = dividirCondicion(seleccionada.correspondeA);
+    return piezas.some((_, k) => {
+      if (k === i || !seleccion[k]) return false;
+      const textoOtra = normalizarTexto(extraerTextoIdiomaEnsenado(seleccion[k].texto));
+      return tokens.includes(textoOtra);
+    });
+  });
 }
 
 // ─── Agrupación de valores condicionados (Cambio 1 — reutilizada por PiezaCard
@@ -461,8 +498,10 @@ const AsiSeForma: React.FC<{ piezas: PiezaGramatical[] }> = ({ piezas }) => {
   );
 };
 
-// ─── Tercera Sección — Constructor interactivo (SIN CAMBIOS) ────────────────
-// El niño selecciona un valor de cada pieza y arma su propia oración
+// ─── Tercera Sección — Constructor interactivo ───────────────────────────────
+// El niño selecciona un valor de cada pieza y arma su propia oración.
+// Valida concordancia real vía correspondeA (no solo "todas las piezas tienen
+// algo seleccionado") y solo revela la traducción cuando la oración es correcta.
 
 const ConstructorOracion: React.FC<{
   piezas: PiezaGramatical[];
@@ -470,17 +509,21 @@ const ConstructorOracion: React.FC<{
   narrar: (id: string, texto: string, langOverride?: string) => void;
   idiomaBCP47: string;
 }> = ({ piezas, idioma, narrar, idiomaBCP47 }) => {
-  const [seleccion, setSeleccion] = useState<Record<number, string>>({});
-
-  const oracionArmada = piezas
-    .map((p, i) => seleccion[i] ?? '___')
-    .join(' ');
-
-  const oracionArmadaSoloIdioma = piezas
-    .map((p, i) => (seleccion[i] ? extraerTextoIdiomaEnsenado(seleccion[i]) : '___'))
-    .join(' ');
+  const [seleccion, setSeleccion] = useState<Record<number, ValorPieza>>({});
 
   const completa = piezas.every((_, i) => !!seleccion[i]);
+  const correcta = completa && concordanciaValida(piezas, seleccion);
+
+  // Cambio 2: la oración armada (mientras se construye Y una vez completa)
+  // nunca muestra la traducción entre paréntesis — protagonismo del idioma enseñado.
+  const oracionArmada = piezas
+    .map((_, i) => (seleccion[i] ? extraerTextoIdiomaEnsenado(seleccion[i].texto) : '___'))
+    .join(' ');
+
+  const oracionTraducida = piezas
+    .map((_, i) => (seleccion[i] ? extraerTraduccion(seleccion[i].texto) : ''))
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <div className="rounded-2xl bg-[#F3EFFE] border-2 border-purple-200 p-4">
@@ -491,7 +534,7 @@ const ConstructorOracion: React.FC<{
         </p>
       </div>
 
-      {/* Selectores por pieza */}
+      {/* Selectores por pieza — Cambio 2: la píldora muestra SOLO el texto en el idioma enseñado */}
       <div className="space-y-2 mb-4">
         {piezas.map((pieza, i) => {
           const pal = COLORES[colorParaRol(pieza.rol)];
@@ -501,23 +544,26 @@ const ConstructorOracion: React.FC<{
                 {pieza.rol}:
               </span>
               <div className="flex flex-wrap gap-1.5">
-                {pieza.valores.map((v, j) => (
-                  <button
-                    key={j}
-                    type="button"
-                    onClick={() => {
-                      setSeleccion(s => ({ ...s, [i]: v.texto }));
-                      narrar(`pieza-${i}-${j}`, extraerTextoIdiomaEnsenado(v.texto), idiomaBCP47);
-                    }}
-                    className={`px-2.5 py-1 rounded-xl text-sm font-black border-2 transition-all cursor-pointer
-                      ${seleccion[i] === v.texto
-                        ? `${pal.badge} ${pal.badgeText} border-transparent scale-105`
-                        : `bg-white ${pal.text} ${pal.border} hover:scale-105`
-                      }`}
-                  >
-                    {v.texto}
-                  </button>
-                ))}
+                {pieza.valores.map((v, j) => {
+                  const textoBoton = extraerTextoIdiomaEnsenado(v.texto);
+                  return (
+                    <button
+                      key={j}
+                      type="button"
+                      onClick={() => {
+                        setSeleccion(s => ({ ...s, [i]: v }));
+                        narrar(`pieza-${i}-${j}`, textoBoton, idiomaBCP47);
+                      }}
+                      className={`px-2.5 py-1 rounded-xl text-sm font-black border-2 transition-all cursor-pointer
+                        ${seleccion[i]?.texto === v.texto
+                          ? `${pal.badge} ${pal.badgeText} border-transparent scale-105`
+                          : `bg-white ${pal.text} ${pal.border} hover:scale-105`
+                        }`}
+                    >
+                      {textoBoton}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           );
@@ -526,29 +572,62 @@ const ConstructorOracion: React.FC<{
 
       {/* Resultado */}
       <div className={`rounded-xl p-3 text-center transition-all ${
-        completa ? 'bg-white border-2 border-purple-300' : 'bg-white/60 border-2 border-dashed border-purple-200'
+        !completa
+          ? 'bg-white/60 border-2 border-dashed border-purple-200'
+          : correcta
+            ? 'bg-white border-2 border-purple-300'
+            : 'bg-amber-50 border-2 border-amber-200'
       }`}>
         <p className={`text-lg font-black italic ${completa ? 'text-slate-800' : 'text-slate-400'}`}>
           {oracionArmada}
         </p>
-        {completa && (
+
+        {/* Cambio 2: traducción solo cuando está completa Y validada como correcta */}
+        {correcta && oracionTraducida && (
+          <p className="mt-1 text-xs font-medium text-slate-400">
+            {oracionTraducida}
+          </p>
+        )}
+
+        {correcta && (
           <>
             <p className="mt-2 text-xs font-bold text-green-700">
               ✅ ¡Muy bien! Así se arma la oración.
             </p>
-            <div className="mt-2 flex items-center justify-center gap-3 flex-wrap">
+            {/* Cambio 3: botones reales, fila con uno a cada extremo */}
+            <div className="mt-3 flex flex-col sm:flex-row gap-2 sm:justify-between">
               <button
                 type="button"
-                onClick={() => narrar('oracion-armada-completa', oracionArmadaSoloIdioma, idiomaBCP47)}
-                className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-600 hover:text-purple-800 cursor-pointer"
+                onClick={() => narrar('oracion-armada-completa', oracionArmada, idiomaBCP47)}
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-sm font-black bg-purple-600 text-white hover:bg-purple-700 transition-all cursor-pointer"
               >
-                🔊 Escuchar oración completa
+                <Volume2 className="w-4 h-4" />
+                Escuchar oración completa
               </button>
               <button
                 type="button"
                 onClick={() => setSeleccion({})}
-                className="text-[10px] font-bold text-purple-500 hover:text-purple-700 underline cursor-pointer"
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-sm font-black bg-white text-purple-700 border-2 border-purple-300 hover:bg-purple-50 transition-all cursor-pointer"
               >
+                <RotateCcw className="w-4 h-4" />
+                Limpiar y volver a intentar
+              </button>
+            </div>
+          </>
+        )}
+
+        {completa && !correcta && (
+          <>
+            <p className="mt-2 text-xs font-bold text-amber-700">
+              🤔 Esta combinación no funciona todavía — ajusta y vuelve a intentar.
+            </p>
+            <div className="mt-3 flex justify-center">
+              <button
+                type="button"
+                onClick={() => setSeleccion({})}
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-sm font-black bg-amber-500 text-white hover:bg-amber-600 transition-all cursor-pointer"
+              >
+                <RotateCcw className="w-4 h-4" />
                 Limpiar y volver a intentar
               </button>
             </div>
@@ -695,7 +774,7 @@ const GramaticalBlock: React.FC<GramaticalBlockProps> = ({
           <AsiSeForma piezas={piezas} />
         </div>
 
-        {/* Tercera Sección: sin cambios */}
+        {/* Tercera Sección */}
         <ConstructorOracion piezas={piezas} idioma={idioma} narrar={narrar} idiomaBCP47={idiomaBCP47} />
         <EjemplosArmados ejemplos={ejemplos} piezas={piezas} narrar={narrar} seccionActiva={seccionActiva} idiomaBCP47={idiomaBCP47} />
 

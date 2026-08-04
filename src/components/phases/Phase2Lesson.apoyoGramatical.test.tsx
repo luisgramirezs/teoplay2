@@ -1,7 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { normalizar } from "./Phase2Lesson";
 import GramaticalBlock from "../lesson/GramaticalBlock";
+import type { ApoyoGramatical } from "@/types";
 
 const rawSesionGramatical = {
   objetivo: "Presente simple, tercera persona",
@@ -71,6 +72,41 @@ const conceptosClaveFixture = [
   },
 ];
 
+// Fixture para el bug crítico de concordancia (ConstructorOracion): "to be"
+// con sujeto plural/singular real, para simular la selección incorrecta
+// reportada en producción ("they" + "am") y la correcta ("they" + "are").
+const apoyoGramaticalToBe: ApoyoGramatical = {
+  titulo: "Presente continuo — verbo to be",
+  idioma: "inglés",
+  piezas: [
+    {
+      rol: "Sujeto",
+      valores: [{ texto: "They (ellos)" }, { texto: "She (ella)" }],
+      etiqueta: "Quien realiza la acción.",
+      color: "blue",
+    },
+    {
+      rol: "Verbo to be",
+      valores: [
+        { texto: "am (soy/estoy)", correspondeA: "I" },
+        { texto: "is (es/está)", correspondeA: "he / she / it" },
+        { texto: "are (son/están)", correspondeA: "you / we / they" },
+      ],
+      etiqueta: "Cambia según el sujeto.",
+      color: "orange",
+    },
+    {
+      rol: "Complemento",
+      valores: [{ texto: "happy (felices)" }],
+      etiqueta: "Completa la oración.",
+      color: "green",
+    },
+  ],
+  reglas: [],
+  ejemplos: [{ oracion: "They are happy.", traduccion: "Ellos están felices." }],
+  nota: "",
+};
+
 describe("normalizar() — apoyoGramatical", () => {
   it("propaga apoyoGramatical al bloque normalizado (regresión del bug donde llegaba undefined)", () => {
     const bloque = normalizar(rawSesionGramatical);
@@ -124,5 +160,29 @@ describe("GramaticalBlock — montaje con datos reales de normalizar()", () => {
       <GramaticalBlock apoyoGramatical={{ titulo: "", idioma: "", piezas: [], reglas: [], ejemplos: [] }} />
     );
     expect(container).toBeEmptyDOMElement();
+  });
+});
+
+describe("ConstructorOracion — validación de concordancia real vía correspondeA (bug crítico)", () => {
+  it('NO valida como correcta una combinación sin concordancia ("they" + "am")', () => {
+    render(<GramaticalBlock apoyoGramatical={apoyoGramaticalToBe} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "They" }));
+    fireEvent.click(screen.getByRole("button", { name: "am" }));
+    fireEvent.click(screen.getByRole("button", { name: "happy" }));
+
+    expect(screen.queryByText(/¡Muy bien!/)).not.toBeInTheDocument();
+    expect(screen.getByText(/Esta combinación no funciona todavía/)).toBeInTheDocument();
+  });
+
+  it('valida como correcta una combinación con concordancia real ("they" + "are")', () => {
+    render(<GramaticalBlock apoyoGramatical={apoyoGramaticalToBe} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "They" }));
+    fireEvent.click(screen.getByRole("button", { name: "are" }));
+    fireEvent.click(screen.getByRole("button", { name: "happy" }));
+
+    expect(screen.getByText(/¡Muy bien!/)).toBeInTheDocument();
+    expect(screen.queryByText(/Esta combinación no funciona todavía/)).not.toBeInTheDocument();
   });
 });
