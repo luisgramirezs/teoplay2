@@ -18,6 +18,7 @@ import { normalizarTexto } from '@/utils/wikimediaQueryDictionary';
 import { useNarrador, RATE_NARRACION_LENTA } from '@/hooks/use-narrador';
 import { mapIdiomaABCP47 } from '@/utils/idiomaBCP47';
 import { obtenerOGenerarPictogramaGramatical } from '@/lib/apoyoVisualIAService';
+import { traducirOracionArmada } from '@/lib/api';
 import BtnNarrar from './BtnNarrar';
 
 // ─── Paleta de colores por pieza ──────────────────────────────────────────────
@@ -92,14 +93,6 @@ export const colorParaRol = (rol: string): PiezaGramatical['color'] => {
 // nunca se narra con la voz del idioma enseñado (sonaría mal pronunciada).
 function extraerTextoIdiomaEnsenado(valor: string): string {
   return valor.replace(/\s*\([^)]*\)\s*$/, '').trim();
-}
-
-// Inverso de extraerTextoIdiomaEnsenado: solo la traducción entre paréntesis
-// (ej. "They (ellos)" → "ellos") — usado por el Constructor para mostrar la
-// traducción SOLO cuando la oración arma es correcta (Cambio 2).
-function extraerTraduccion(valor: string): string {
-  const match = valor.match(/\(([^)]*)\)\s*$/);
-  return match ? match[1].trim() : '';
 }
 
 // ─── Validación de concordancia real vía correspondeA (Constructor) ─────────
@@ -531,6 +524,9 @@ const ConstructorOracion: React.FC<{
   tipoOracion?: TipoOracion;
 }> = ({ piezas, idioma, narrar, idiomaBCP47, tipoOracion }) => {
   const [seleccion, setSeleccion] = useState<Record<number, ValorPieza>>({});
+  // Caché de traducciones reales (IA) por texto exacto de oracionArmada — evita
+  // volver a pagar la llamada si el niño rearma la misma combinación correcta.
+  const [traducciones, setTraducciones] = useState<Record<string, string>>({});
 
   const completa = piezas.every((_, i) => !!seleccion[i]);
   const conflicto = completa ? piezaEnConflicto(piezas, seleccion) : null;
@@ -538,14 +534,27 @@ const ConstructorOracion: React.FC<{
 
   // Cambio 2: la oración armada (mientras se construye Y una vez completa)
   // nunca muestra la traducción entre paréntesis — protagonismo del idioma enseñado.
+  // Si la oración es interrogativa, cierra con "?" (el español, con apertura
+  // "¿" incluida, lo resuelve la traducción real de la IA — ver useEffect abajo).
   const oracionArmada = piezas
     .map((_, i) => (seleccion[i] ? extraerTextoIdiomaEnsenado(seleccion[i].texto) : '___'))
-    .join(' ');
+    .join(' ') + (tipoOracion === 'interrogativa' ? '?' : '');
 
-  const oracionTraducida = piezas
-    .map((_, i) => (seleccion[i] ? extraerTraduccion(seleccion[i].texto) : ''))
-    .filter(Boolean)
-    .join(' ');
+  const oracionTraducida = traducciones[oracionArmada];
+
+  useEffect(() => {
+    if (!correcta || traducciones[oracionArmada] !== undefined) return;
+    let cancelado = false;
+    traducirOracionArmada(oracionArmada, idioma, tipoOracion)
+      .then(texto => {
+        if (!cancelado) setTraducciones(t => ({ ...t, [oracionArmada]: texto }));
+      })
+      .catch(error => {
+        console.error('🔴 Error traduciendo oración armada:', error);
+        if (!cancelado) setTraducciones(t => ({ ...t, [oracionArmada]: '' }));
+      });
+    return () => { cancelado = true; };
+  }, [correcta, oracionArmada, idioma, tipoOracion, traducciones]);
 
   return (
     <div className="rounded-2xl bg-[#F3EFFE] border-2 border-purple-200 p-4">
@@ -604,11 +613,19 @@ const ConstructorOracion: React.FC<{
           {oracionArmada}
         </p>
 
-        {/* Cambio 2: traducción solo cuando está completa Y validada como correcta */}
-        {correcta && oracionTraducida && (
-          <p className="mt-1 text-xs font-medium text-slate-400">
-            {oracionTraducida}
-          </p>
+        {/* Cambio 2: traducción real (IA) solo cuando está completa Y validada como
+            correcta — no bloquea el refuerzo de abajo, aparece cuando resuelve.
+            Si la traducción falló (string vacío en caché), no se muestra nada. */}
+        {correcta && (
+          oracionTraducida === undefined ? (
+            <div className="mt-1.5 flex justify-center">
+              <div className="w-3.5 h-3.5 rounded-full border-2 border-slate-200 border-t-purple-400 animate-spin" />
+            </div>
+          ) : oracionTraducida ? (
+            <p className="mt-1 text-xs font-medium text-slate-400">
+              {oracionTraducida}
+            </p>
+          ) : null
         )}
 
         {correcta && (

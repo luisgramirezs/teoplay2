@@ -1,4 +1,4 @@
-import { PerfilNino, SesionGenerada, ExplicacionBloque, Idioma } from '@/types';
+import { PerfilNino, SesionGenerada, ExplicacionBloque, Idioma, TipoOracion } from '@/types';
 import { buildOperationalProfile, renderOperationalProfileBlock } from '../utils/profilePrompt';
 
 
@@ -596,6 +596,46 @@ export async function generarSugerenciasObjetivo(
         console.error('🔴 Error parseando sugerencias de objetivo:', error);
         return [];
     }
+}
+
+/**
+ * Traduce al español una oración armada por el niño en el Constructor de
+ * GramaticalBlock (idiomas) — una vez que ya se validó como correcta.
+ * Produce una traducción real y natural, no una concatenación palabra por
+ * palabra. Si la oración es interrogativa, usa apertura y cierre "¿...?".
+ */
+export async function traducirOracionArmada(
+    oracionArmada: string,
+    idiomaOrigen: string,
+    tipoOracion?: TipoOracion
+): Promise<string> {
+
+    const instruccionSigno = tipoOracion === 'interrogativa'
+        ? ' Es una pregunta: la traducción debe llevar apertura y cierre de interrogación ("¿...?").'
+        : '';
+
+    const prompt = `Traduce al español de forma natural y gramaticalmente correcta esta oración en ${idiomaOrigen}: "${oracionArmada}".${instruccionSigno} Responde SOLO con la traducción, sin comillas, sin explicación, sin markdown.`;
+
+    const API_URL = import.meta.env.VITE_BACKEND_URL;
+    const res = await fetch(`${API_URL}/api/chat`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            max_tokens: 60,
+            messages: [{ role: 'user', content: prompt }],
+        }),
+    });
+
+    if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Error de OpenAI (${res.status}): ${errText}`);
+    }
+
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content?.trim() || '';
 }
 
 /** Función de guardado local de lecciones localstorage */
