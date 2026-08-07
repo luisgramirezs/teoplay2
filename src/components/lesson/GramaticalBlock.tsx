@@ -13,7 +13,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { User, Heart, Footprints, MapPin, HelpCircle, ArrowRight, CheckCircle2, Volume2, RotateCcw } from 'lucide-react';
-import { PiezaGramatical, EjemploGramatical, ApoyoGramatical, ConceptoClave, ValorPieza } from '@/types';
+import { PiezaGramatical, EjemploGramatical, ApoyoGramatical, ConceptoClave, ValorPieza, TipoOracion } from '@/types';
 import { normalizarTexto } from '@/utils/wikimediaQueryDictionary';
 import { useNarrador, RATE_NARRACION_LENTA } from '@/hooks/use-narrador';
 import { mapIdiomaABCP47 } from '@/utils/idiomaBCP47';
@@ -117,18 +117,25 @@ function dividirCondicion(correspondeA: string): string[] {
 // (sin traducción) que coincida con uno de los tokens de esa condición.
 // Piezas sin correspondeA (valores libres) se consideran automáticamente
 // compatibles — no hay nada que validar entre ellas.
-function concordanciaValida(piezas: PiezaGramatical[], seleccion: Record<number, ValorPieza>): boolean {
-  return piezas.every((_, i) => {
+// Devuelve la PRIMERA pieza en conflicto (Bloque 5: habilita un mensaje
+// orientador específico) o null si toda la selección concuerda.
+function piezaEnConflicto(
+  piezas: PiezaGramatical[],
+  seleccion: Record<number, ValorPieza>
+): PiezaGramatical | null {
+  for (let i = 0; i < piezas.length; i++) {
     const seleccionada = seleccion[i];
-    if (!seleccionada?.correspondeA) return true;
+    if (!seleccionada?.correspondeA) continue;
 
     const tokens = dividirCondicion(seleccionada.correspondeA);
-    return piezas.some((_, k) => {
+    const compatible = piezas.some((_, k) => {
       if (k === i || !seleccion[k]) return false;
       const textoOtra = normalizarTexto(extraerTextoIdiomaEnsenado(seleccion[k].texto));
       return tokens.includes(textoOtra);
     });
-  });
+    if (!compatible) return piezas[i];
+  }
+  return null;
 }
 
 // ─── Agrupación de valores condicionados (Cambio 1 — reutilizada por PiezaCard
@@ -498,6 +505,19 @@ const AsiSeForma: React.FC<{ piezas: PiezaGramatical[] }> = ({ piezas }) => {
   );
 };
 
+// ─── Mensaje orientador dinámico (Bloque 5) ──────────────────────────────────
+// En vez de un mensaje genérico de error, usa la "etiqueta" de la pieza en
+// conflicto (ya escrita por la IA para explicar cuándo/por qué se usa esa
+// pieza) más un encabezado según el tipo de oración — la pista apunta a la
+// regla real, no solo a "algo falló".
+function mensajeOrientador(pieza: PiezaGramatical, tipoOracion?: TipoOracion): string {
+  const encabezado =
+    tipoOracion === 'negativa' ? 'En esta oración negativa, revisa' :
+    tipoOracion === 'interrogativa' ? 'En esta pregunta, revisa' :
+    'Revisa';
+  return `${encabezado}: ${pieza.etiqueta}`;
+}
+
 // ─── Tercera Sección — Constructor interactivo ───────────────────────────────
 // El niño selecciona un valor de cada pieza y arma su propia oración.
 // Valida concordancia real vía correspondeA (no solo "todas las piezas tienen
@@ -508,11 +528,13 @@ const ConstructorOracion: React.FC<{
   idioma: string;
   narrar: (id: string, texto: string, langOverride?: string) => void;
   idiomaBCP47: string;
-}> = ({ piezas, idioma, narrar, idiomaBCP47 }) => {
+  tipoOracion?: TipoOracion;
+}> = ({ piezas, idioma, narrar, idiomaBCP47, tipoOracion }) => {
   const [seleccion, setSeleccion] = useState<Record<number, ValorPieza>>({});
 
   const completa = piezas.every((_, i) => !!seleccion[i]);
-  const correcta = completa && concordanciaValida(piezas, seleccion);
+  const conflicto = completa ? piezaEnConflicto(piezas, seleccion) : null;
+  const correcta = completa && !conflicto;
 
   // Cambio 2: la oración armada (mientras se construye Y una vez completa)
   // nunca muestra la traducción entre paréntesis — protagonismo del idioma enseñado.
@@ -619,7 +641,7 @@ const ConstructorOracion: React.FC<{
         {completa && !correcta && (
           <>
             <p className="mt-2 text-xs font-bold text-amber-700">
-              🤔 Esta combinación no funciona todavía — ajusta y vuelve a intentar.
+              🤔 {conflicto ? mensajeOrientador(conflicto, tipoOracion) : 'Esta combinación no funciona todavía — ajusta y vuelve a intentar.'}
             </p>
             <div className="mt-3 flex justify-center">
               <button
@@ -689,6 +711,47 @@ const EjemplosArmados: React.FC<{
   );
 };
 
+// ─── Orden real de piezas (por posicion) ─────────────────────────────────────
+// El array piezas[] que llega de la API puede no coincidir con el orden
+// gramatical real de la oración (ej. auxiliar antes que sujeto en
+// interrogativa). "posicion" es la fuente de verdad para el orden de render.
+// Si falta (sesiones generadas antes de este campo, o parcialmente presente),
+// se usa el índice original como clave de respaldo — así se conserva el orden
+// tal como vino del array en vez de mezclar piezas con y sin posicion.
+function ordenarPorPosicion(piezas: PiezaGramatical[]): PiezaGramatical[] {
+  return piezas
+    .map((pieza, i) => ({ pieza, clave: pieza.posicion ?? i + 1 }))
+    .sort((a, b) => a.clave - b.clave)
+    .map(({ pieza }) => pieza);
+}
+
+// ─── Validación silenciosa de orden (Bloque 4) ───────────────────────────────
+// Contrasta el orden dado por "posicion" contra el orden real en que las
+// piezas aparecen en la oración de ejemplo (localizándolas por su
+// fragmentoEnOracion, igual que segmentarOracion). Si no coinciden, es señal
+// de que la IA asignó mal alguna posicion — se registra en consola para
+// depuración, pero NUNCA bloquea ni altera el render de la lección.
+function validarOrdenPiezas(
+  piezasOrdenadas: PiezaGramatical[],
+  conceptos: ConceptoClave[],
+  oracion: string
+): void {
+  if (!oracion) return;
+  let ultimoIdx = -1;
+  for (const pieza of piezasOrdenadas) {
+    const fragmento = fragmentoParaPieza(pieza, conceptos);
+    if (!fragmento) continue;
+    const idx = oracion.indexOf(fragmento);
+    if (idx === -1) continue;
+    if (idx < ultimoIdx) {
+      console.warn(
+        `[GramaticalBlock] "posicion" inconsistente para la pieza "${pieza.rol}" (posicion: ${pieza.posicion ?? '—'}) — aparece antes en el texto de lo que su posicion indica. Oración: "${oracion}"`
+      );
+    }
+    ultimoIdx = idx;
+  }
+}
+
 // ─── Componente principal ─────────────────────────────────────────────────────
 
 interface GramaticalBlockProps {
@@ -731,7 +794,9 @@ const GramaticalBlock: React.FC<GramaticalBlockProps> = ({
 
   if (!apoyoGramatical?.piezas?.length) return null;
 
-  const { titulo, idioma, piezas, ejemplos, nota } = apoyoGramatical;
+  const { titulo, idioma, piezas, ejemplos, nota, tipoOracion } = apoyoGramatical;
+  const piezasOrdenadas = ordenarPorPosicion(piezas);
+  validarOrdenPiezas(piezasOrdenadas, conceptos, oracionCanonica);
 
   return (
     <div className="w-full rounded-[26px] border border-slate-200 bg-white shadow-sm overflow-hidden">
@@ -751,32 +816,32 @@ const GramaticalBlock: React.FC<GramaticalBlockProps> = ({
 
       <div className="p-5 space-y-5">
         {/* Segunda Sección: Estructura */}
-        <FormulaIconos piezas={piezas} />
+        <FormulaIconos piezas={piezasOrdenadas} />
 
         <VeamosUnEjemplo
-          piezas={piezas}
+          piezas={piezasOrdenadas}
           conceptos={conceptos}
           oracion={oracionCanonica}
           pictogramaUrl={pictogramaUrl}
         />
 
-        <RecuerdaBlock piezas={piezas} />
+        <RecuerdaBlock piezas={piezasOrdenadas} />
 
         <div className="flex flex-col md:flex-row gap-3">
           <EjemploCompletoInterlineado
             oracion={oracionCanonica}
-            piezas={piezas}
+            piezas={piezasOrdenadas}
             conceptos={conceptos}
             seccionActiva={seccionActiva}
             narrar={narrar}
             idiomaBCP47={idiomaBCP47}
           />
-          <AsiSeForma piezas={piezas} />
+          <AsiSeForma piezas={piezasOrdenadas} />
         </div>
 
         {/* Tercera Sección */}
-        <ConstructorOracion piezas={piezas} idioma={idioma} narrar={narrar} idiomaBCP47={idiomaBCP47} />
-        <EjemplosArmados ejemplos={ejemplos} piezas={piezas} narrar={narrar} seccionActiva={seccionActiva} idiomaBCP47={idiomaBCP47} />
+        <ConstructorOracion piezas={piezasOrdenadas} idioma={idioma} narrar={narrar} idiomaBCP47={idiomaBCP47} tipoOracion={tipoOracion} />
+        <EjemplosArmados ejemplos={ejemplos} piezas={piezasOrdenadas} narrar={narrar} seccionActiva={seccionActiva} idiomaBCP47={idiomaBCP47} />
 
         {/* Nota pedagógica */}
         {nota && (

@@ -159,8 +159,9 @@ function buildPrompt(perfil: PerfilNino): string {
         "apoyoGramatical": {
           "titulo": "",
           "idioma": "",
+          "tipoOracion": "afirmativa | negativa | interrogativa",
           "piezas": [
-            { "rol": "", "valores": [{ "texto": "", "correspondeA": "" }], "etiqueta": "", "color": "orange | blue | green | purple | pink | teal" }
+            { "rol": "", "valores": [{ "texto": "", "correspondeA": "" }], "etiqueta": "", "color": "orange | blue | green | purple | pink | teal", "posicion": 1 }
           ],
           "reglas": [""],
           "ejemplos": [
@@ -216,8 +217,9 @@ function buildPrompt(perfil: PerfilNino): string {
         "apoyoGramatical": {
           "titulo": "",
           "idioma": "",
+          "tipoOracion": "afirmativa | negativa | interrogativa",
           "piezas": [
-            { "rol": "", "valores": [{ "texto": "", "correspondeA": "" }], "etiqueta": "", "color": "orange | blue | green | purple | pink | teal" }
+            { "rol": "", "valores": [{ "texto": "", "correspondeA": "" }], "etiqueta": "", "color": "orange | blue | green | purple | pink | teal", "posicion": 1 }
           ],
           "reglas": [""],
           "ejemplos": [
@@ -263,8 +265,9 @@ function buildPrompt(perfil: PerfilNino): string {
         "apoyoGramatical": {
           "titulo": "",
           "idioma": "",
+          "tipoOracion": "afirmativa | negativa | interrogativa",
           "piezas": [
-            { "rol": "", "valores": [{ "texto": "", "correspondeA": "" }], "etiqueta": "", "color": "orange | blue | green | purple | pink | teal" }
+            { "rol": "", "valores": [{ "texto": "", "correspondeA": "" }], "etiqueta": "", "color": "orange | blue | green | purple | pink | teal", "posicion": 1 }
           ],
           "reglas": [""],
           "ejemplos": [
@@ -369,6 +372,11 @@ function buildPrompt(perfil: PerfilNino): string {
         `31. "apoyoGramatical.reglas" debe contener máximo 4 reglas claras, cortas y en el idioma de la lección.`,
         `32. "apoyoGramatical.ejemplos" debe contener entre 3 y 5 oraciones completas reales con su traducción.`,
         `33. "piezas[].color" debe rotar entre: "orange", "blue", "green", "purple", "pink", "teal" — uno distinto por pieza.`,
+        `33b. "apoyoGramatical.tipoOracion" es OBLIGATORIO y debe ser "afirmativa", "negativa" o "interrogativa" según el tipo de oración que enseña el tema de esta lección. Si el tema no distingue tipo de oración explícitamente, usa "afirmativa" por defecto.`,
+        `33c. "piezas[].posicion" es OBLIGATORIO y debe reflejar el orden gramatical REAL (1-indexado) de esa pieza dentro de "apoyoGramatical.ejemplos[0].oracion" — NUNCA el orden en que la pieza aparece en el array "piezas". Ej.: en la interrogativa "Do you like pizza?", "Auxiliar" (do) → posicion 1, "Sujeto" (you) → posicion 2, "Verbo principal" (like) → posicion 3, "Complemento" (pizza) → posicion 4.`,
+        `33d. Cuando "tipoOracion" sea "negativa": "piezas" DEBE incluir una pieza de negación (rol "Negación" o equivalente en el idioma de la lección) con valores reales y traducidos (ej. "don't (no)", "doesn't (no)"), posicionada según el orden real del idioma enseñado (ej. inmediatamente después del auxiliar y antes del verbo principal).`,
+        `33e. Cuando "tipoOracion" sea "interrogativa": el auxiliar (o el verbo invertido, según el idioma) debe tener "posicion": 1, antes del sujeto. Si la oración incluye palabra interrogativa (qué, dónde, cuándo, etc.), esa pieza debe tener "posicion": 1 y el resto de piezas se desplaza en consecuencia.`,
+        `33f. Autoconsistencia obligatoria: el orden de las palabras en "apoyoGramatical.ejemplos[0].oracion" DEBE coincidir exactamente con el orden ascendente de "piezas[].posicion" de las piezas que instancian esa oración — nunca generes una "posicion" que contradiga el orden real de las palabras en el ejemplo.`,
         `34. Si la asignatura NO es de idioma: devuelve "apoyoGramatical": null.`,
         `35. "ejemplosVisuales" SOLO para asignaturas: artes, sociales, historia, ciencias. Para el resto: "ejemplosVisuales": [].`,
         `35. "ejemplosVisuales" es OBLIGATORIO y SIEMPRE debe tener entre 3 y 5 elementos para asignaturas: artes, sociales, historia, ciencias. NUNCA devolver array vacío para estas asignaturas.`,

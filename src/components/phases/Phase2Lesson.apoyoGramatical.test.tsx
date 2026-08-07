@@ -172,7 +172,9 @@ describe("ConstructorOracion — validación de concordancia real vía correspon
     fireEvent.click(screen.getByRole("button", { name: "happy" }));
 
     expect(screen.queryByText(/¡Muy bien!/)).not.toBeInTheDocument();
-    expect(screen.getByText(/Esta combinación no funciona todavía/)).toBeInTheDocument();
+    // Mensaje orientador dinámico (Bloque 5): debe usar la etiqueta real de
+    // la pieza en conflicto ("Verbo to be"), no un texto genérico.
+    expect(screen.getByText(/Revisa: Cambia según el sujeto/)).toBeInTheDocument();
   });
 
   it('valida como correcta una combinación con concordancia real ("they" + "are")', () => {

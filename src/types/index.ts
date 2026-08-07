@@ -451,6 +451,12 @@ export interface PiezaGramatical {
     valores: ValorPieza[];
     etiqueta: string;
     color: 'orange' | 'blue' | 'green' | 'purple' | 'pink' | 'teal';
+    // Posición real de esta pieza dentro de la oración (1-indexado). Determina
+    // el orden de render — NUNCA el orden crudo en que llega el array piezas[],
+    // que puede no coincidir con el orden gramatical real (ej. auxiliar antes
+    // que sujeto en interrogativa). Opcional para compatibilidad con sesiones
+    // generadas antes de este campo.
+    posicion?: number;
 }
 
 export interface EjemploGramatical {
@@ -458,9 +464,15 @@ export interface EjemploGramatical {
     traduccion: string;
 }
 
+// Tipo de oración que enseña esta estructura gramatical. Determina qué piezas
+// deben existir (ej. pieza de negación solo en 'negativa') y su orden real.
+// Opcional para compatibilidad con sesiones generadas antes de este campo.
+export type TipoOracion = 'afirmativa' | 'negativa' | 'interrogativa';
+
 export interface ApoyoGramatical {
     titulo: string;
     idioma: string;
+    tipoOracion?: TipoOracion;
     piezas: PiezaGramatical[];
     reglas: string[];
     ejemplos: EjemploGramatical[];
