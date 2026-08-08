@@ -169,15 +169,37 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // ── Piloto: apoyo visual generado por IA (ciencias y estructuras gramaticales) ──
+    // ── Piloto: apoyo visual generado por IA ────────────────────────────────────
+    // Ciencias: un documento inmutable por concepto (sin cambios).
+    // Gramática: un banco de escenas por asignatura+tema que CRECE con el
+    // tiempo (hasta el máximo definido en el código) — por eso, a diferencia
+    // de ciencias, sí necesita permiso de "update".
     match /apoyoVisualIA/{claveId} {
       allow read: if request.auth != null;
 
       allow create: if request.auth != null
-        && request.resource.data.keys().hasAll(['url', 'prompt', 'modelo', 'contexto', 'asignatura', 'tema', 'concepto', 'createdAt'])
-        && request.resource.data.contexto in ['ciencias', 'gramatica'];
+        && (
+          (
+            request.resource.data.keys().hasAll(['url', 'prompt', 'modelo', 'contexto', 'asignatura', 'tema', 'concepto', 'createdAt'])
+            && request.resource.data.contexto == 'ciencias'
+          )
+          ||
+          (
+            request.resource.data.keys().hasAll(['variantes', 'contexto', 'asignatura', 'tema', 'updatedAt'])
+            && request.resource.data.contexto == 'gramatica'
+            && request.resource.data.variantes is list
+          )
+        );
 
-      allow update, delete: if false;
+      allow update: if request.auth != null
+        && resource.data.contexto == 'gramatica'
+        && request.resource.data.contexto == 'gramatica'
+        && request.resource.data.asignatura == resource.data.asignatura
+        && request.resource.data.tema == resource.data.tema
+        && request.resource.data.variantes is list
+        && request.resource.data.variantes.size() >= resource.data.variantes.size();
+
+      allow delete: if false;
     }
 
     // ── Piloto: tope diario de generaciones de apoyo visual por IA ──────────────

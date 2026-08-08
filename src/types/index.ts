@@ -338,6 +338,7 @@ export interface SesionGenerada {
     infografiaUrl?: string;
     ejemplosVisuales: string;
     apoyoGramatical?: ApoyoGramatical | null;
+    pictogramaGramaticalUrl?: string;
     pertinencia?: Pertinencia;
 
 

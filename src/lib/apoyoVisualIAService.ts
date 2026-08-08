@@ -275,21 +275,120 @@ export async function obtenerOGenerarApoyoVisualCiencias(
     );
 }
 
-// ── Orquestador: pictograma gramatical ──────────────────────────────────────
-// Un solo pictograma por lección (no por concepto/pieza): ilustra la oración
-// canónica de apoyoGramatical.ejemplos[0], reutilizada por todos los conceptos
-// con pieza gramatical asociada en esa misma lección.
+// ── Banco de escenas por tema (solo idiomas) ────────────────────────────────
+// A diferencia de ciencias (donde una sola imagen por concepto es correcta:
+// "el átomo" siempre es el átomo), en idiomas conviene variedad real entre
+// lecciones del mismo tema. Se mantiene un banco de hasta MAX_BANCO_ESCENAS
+// imágenes por asignatura+tema, cada una con su propia descripción de escena
+// — la oración de la lección se genera DESPUÉS, para calzar con la escena
+// elegida (nunca al revés), garantizando coherencia imagen↔oración siempre.
 
-export async function obtenerOGenerarPictogramaGramatical(
+const MAX_BANCO_ESCENAS = 5;
+
+interface EscenaGramatical {
+    url: string;
+    descripcion: string;
+}
+
+function construirClaveTema(asignatura: string, tema: string): string {
+    return construirClaveCache([asignatura, tema]);
+}
+
+async function generarDescripcionEscena(asignatura: string, tema: string): Promise<string> {
+    const prompt = [
+        `Estás preparando material visual para una lección de "${asignatura}" sobre "${tema}".`,
+        'Describe en UNA frase corta (5-10 palabras), en español, una escena simple y cotidiana',
+        'que un niño pueda reconocer fácilmente y que sirva de ejemplo para este tema',
+        '(ej. "niño jugando fútbol en el parque", "niña leyendo un libro en casa").',
+        'Responde SOLO con la frase, sin comillas, sin explicación.',
+    ].join('\n');
+
+    const API_URL = import.meta.env.VITE_BACKEND_URL;
+    const res = await fetch(`${API_URL}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            max_tokens: 40,
+            messages: [{ role: 'user', content: prompt }],
+        }),
+    });
+
+    if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Error generando descripción de escena (${res.status}): ${errText}`);
+    }
+
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content?.trim() || 'una escena cotidiana simple';
+}
+
+async function obtenerBancoEscenas(claveTema: string): Promise<EscenaGramatical[]> {
+    const refDoc = doc(db, 'apoyoVisualIA', claveTema);
+    const snap = await getDoc(refDoc);
+    if (!snap.exists()) return [];
+    const variantes = snap.data()?.variantes;
+    return Array.isArray(variantes) ? variantes : [];
+}
+
+async function agregarEscenaABanco(
+    claveTema: string,
+    escena: EscenaGramatical,
+    contexto: Contexto,
     asignatura: string,
-    tema: string,
-    oracionEjemplo: string
-): Promise<string | null> {
-    const prompt = construirPromptGramatical(tema, oracionEjemplo);
-    return obtenerOGenerarApoyoVisual(
-        'gramatica',
-        [asignatura, tema, oracionEjemplo],
-        prompt,
-        { asignatura, tema, concepto: oracionEjemplo }
-    );
+    tema: string
+): Promise<void> {
+    const refDoc = doc(db, 'apoyoVisualIA', claveTema);
+    await runTransaction(db, async (tx) => {
+        const snap = await tx.get(refDoc);
+        const actuales: EscenaGramatical[] = snap.exists() && Array.isArray(snap.data()?.variantes)
+            ? snap.data()!.variantes
+            : [];
+        tx.set(refDoc, {
+            variantes: [...actuales, escena],
+            contexto,
+            asignatura,
+            tema,
+            updatedAt: serverTimestamp(),
+        }, { merge: true });
+    });
+}
+
+// ── Orquestador: banco de escenas gramaticales ──────────────────────────────
+// Devuelve la escena elegida (URL + descripción) — la descripción se usa
+// DESPUÉS para instruir la generación de la oración de la lección, nunca al
+// revés (garantiza coherencia imagen↔oración siempre).
+
+export async function obtenerEscenaGramatical(
+    asignatura: string,
+    tema: string
+): Promise<EscenaGramatical | null> {
+    const claveTema = construirClaveTema(asignatura, tema);
+
+    try {
+        const banco = await obtenerBancoEscenas(claveTema);
+
+        if (banco.length >= MAX_BANCO_ESCENAS) {
+            return banco[Math.floor(Math.random() * banco.length)];
+        }
+
+        const hayCupo = await reservarCupoGeneracion('gramatica');
+        if (!hayCupo) {
+            return banco.length > 0 ? banco[Math.floor(Math.random() * banco.length)] : null;
+        }
+
+        const descripcion = await generarDescripcionEscena(asignatura, tema);
+        const prompt = construirPromptGramatical(tema, descripcion);
+        const base64 = await generarImagenGptImage1(prompt);
+        const claveImagen = `${claveTema}-${banco.length + 1}`;
+        const url = await subirImagenAStorage(base64, claveImagen);
+
+        const escenaNueva: EscenaGramatical = { url, descripcion };
+        await agregarEscenaABanco(claveTema, escenaNueva, 'gramatica', asignatura, tema);
+
+        return escenaNueva;
+    } catch (err) {
+        console.error('Error en obtenerEscenaGramatical:', err);
+        return null;
+    }
 }

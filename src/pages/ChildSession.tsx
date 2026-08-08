@@ -6,6 +6,7 @@ import Phase2Lesson from '@/components/phases/Phase2Lesson';
 import Phase3Games from '@/components/phases/Phase3Games';
 import Phase4FinalEmotion, { ClosureScreen } from '@/components/phases/Phase4FinalEmotion';
 import { generarSesion } from '@/lib/api';
+import { obtenerEscenaGramatical } from '@/lib/apoyoVisualIAService';
 import { Sparkles } from 'lucide-react';
 import { ArrowLeft } from 'lucide-react';
 import NeuroLessonPage, { MODULOS} from '@/neuro/pages/NeuroLessonPage';
@@ -148,7 +149,10 @@ const ChildSession: React.FC<ChildSessionProps> = ({ perfil, onComplete, onBack 
     setSubPhase('loading');
 
     try {
-      const result = await generarSesion(updated);
+      const escenaGramatical = updated.asignatura === 'ingles'
+        ? await obtenerEscenaGramatical(updated.asignatura, updated.tema)
+        : null;
+      const result = await generarSesion(updated, escenaGramatical);
       setSesion(result);
       setSessionData(s => ({ ...s, sesionGenerada: result }));
       setSubPhase('phase2');
@@ -165,7 +169,10 @@ const ChildSession: React.FC<ChildSessionProps> = ({ perfil, onComplete, onBack 
     setLoadProgress(0);
     setSubPhase('loading');
     try {
-      const result = await generarSesion(perfilConInteres);
+      const escenaGramatical = perfilConInteres.asignatura === 'ingles'
+        ? await obtenerEscenaGramatical(perfilConInteres.asignatura, perfilConInteres.tema)
+        : null;
+      const result = await generarSesion(perfilConInteres, escenaGramatical);
       setSesion(result);
       setSessionData(s => ({ ...s, sesionGenerada: result }));
       setSubPhase('phase2');

@@ -17,7 +17,6 @@ import { PiezaGramatical, EjemploGramatical, ApoyoGramatical, ConceptoClave, Val
 import { normalizarTexto } from '@/utils/wikimediaQueryDictionary';
 import { useNarrador, RATE_NARRACION_LENTA } from '@/hooks/use-narrador';
 import { mapIdiomaABCP47 } from '@/utils/idiomaBCP47';
-import { obtenerOGenerarPictogramaGramatical } from '@/lib/apoyoVisualIAService';
 import { traducirOracionArmada } from '@/lib/api';
 import BtnNarrar from './BtnNarrar';
 
@@ -801,39 +800,22 @@ interface GramaticalBlockProps {
   apoyoGramatical: ApoyoGramatical;
   condicion?: string;
   conceptos?: ConceptoClave[];
-  asignatura?: string;
-  tema?: string;
+  // URL del pictograma de la escena gramatical — ya elegida/generada ANTES
+  // de esta sesión (banco de escenas por asignatura+tema, ver Paso B en
+  // ChildSession.tsx). null = no hay imagen disponible para esta lección.
+  pictogramaUrl?: string | null;
 }
 
 const GramaticalBlock: React.FC<GramaticalBlockProps> = ({
   apoyoGramatical,
   condicion = 'general',
   conceptos = [],
-  asignatura = '',
-  tema = '',
+  pictogramaUrl = null,
 }) => {
   // Hooks siempre antes de cualquier return condicional (Reglas de Hooks de React).
   const { narrar, seccionActiva } = useNarrador('en', condicion);
   const idiomaBCP47 = mapIdiomaABCP47(apoyoGramatical?.idioma ?? '');
   const oracionCanonica = apoyoGramatical?.ejemplos?.[0]?.oracion ?? '';
-
-  // Pictograma único de la lección — mismo asignatura/tema/oración que ya usa
-  // ConceptosClaveBlock, para pegarle a la MISMA clave de caché en Firestore y
-  // no disparar una generación nueva.
-  const [pictogramaUrl, setPictogramaUrl] = useState<string | null | undefined>(null);
-
-  useEffect(() => {
-    if (!asignatura || !tema || !oracionCanonica) {
-      setPictogramaUrl(null);
-      return;
-    }
-    let cancelado = false;
-    setPictogramaUrl(undefined);
-    obtenerOGenerarPictogramaGramatical(asignatura, tema, oracionCanonica).then(url => {
-      if (!cancelado) setPictogramaUrl(url);
-    });
-    return () => { cancelado = true; };
-  }, [asignatura, tema, oracionCanonica]);
 
   if (!apoyoGramatical?.piezas?.length) return null;
 

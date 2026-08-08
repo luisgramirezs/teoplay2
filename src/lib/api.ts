@@ -68,7 +68,7 @@ function getApiKey(): string {
 
 //* BuildPrompt ajustado *//
 
-function buildPrompt(perfil: PerfilNino): string {
+function buildPrompt(perfil: PerfilNino, escenaGramatical?: { url: string; descripcion: string } | null): string {
     const nombre = perfil.nombre || 'el niño';
     const idioma = perfil.idioma === 'es' ? 'Español' : 'English';
     const condicion = condicionLabels[perfil.condicion] || perfil.condicion;
@@ -320,6 +320,9 @@ function buildPrompt(perfil: PerfilNino): string {
         'INSTRUCCIONES PEDAGÓGICAS OBLIGATORIAS:',
         `0. El "Objetivo de aprendizaje" delimita el alcance real de esta lección. Si el objetivo acota una porción del tema "${perfil.tema}", las reglas de completitud (1 a 11, "cubre TODO el tema") quedan subordinadas a ese objetivo: NO generes "conceptosClave", "ejemplos", "apoyoGramatical" ni "juegos" que excedan lo que el objetivo pide cubrir. Si el objetivo no acota nada (pide el tema completo), aplica las reglas de completitud sin restricción.`,
         `0b. Si se especifica un "Recurso o contexto pedagógico", úsalo SOLO para ambientar ejemplos y analogías dentro del contenido — nunca como concepto a evaluar en "conceptosClave" ni en los juegos, y nunca como parte del alcance del objetivo, salvo que el "Objetivo de aprendizaje" lo mencione explícitamente.`,
+        ...(escenaGramatical ? [
+          `0d. IMPORTANTE — ya existe una imagen de apoyo preparada para esta lección, que representa la escena: "${escenaGramatical.descripcion}". La oración de "apoyoGramatical.ejemplos[0].oracion" DEBE describir EXACTAMENTE esa escena — no inventes una escena distinta. Todos los demás ejemplos, "fragmentoEnOracion" y contenido relacionado deben ser coherentes con esa misma escena.`
+        ] : []),
         `1. Antes de generar, identifica todo lo que el niño necesita aprender sobre "${perfil.tema}".`,
         `2. Descompón el tema en sus componentes, partes, etapas, miembros o elementos esenciales.`,
         `3. En "conceptosClave" debes incluir TODAS las partes fundamentales del tema. No devuelvas un solo concepto general si el tema puede dividirse pedagógicamente.`,
@@ -451,9 +454,12 @@ function buildPrompt(perfil: PerfilNino): string {
 
 /** Genera la sesión de texto con GPT-4o */
 /** Genera la sesión completa: texto JSON + imagen infográfica pedagógica autónoma de DALL-E */
-export async function generarSesion(perfil: PerfilNino): Promise<SesionGenerada> {
+export async function generarSesion(
+    perfil: PerfilNino,
+    escenaGramatical?: { url: string; descripcion: string } | null
+): Promise<SesionGenerada> {
     
-    const prompt = buildPrompt(perfil);
+    const prompt = buildPrompt(perfil, escenaGramatical);
 
     console.log('🟡 buildPrompt length:', prompt.length);
 
@@ -496,6 +502,13 @@ export async function generarSesion(perfil: PerfilNino): Promise<SesionGenerada>
         const sesion = JSON.parse(rawContent) as SesionGenerada;
         console.log("🟢 ejemplosVisuales:", sesion.ejemplosVisuales);
 
+        // La imagen de apoyo gramatical ya se eligió ANTES de generar esta
+        // sesión (Paso B) — se adjunta aquí para que GramaticalBlock la use
+        // directo, sin tener que buscarla ni generarla de nuevo.
+        if (escenaGramatical) {
+            sesion.pictogramaGramaticalUrl = escenaGramatical.url;
+        }
+
         // Guardar en localStorage
         guardarSesionLocal({
             nombre: perfil.nombre, edad: perfil.edad, grado: perfil.grado, condicion: perfil.condicion,
@@ -506,6 +519,7 @@ export async function generarSesion(perfil: PerfilNino): Promise<SesionGenerada>
 
         console.log('🎮 juegos generados:', sesion.juegos);
         return sesion;
+
     } catch (error) {
         console.error('🔴 JSON parse error:', error);
         console.error('🔴 rawContent completo:', rawContent);

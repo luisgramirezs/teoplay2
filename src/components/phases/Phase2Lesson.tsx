@@ -1073,8 +1073,7 @@ const ExplicacionRenderer: React.FC<{
                             apoyoGramatical={bloque.apoyoGramatical}
                             condicion={condicion}
                             conceptos={bloque.conceptosClave}
-                            asignatura={perfil.asignatura}
-                            tema={perfil.tema}
+                            pictogramaUrl={sesion.pictogramaGramaticalUrl ?? null}
                         />
                     )}
 
@@ -1636,8 +1635,7 @@ const Phase2Lesson: React.FC<Phase2LessonProps> = ({ perfil, sesion, onComplete,
                                         apoyoGramatical={bloqueActual.apoyoGramatical}
                                         condicion={perfil.condicion}
                                         conceptos={bloqueActual.conceptosClave}
-                                        asignatura={perfil.asignatura}
-                                        tema={perfil.tema}
+                                        pictogramaUrl={sesion.pictogramaGramaticalUrl ?? null}
                                     />
                                 )}
                             </div>
