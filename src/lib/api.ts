@@ -489,7 +489,18 @@ export async function generarSesion(
         throw new Error(`Error de OpenAI (${res.status}): ${errText}`);
     }
 
-    const data = await res.json();
+   const data = await res.json();
+
+    // OpenAI puede rechazar la petición por su propio filtro de seguridad,
+    // devolviendo content: null con un mensaje de "refusal" — sin esto, el
+    // código seguía de largo como si fuera un JSON vacío válido, generando
+    // una lección completamente en blanco sin ningún error visible.
+    const refusal = data.choices?.[0]?.message?.refusal;
+    if (refusal) {
+        console.error('🔴 OpenAI rechazó la petición:', refusal);
+        throw new Error('No se pudo generar esta lección. Intenta de nuevo — a veces ocurre al azar.');
+    }
+
     const rawContent = data.choices?.[0]?.message?.content || '{}';
 
     // Log temporal para verificar infografiaPedagogicaUrl
