@@ -332,6 +332,7 @@ const ConceptosClaveBlock: React.FC<{
     asignatura: any;
     tema: string;
     apoyoGramatical?: ApoyoGramatical | null;
+    pictogramaGramaticalUrl?: string | null;
 }> = ({
     conceptos,
     fontSize,
@@ -340,6 +341,7 @@ const ConceptosClaveBlock: React.FC<{
     onSelectObra,
     perfil,
     apoyoGramatical = null,
+    pictogramaGramaticalUrl = null,
 }) => {
 
     const [paso, setPaso] = useState(0);
@@ -441,27 +443,10 @@ const ConceptosClaveBlock: React.FC<{
         return () => { cancelado = true; };
     }, [queryParaEfecto, nombreConcepto, explicacionConcepto, tipoEntidadConcepto, usaGeneracionIA, perfil.asignatura, perfil.objetivo, perfil.tema, tienePiezaGramatical]);
 
-    // Carga/generación del pictograma gramatical — independiente de qué concepto
-    // esté activo (misma clave mientras la lección no cambie), así que navegar
-    // entre conceptos ("Sujeto" → "Verbo") no dispara una nueva generación.
-    useEffect(() => {
-        if (!tienePiezaGramatical || !clavePictograma) return;
-        if (clavePictograma in pictogramaCacheRef.current) return;
-        if (pictogramaFetchingRef.current.has(clavePictograma)) return;
 
-        pictogramaFetchingRef.current.add(clavePictograma);
-        let cancelado = false;
-
-        obtenerOGenerarPictogramaGramatical(perfil.asignatura, perfil.tema, oracionEjemploGramatical)
-            .then(url => {
-                pictogramaFetchingRef.current.delete(clavePictograma);
-                if (cancelado) return;
-                pictogramaCacheRef.current[clavePictograma] = url;
-                forceUpdate(v => v + 1);
-            });
-
-        return () => { cancelado = true; };
-    }, [tienePiezaGramatical, clavePictograma, oracionEjemploGramatical, perfil.asignatura, perfil.tema]);
+    // El pictograma gramatical ya viene resuelto desde antes de generar la
+    // sesión (banco de escenas por asignatura+tema) — ya no se busca ni se
+    // genera aquí, solo se usa el valor recibido por prop.
 
     if (!concepto) return null;
 
@@ -478,10 +463,8 @@ const ConceptosClaveBlock: React.FC<{
     const imagenUrl = typeof imagenResultado === 'string' ? imagenResultado : null;
     const imagenLista = imagenResultado !== undefined;
 
-    const pictogramaResultado = clavePictograma ? pictogramaCacheRef.current[clavePictograma] : undefined;
-    const pictogramaUrl = typeof pictogramaResultado === 'string' ? pictogramaResultado : null;
-    const pictogramaListo = pictogramaResultado !== undefined;
-    const mostrarCajaPictograma = !!clavePictograma && (!pictogramaListo || !!pictogramaUrl);
+    const pictogramaUrl = pictogramaGramaticalUrl ?? null;
+    const mostrarCajaPictograma = !!pictogramaUrl;
 
     const mostrarEjemploGramatical = tienePiezaGramatical && !!oracionEjemploGramatical;
     const fragmentoResaltado = concepto.fragmentoEnOracion ?? '';
@@ -742,6 +725,7 @@ const ExplicacionRenderer: React.FC<{
                 asignatura={perfil.asignatura}
                 tema={perfil.tema}
                 apoyoGramatical={bloque.apoyoGramatical}
+                pictogramaGramaticalUrl={sesion.pictogramaGramaticalUrl ?? null}
             />
 
         ) : bloque.pasos.length > 0 ? (
@@ -1629,7 +1613,8 @@ const Phase2Lesson: React.FC<Phase2LessonProps> = ({ perfil, sesion, onComplete,
                                     onSelectObra={handleSelectObra}
                                     perfil={perfil}
                                     apoyoGramatical={bloqueActual.apoyoGramatical}
-                                />
+                                    pictogramaGramaticalUrl={sesion.pictogramaGramaticalUrl ?? null}
+                                />  
                                 {bloqueActual.apoyoGramatical && (
                                     <GramaticalBlock
                                         apoyoGramatical={bloqueActual.apoyoGramatical}
