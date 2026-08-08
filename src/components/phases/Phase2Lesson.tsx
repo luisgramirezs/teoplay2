@@ -14,9 +14,9 @@ import { resolveVisual } from "@/utils/iconResolver";
 import ApoyoVisualBlock from '../lesson/ApoyoVisualBlock';
 import ExamplesBlock from '../lesson/ExamplesBlock';
 import { buscarImagenWikimedia } from '@/lib/api';
-import GramaticalBlock, { PiezaCard } from '../lesson/GramaticalBlock';
+import GramaticalBlock, { PiezaCard, coincideRolConConcepto } from '../lesson/GramaticalBlock';
 import { buscarImagenConcepto } from '@/lib/api';
-import { buildConceptoWikimediaQuery, estaEnDiccionarioCiencias, normalizarTexto } from '@/utils/wikimediaQueryDictionary';
+import { buildConceptoWikimediaQuery, estaEnDiccionarioCiencias } from '@/utils/wikimediaQueryDictionary';
 import { obtenerOGenerarApoyoVisualCiencias, obtenerOGenerarPictogramaGramatical } from '@/lib/apoyoVisualIAService';
 import { mapIdiomaABCP47 } from '@/utils/idiomaBCP47';
 import { RATE_NARRACION_LENTA } from '@/hooks/use-narrador';
@@ -362,14 +362,22 @@ const ConceptosClaveBlock: React.FC<{
     const pasoActivo = total > 0 ? Math.min(paso, total - 1) : 0;
     const concepto = total > 0 ? conceptos[pasoActivo] : null;
 
-    // Apoyo gramatical: si el nombre del concepto coincide (normalizado) con el rol
-    // de una pieza de apoyoGramatical, esa pieza ES el apoyo visual de este concepto
-    // — nunca buscamos imagen/ícono en ese caso (ver guard del efecto más abajo).
-    const nombreNormConcepto = concepto ? normalizarTexto(concepto.nombre) : '';
+    // Apoyo gramatical: si el nombre del concepto coincide (tolerante, no exige
+    // igualdad exacta — ver coincideRolConConcepto en GramaticalBlock.tsx, mismo
+    // criterio que usa "Veamos un ejemplo" para que ambos nunca se desincronicen)
+    // con el rol de una pieza de apoyoGramatical, esa pieza ES el apoyo visual de
+    // este concepto — nunca buscamos imagen/ícono en ese caso (ver guard del
+    // efecto más abajo).
     const piezaGramaticalMatch = concepto && apoyoGramatical?.piezas?.length
-        ? apoyoGramatical.piezas.find(p => normalizarTexto(p.rol) === nombreNormConcepto) ?? null
+        ? apoyoGramatical.piezas.find(p => coincideRolConConcepto(p.rol, concepto.nombre)) ?? null
         : null;
     const tienePiezaGramatical = !!piezaGramaticalMatch;
+
+    if (concepto && apoyoGramatical?.piezas?.length && !piezaGramaticalMatch) {
+        console.warn(
+            `[ConceptosClaveBlock] Ningún pieza gramatical coincide con el concepto "${concepto.nombre}" (ni exacto ni tolerante) — usará imagen genérica en vez del pictograma de la lección. Roles disponibles: ${apoyoGramatical.piezas.map(p => p.rol).join(', ')}`
+        );
+    }
 
     // Pictograma: uno solo por lección (no por concepto/pieza) — ilustra la
     // oración canónica de apoyoGramatical.ejemplos[0], reutilizada por todos

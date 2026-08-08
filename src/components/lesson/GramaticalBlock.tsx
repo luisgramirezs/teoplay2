@@ -121,6 +121,15 @@ function piezaEnConflicto(
     if (!seleccionada?.correspondeA) continue;
 
     const tokens = dividirCondicion(seleccionada.correspondeA);
+
+    // Guarda defensiva: correspondeA autorreferencial (valor "you" con
+    // correspondeA "you") es dato roto — la IA lo inventó en vez de dejarlo
+    // vacío (bug corregido en el prompt, regla 29c). Se ignora como si no
+    // tuviera correspondeA, para no romper sesiones ya generadas con este
+    // dato antes de la corrección, en vez de esperar a que se regeneren.
+    const textoPropio = normalizarTexto(extraerTextoIdiomaEnsenado(seleccionada.texto));
+    if (tokens.includes(textoPropio)) continue;
+
     const compatible = piezas.some((_, k) => {
       if (k === i || !seleccion[k]) return false;
       const textoOtra = normalizarTexto(extraerTextoIdiomaEnsenado(seleccion[k].texto));
@@ -180,13 +189,30 @@ function infoParaRol(rol: string): InfoRol {
   return DICCIONARIO_ROL.find(d => d.test(normalizado))?.info ?? INFO_ROL_RESPALDO;
 }
 
-// ─── Matching rol↔concepto (mismo criterio que ConceptosClaveBlock) ──────────
-// Reutilizado por "Veamos un ejemplo" y por el ejemplo interlineado.
+// ─── Matching rol↔concepto (compartido con ConceptosClaveBlock en Phase2Lesson.tsx,
+// vía import — mismo criterio en los dos lugares para que nunca se desincronicen) ──
+// Tolerante, no exige igualdad exacta: si la IA nombra el concepto con una palabra
+// descriptiva extra (ej. "Auxiliar 'did'" en vez de "Auxiliar"), sigue matcheando
+// por contención de substring en cualquier dirección. La igualdad exacta sigue
+// siendo válida (superset del comportamiento anterior — no rompe ningún caso que
+// ya funcionaba).
+export function coincideRolConConcepto(rol: string, nombreConcepto: string): boolean {
+  const a = normalizarTexto(rol);
+  const b = normalizarTexto(nombreConcepto);
+  if (!a || !b) return false;
+  return a === b || a.includes(b) || b.includes(a);
+}
 
+// Reutilizado por "Veamos un ejemplo" y por el ejemplo interlineado.
 function fragmentoParaPieza(pieza: PiezaGramatical, conceptos: ConceptoClave[]): string {
-  const rolNormalizado = normalizarTexto(pieza.rol);
-  const concepto = conceptos.find(c => normalizarTexto(c.nombre) === rolNormalizado);
-  return concepto?.fragmentoEnOracion?.trim() ?? '';
+  const concepto = conceptos.find(c => coincideRolConConcepto(pieza.rol, c.nombre));
+  if (!concepto) {
+    console.warn(
+      `[GramaticalBlock] Ningún conceptoClave coincide con la pieza "${pieza.rol}" (ni exacto ni tolerante) — se omite del recorrido "Veamos un ejemplo". Conceptos disponibles: ${conceptos.map(c => c.nombre).join(', ')}`
+    );
+    return '';
+  }
+  return concepto.fragmentoEnOracion?.trim() ?? '';
 }
 
 // ─── Segmentación de la oración canónica por fragmento de pieza ──────────────
