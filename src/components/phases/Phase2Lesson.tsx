@@ -463,10 +463,8 @@ const ConceptosClaveBlock: React.FC<{
     const imagenUrl = typeof imagenResultado === 'string' ? imagenResultado : null;
     const imagenLista = imagenResultado !== undefined;
 
-    const pictogramaUrl = pictogramaGramaticalUrl ?? null;
-    const mostrarCajaPictograma = !!pictogramaUrl;
-
     const mostrarEjemploGramatical = tienePiezaGramatical && !!oracionEjemploGramatical;
+    
     const fragmentoResaltado = concepto.fragmentoEnOracion ?? '';
 
     const fuenteEjemplo =
@@ -524,7 +522,7 @@ const ConceptosClaveBlock: React.FC<{
                         </>
                     )}
 
-                    {concepto.formula && (
+                    {concepto.formula && !mostrarEjemploGramatical && (
                         <div className="w-full rounded-2xl bg-[#F6F3FF] border border-purple-100 px-4 py-3 mb-4">
                             <p className="text-[11px] font-black text-[#5b40d6] uppercase tracking-wide mb-2">
                                 Fórmula
@@ -544,27 +542,7 @@ const ConceptosClaveBlock: React.FC<{
                         </div>
                     )}
 
-                    {mostrarEjemploGramatical ? (
-                        <div className={`mt-auto w-full rounded-2xl ${pal.exampleBg} px-4 py-4`}>
-                            <div className="flex items-center justify-between gap-2 mb-1">
-                                <p className={`text-sm font-black ${pal.nameText}`}>Ejemplo</p>
-                                <BtnNarrar
-                                    id={`ejemplo-oracion-${pasoActivo}`}
-                                    texto={oracionEjemploGramatical}
-                                    seccionActiva={seccionActiva}
-                                    onNarrar={(id, texto) => onNarrar(id, texto, idiomaBCP47, RATE_NARRACION_LENTA)}
-                                />
-                            </div>
-                            <p className="text-[13px] text-slate-700 font-medium leading-6 text-left">
-                                {resaltarFragmento(oracionEjemploGramatical, fragmentoResaltado)}
-                            </p>
-                            {apoyoGramatical?.ejemplos?.[0]?.traduccion && (
-                                <p className="text-[12px] text-slate-500 font-medium leading-6 text-left mt-1">
-                                    {apoyoGramatical.ejemplos[0].traduccion}
-                                </p>
-                            )}
-                        </div>
-                    ) : ejemploTexto ? (
+                    {mostrarEjemploGramatical ? null : ejemploTexto ? (
                         <div className={`mt-auto w-full rounded-2xl ${pal.exampleBg} px-4 py-4`}>
                             <p className={`text-sm font-black mb-1 ${pal.nameText}`}>Ejemplo</p>
                             <p className="text-[13px] text-slate-700 font-medium leading-6 text-left">
@@ -588,20 +566,7 @@ const ConceptosClaveBlock: React.FC<{
                 {/* Columna derecha: apoyo gramatical (pictograma + pieza), imagen o ícono */}
                 <div className="w-full md:w-1/2 flex-shrink-0">
                     {piezaGramaticalMatch ? (
-                        <div className="w-full h-56 md:h-full flex flex-col gap-3">
-                            {mostrarCajaPictograma && (
-                                <div className="w-full flex-1 min-h-0 rounded-[20px] overflow-hidden border border-slate-200 bg-slate-50 flex items-center justify-center">
-                                    {pictogramaUrl ? (
-                                        <img
-                                            src={pictogramaUrl}
-                                            alt={oracionEjemploGramatical || piezaGramaticalMatch.rol}
-                                            className="w-full h-full object-contain"
-                                        />
-                                    ) : (
-                                        <div className="w-8 h-8 rounded-full border-4 border-slate-200 border-t-purple-500 animate-spin" />
-                                    )}
-                                </div>
-                            )}
+                        <div className="w-full h-56 md:h-full flex flex-col justify-center">
                             <PiezaCard pieza={piezaGramaticalMatch} index={0} total={1} />
                         </div>
                     ) : imagenUrl ? (
