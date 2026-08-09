@@ -194,8 +194,6 @@ service cloud.firestore {
       allow update: if request.auth != null
         && resource.data.contexto == 'gramatica'
         && request.resource.data.contexto == 'gramatica'
-        && request.resource.data.asignatura == resource.data.asignatura
-        && request.resource.data.tema == resource.data.tema
         && request.resource.data.variantes is list
         && request.resource.data.variantes.size() >= resource.data.variantes.size();
 
