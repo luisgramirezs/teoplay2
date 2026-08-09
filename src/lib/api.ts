@@ -1,4 +1,4 @@
-import { PerfilNino, SesionGenerada, ExplicacionBloque, Idioma, TipoOracion } from '@/types';
+import { PerfilNino, SesionGenerada, ExplicacionBloque, Idioma } from '@/types';
 import { buildOperationalProfile, renderOperationalProfileBlock } from '../utils/profilePrompt';
 
 
@@ -159,7 +159,8 @@ function buildPrompt(perfil: PerfilNino, escenaGramatical?: { url: string; descr
         "apoyoGramatical": {
           "titulo": "",
           "idioma": "",
-          "tipoOracion": "afirmativa | negativa | interrogativa",
+          "esInterrogativa": true | false,
+          "esNegativa": true | false,
           "piezas": [
             { "rol": "", "valores": [{ "texto": "", "correspondeA": "" }], "etiqueta": "", "color": "orange | blue | green | purple | pink | teal", "posicion": 1 }
           ],
@@ -217,7 +218,8 @@ function buildPrompt(perfil: PerfilNino, escenaGramatical?: { url: string; descr
         "apoyoGramatical": {
           "titulo": "",
           "idioma": "",
-          "tipoOracion": "afirmativa | negativa | interrogativa",
+          "esInterrogativa": true | false,
+          "esNegativa": true | false,
           "piezas": [
             { "rol": "", "valores": [{ "texto": "", "correspondeA": "" }], "etiqueta": "", "color": "orange | blue | green | purple | pink | teal", "posicion": 1 }
           ],
@@ -265,7 +267,8 @@ function buildPrompt(perfil: PerfilNino, escenaGramatical?: { url: string; descr
         "apoyoGramatical": {
           "titulo": "",
           "idioma": "",
-          "tipoOracion": "afirmativa | negativa | interrogativa",
+          "esInterrogativa": true | false,
+          "esNegativa": true | false,
           "piezas": [
             { "rol": "", "valores": [{ "texto": "", "correspondeA": "" }], "etiqueta": "", "color": "orange | blue | green | purple | pink | teal", "posicion": 1 }
           ],
@@ -378,11 +381,13 @@ function buildPrompt(perfil: PerfilNino, escenaGramatical?: { url: string; descr
         `31. "apoyoGramatical.reglas" debe contener máximo 4 reglas claras, cortas y en el idioma de la lección.`,
         `32. "apoyoGramatical.ejemplos" debe contener entre 3 y 5 oraciones completas reales con su traducción.`,
         `33. "piezas[].color" debe rotar entre: "orange", "blue", "green", "purple", "pink", "teal" — uno distinto por pieza.`,
-        `33b. "apoyoGramatical.tipoOracion" es OBLIGATORIO y debe ser "afirmativa", "negativa" o "interrogativa" según el tipo de oración que enseña el tema de esta lección. Si el tema no distingue tipo de oración explícitamente, usa "afirmativa" por defecto.`,
+        `33b. "apoyoGramatical.esInterrogativa" y "apoyoGramatical.esNegativa" son OBLIGATORIOS (true o false cada uno, NUNCA uno solo) y son INDEPENDIENTES entre sí — pueden combinarse libremente. Determínalos a partir del Objetivo de aprendizaje y el tema: si el Objetivo pide explícitamente "interrogativas negativas" (o equivalente), AMBOS deben ser true a la vez — esto es una combinación real y válida, no una contradicción. Si no se distingue explícitamente, usa esInterrogativa: false, esNegativa: false (afirmativa) por defecto.`,
         `33c. "piezas[].posicion" es OBLIGATORIO y debe reflejar el orden gramatical REAL (1-indexado) de esa pieza dentro de "apoyoGramatical.ejemplos[0].oracion" — NUNCA el orden en que la pieza aparece en el array "piezas". Ej.: en la interrogativa "Do you like pizza?", "Auxiliar" (do) → posicion 1, "Sujeto" (you) → posicion 2, "Verbo principal" (like) → posicion 3, "Complemento" (pizza) → posicion 4.`,
-        `33d. Cuando "tipoOracion" sea "negativa": "piezas" DEBE incluir una pieza de negación (rol "Negación" o equivalente en el idioma de la lección) con valores reales y traducidos (ej. "don't (no)", "doesn't (no)"), posicionada según el orden real del idioma enseñado (ej. inmediatamente después del auxiliar y antes del verbo principal).`,
-        `33e. Cuando "tipoOracion" sea "interrogativa": el auxiliar (o el verbo invertido, según el idioma) debe tener "posicion": 1, antes del sujeto. Si la oración incluye palabra interrogativa (qué, dónde, cuándo, etc.), esa pieza debe tener "posicion": 1 y el resto de piezas se desplaza en consecuencia.`,
-        `33f. Autoconsistencia obligatoria: el orden de las palabras en "apoyoGramatical.ejemplos[0].oracion" DEBE coincidir exactamente con el orden ascendente de "piezas[].posicion" de las piezas que instancian esa oración — nunca generes una "posicion" que contradiga el orden real de las palabras en el ejemplo.`,
+        `33d. Cuando "esNegativa" sea true (con o sin "esInterrogativa"): "piezas" DEBE incluir una pieza de negación (rol "Negación" o equivalente en el idioma de la lección) con valores reales y traducidos (ej. "don't (no)", "doesn't (no)").
+        - Si esInterrogativa es FALSE (solo negativa): orden = Sujeto, Auxiliar, Negación, Verbo principal, Complemento (ej. "You have not finished the book").
+        - Si esInterrogativa es TAMBIÉN true (interrogativa Y negativa combinadas): orden = Auxiliar (o palabra interrogativa si existe), Negación, Sujeto, Verbo principal, Complemento (ej. "Have not you finished the book?" en forma completa sin contracción — el auxiliar sigue yendo primero exactamente igual que en una interrogativa simple, la negación se inserta justo después del auxiliar, ANTES del sujeto — nunca después del sujeto en este caso combinado).`,
+        `33e. Cuando "esInterrogativa" sea true (con o sin "esNegativa"): el auxiliar (o el verbo invertido, según el idioma) debe tener "posicion": 1, antes del sujeto. Si la oración incluye palabra interrogativa (qué, dónde, cuándo, etc.), esa pieza debe tener "posicion": 1 y el resto se desplaza en consecuencia. Esta regla APLICA sin importar el valor de "esNegativa" — ambas condiciones son compatibles y deben respetarse simultáneamente si ambas son true (ver regla 33d para el orden exacto del caso combinado).`,
+        `33f. Autoconsistencia obligatoria: el orden de las palabras en "apoyoGramatical.ejemplos[0].oracion" DEBE coincidir exactamente con el orden ascendente de "piezas[].posicion" de las piezas que instancian esa oración — nunca generes una "posicion" que contradiga el orden real de las palabras en el ejemplo. Esto aplica sin importar la combinación de esInterrogativa/esNegativa.`, 
         `34. Si la asignatura NO es de idioma: devuelve "apoyoGramatical": null.`,
         `35. "ejemplosVisuales" SOLO para asignaturas: artes, sociales, historia, ciencias. Para el resto: "ejemplosVisuales": [].`,
         `35. "ejemplosVisuales" es OBLIGATORIO y SIEMPRE debe tener entre 3 y 5 elementos para asignaturas: artes, sociales, historia, ciencias. NUNCA devolver array vacío para estas asignaturas.`,
@@ -635,10 +640,10 @@ export async function generarSugerenciasObjetivo(
 export async function traducirOracionArmada(
     oracionArmada: string,
     idiomaOrigen: string,
-    tipoOracion?: TipoOracion
+    esInterrogativa?: boolean
 ): Promise<string> {
 
-    const instruccionSigno = tipoOracion === 'interrogativa'
+    const instruccionSigno = esInterrogativa
         ? ' Es una pregunta: la traducción debe llevar apertura y cierre de interrogación ("¿...?").'
         : '';
 

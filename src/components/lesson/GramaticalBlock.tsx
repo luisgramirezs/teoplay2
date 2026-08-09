@@ -355,9 +355,8 @@ export const PiezaCard: React.FC<{ pieza: PiezaGramatical; index: number; total:
 
 // ─── Segunda Sección — Pieza 1: Fórmula con íconos ───────────────────────────
 
-const FormulaIconos: React.FC<{ piezas: PiezaGramatical[]; tipoOracion?: TipoOracion }> = ({ piezas, tipoOracion }) => {
+const FormulaIconos: React.FC<{ piezas: PiezaGramatical[]; esInterrogativa?: boolean }> = ({ piezas, esInterrogativa }) => {
   if (!piezas.length) return null;
-  const esInterrogativa = tipoOracion === 'interrogativa';
 
   return (
     <div className="rounded-2xl bg-[#F6F3FF] border border-purple-100 px-4 py-4">
@@ -398,8 +397,8 @@ const VeamosUnEjemplo: React.FC<{
   conceptos: ConceptoClave[];
   oracion: string;
   pictogramaUrl: string | null | undefined; // undefined = cargando, null = sin imagen
-  tipoOracion?: TipoOracion;
-}> = ({ piezas, conceptos, oracion, pictogramaUrl, tipoOracion }) => {
+  esInterrogativa?: boolean;
+}> = ({ piezas, conceptos, oracion, pictogramaUrl, esInterrogativa }) => {
   
   const pasos = piezas
     .map(pieza => ({ pieza, fragmento: fragmentoParaPieza(pieza, conceptos) }))
@@ -441,7 +440,7 @@ const VeamosUnEjemplo: React.FC<{
               </React.Fragment>
             );
           })}
-          {tipoOracion === 'interrogativa' && (
+          {esInterrogativa && (
             <>
               <ArrowRight className="w-4 h-4 text-teal-400 flex-shrink-0" />
               <span className="text-3xl font-black text-pink-600 flex-shrink-0">?</span>
@@ -565,10 +564,11 @@ const AsiSeForma: React.FC<{ piezas: PiezaGramatical[] }> = ({ piezas }) => {
 // conflicto (ya escrita por la IA para explicar cuándo/por qué se usa esa
 // pieza) más un encabezado según el tipo de oración — la pista apunta a la
 // regla real, no solo a "algo falló".
-function mensajeOrientador(pieza: PiezaGramatical, tipoOracion?: TipoOracion): string {
+function mensajeOrientador(pieza: PiezaGramatical, esInterrogativa?: boolean, esNegativa?: boolean): string {
   const encabezado =
-    tipoOracion === 'negativa' ? 'En esta oración negativa, revisa' :
-    tipoOracion === 'interrogativa' ? 'En esta pregunta, revisa' :
+    esInterrogativa && esNegativa ? 'En esta pregunta negativa, revisa' :
+    esNegativa ? 'En esta oración negativa, revisa' :
+    esInterrogativa ? 'En esta pregunta, revisa' :
     'Revisa';
   return `${encabezado}: ${pieza.etiqueta}`;
 }
@@ -583,8 +583,9 @@ const ConstructorOracion: React.FC<{
   idioma: string;
   narrar: (id: string, texto: string, langOverride?: string) => void;
   idiomaBCP47: string;
-  tipoOracion?: TipoOracion;
-}> = ({ piezas, idioma, narrar, idiomaBCP47, tipoOracion }) => {
+  esInterrogativa?: boolean;
+  esNegativa?: boolean;
+}> = ({ piezas, idioma, narrar, idiomaBCP47, esInterrogativa, esNegativa }) => {
   const [seleccion, setSeleccion] = useState<Record<number, ValorPieza>>({});
   // Caché de traducciones reales (IA) por texto exacto de oracionArmada — evita
   // volver a pagar la llamada si el niño rearma la misma combinación correcta.
@@ -600,14 +601,14 @@ const ConstructorOracion: React.FC<{
   // "¿" incluida, lo resuelve la traducción real de la IA — ver useEffect abajo).
   const oracionArmada = piezas
     .map((_, i) => (seleccion[i] ? extraerTextoIdiomaEnsenado(seleccion[i].texto) : '___'))
-    .join(' ') + (tipoOracion === 'interrogativa' ? '?' : '');
+    .join(' ') + (esInterrogativa ? '?' : '');
 
   const oracionTraducida = traducciones[oracionArmada];
 
   useEffect(() => {
     if (!correcta || traducciones[oracionArmada] !== undefined) return;
     let cancelado = false;
-    traducirOracionArmada(oracionArmada, idioma, tipoOracion)
+    traducirOracionArmada(oracionArmada, idioma, esInterrogativa)
       .then(texto => {
         if (!cancelado) setTraducciones(t => ({ ...t, [oracionArmada]: texto }));
       })
@@ -616,7 +617,7 @@ const ConstructorOracion: React.FC<{
         if (!cancelado) setTraducciones(t => ({ ...t, [oracionArmada]: '' }));
       });
     return () => { cancelado = true; };
-  }, [correcta, oracionArmada, idioma, tipoOracion, traducciones]);
+  }, [correcta, oracionArmada, idioma, esInterrogativa, traducciones]);
 
   return (
     <div className="rounded-2xl bg-[#F3EFFE] border-2 border-purple-200 p-4">
@@ -720,7 +721,7 @@ const ConstructorOracion: React.FC<{
         {completa && !correcta && (
           <>
             <p className="mt-2 text-xs font-bold text-amber-700">
-              🤔 {conflicto ? mensajeOrientador(conflicto, tipoOracion) : 'Esta combinación no funciona todavía — ajusta y vuelve a intentar.'}
+              🤔 {conflicto ? mensajeOrientador(conflicto, esInterrogativa, esNegativa) : 'Esta combinación no funciona todavía — ajusta y vuelve a intentar.'}
             </p>
             <div className="mt-3 flex justify-center">
               <button
@@ -875,7 +876,7 @@ const GramaticalBlock: React.FC<GramaticalBlockProps> = ({
 
   if (!apoyoGramatical?.piezas?.length) return null;
 
-  const { titulo, idioma, piezas, ejemplos, nota, tipoOracion } = apoyoGramatical;
+  const { titulo, idioma, piezas, ejemplos, nota, esInterrogativa, esNegativa } = apoyoGramatical;
   const piezasOrdenadas = ordenarPorPosicion(piezas);
   const piezasEnOrdenTextoReal = piezasEnOrdenReal(piezas, conceptos, oracionCanonica);
   validarOrdenPiezas(piezasOrdenadas, conceptos, oracionCanonica);
@@ -898,14 +899,14 @@ const GramaticalBlock: React.FC<GramaticalBlockProps> = ({
 
       <div className="p-5 space-y-5">
         {/* Segunda Sección: Estructura */}
-        <FormulaIconos piezas={piezasEnOrdenTextoReal} tipoOracion={tipoOracion} />
+        <FormulaIconos piezas={piezasEnOrdenTextoReal} esInterrogativa={esInterrogativa} />
 
         <VeamosUnEjemplo
           piezas={piezasEnOrdenTextoReal}
           conceptos={conceptos}
           oracion={oracionCanonica}
           pictogramaUrl={pictogramaUrl}
-          tipoOracion={tipoOracion}
+          esInterrogativa={esInterrogativa}
         />
 
         <RecuerdaBlock piezas={piezasOrdenadas} />
@@ -923,7 +924,7 @@ const GramaticalBlock: React.FC<GramaticalBlockProps> = ({
         </div>
 
         {/* Tercera Sección */}
-        <ConstructorOracion piezas={piezasOrdenadas} idioma={idioma} narrar={narrar} idiomaBCP47={idiomaBCP47} tipoOracion={tipoOracion} />
+        <ConstructorOracion piezas={piezasOrdenadas} idioma={idioma} narrar={narrar} idiomaBCP47={idiomaBCP47} esInterrogativa={esInterrogativa} esNegativa={esNegativa} />
         <EjemplosArmados ejemplos={ejemplos} piezas={piezasOrdenadas} narrar={narrar} seccionActiva={seccionActiva} idiomaBCP47={idiomaBCP47} />
 
         {/* Nota pedagógica */}

@@ -465,15 +465,17 @@ export interface EjemploGramatical {
     traduccion: string;
 }
 
-// Tipo de oración que enseña esta estructura gramatical. Determina qué piezas
-// deben existir (ej. pieza de negación solo en 'negativa') y su orden real.
-// Opcional para compatibilidad con sesiones generadas antes de este campo.
-export type TipoOracion = 'afirmativa' | 'negativa' | 'interrogativa';
-
+// Tipo de oración que enseña esta estructura gramatical — dos interruptores
+// independientes en vez de una sola opción, porque en la práctica se combinan
+// libremente (ej. interrogativa Y negativa a la vez: "Haven't you finished?").
+// Determinan qué piezas deben existir (ej. pieza de negación solo si
+// esNegativa) y su orden real. Ambos opcionales para compatibilidad con
+// sesiones generadas antes de este campo.
 export interface ApoyoGramatical {
     titulo: string;
     idioma: string;
-    tipoOracion?: TipoOracion;
+    esInterrogativa?: boolean;
+    esNegativa?: boolean;
     piezas: PiezaGramatical[];
     reglas: string[];
     ejemplos: EjemploGramatical[];
