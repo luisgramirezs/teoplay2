@@ -355,8 +355,9 @@ export const PiezaCard: React.FC<{ pieza: PiezaGramatical; index: number; total:
 
 // ─── Segunda Sección — Pieza 1: Fórmula con íconos ───────────────────────────
 
-const FormulaIconos: React.FC<{ piezas: PiezaGramatical[] }> = ({ piezas }) => {
+const FormulaIconos: React.FC<{ piezas: PiezaGramatical[]; tipoOracion?: TipoOracion }> = ({ piezas, tipoOracion }) => {
   if (!piezas.length) return null;
+  const esInterrogativa = tipoOracion === 'interrogativa';
 
   return (
     <div className="rounded-2xl bg-[#F6F3FF] border border-purple-100 px-4 py-4">
@@ -377,6 +378,14 @@ const FormulaIconos: React.FC<{ piezas: PiezaGramatical[] }> = ({ piezas }) => {
             </React.Fragment>
           );
         })}
+        {esInterrogativa && (
+          <>
+            <span className="text-[#5b40d6] font-black text-lg flex-shrink-0">+</span>
+            <div className="flex items-center justify-center rounded-xl border-2 border-pink-200 bg-pink-50 px-4 py-2 min-w-[60px] h-[68px]">
+              <span className="text-3xl font-black text-pink-600">?</span>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -389,7 +398,9 @@ const VeamosUnEjemplo: React.FC<{
   conceptos: ConceptoClave[];
   oracion: string;
   pictogramaUrl: string | null | undefined; // undefined = cargando, null = sin imagen
-}> = ({ piezas, conceptos, oracion, pictogramaUrl }) => {
+  tipoOracion?: TipoOracion;
+}> = ({ piezas, conceptos, oracion, pictogramaUrl, tipoOracion }) => {
+  
   const pasos = piezas
     .map(pieza => ({ pieza, fragmento: fragmentoParaPieza(pieza, conceptos) }))
     .filter(p => !!p.fragmento);
@@ -430,6 +441,12 @@ const VeamosUnEjemplo: React.FC<{
               </React.Fragment>
             );
           })}
+          {tipoOracion === 'interrogativa' && (
+            <>
+              <ArrowRight className="w-4 h-4 text-teal-400 flex-shrink-0" />
+              <span className="text-3xl font-black text-pink-600 flex-shrink-0">?</span>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -881,18 +898,19 @@ const GramaticalBlock: React.FC<GramaticalBlockProps> = ({
 
       <div className="p-5 space-y-5">
         {/* Segunda Sección: Estructura */}
-        <FormulaIconos piezas={piezasEnOrdenTextoReal} />
+        <FormulaIconos piezas={piezasEnOrdenTextoReal} tipoOracion={tipoOracion} />
 
         <VeamosUnEjemplo
           piezas={piezasEnOrdenTextoReal}
           conceptos={conceptos}
           oracion={oracionCanonica}
           pictogramaUrl={pictogramaUrl}
+          tipoOracion={tipoOracion}
         />
 
         <RecuerdaBlock piezas={piezasOrdenadas} />
 
-        <div className="flex flex-col md:flex-row gap-3">
+        <div className="flex flex-col gap-3">
           <EjemploCompletoInterlineado
             oracion={oracionCanonica}
             piezas={piezasOrdenadas}
