@@ -567,7 +567,7 @@ const ConceptosClaveBlock: React.FC<{
                 <div className="w-full md:w-1/2 flex-shrink-0">
                     {piezaGramaticalMatch ? (
                         <div className="w-full h-56 md:h-full flex flex-col justify-center">
-                            <PiezaCard pieza={piezaGramaticalMatch} index={0} total={1} />
+                            <PiezaCard pieza={piezaGramaticalMatch} index={0} total={1} idiomaBCP47={idiomaBCP47} />
                         </div>
                     ) : imagenUrl ? (
                         <button

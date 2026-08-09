@@ -261,13 +261,24 @@ function segmentarOracion(
   return segmentos;
 }
 
+// Separa "walked (caminó)" en { principal: "walked", traduccion: "caminó" } —
+// para mostrar la palabra como protagonista y la traducción discreta debajo,
+// en vez de ambas juntas en la misma línea.
+function separarTraduccion(texto: string): { principal: string; traduccion: string } {
+  const match = texto.match(/^(.+?)\s*\(([^)]+)\)\s*$/);
+  if (!match) return { principal: texto, traduccion: '' };
+  return { principal: match[1].trim(), traduccion: match[2].trim() };
+}
+
+
 // ─── Subcomponente: Pieza gramatical (Primera Sección — SIN CAMBIOS de cara
 // afuera, sigue exportado y usado por ConceptosClaveBlock) ───────────────────
 
-export const PiezaCard: React.FC<{ pieza: PiezaGramatical; index: number; total: number }> = ({
-  pieza, index, total,
+export const PiezaCard: React.FC<{ pieza: PiezaGramatical; index: number; total: number; idiomaBCP47?: string }> = ({
+  pieza, index, total, idiomaBCP47 = 'en-US',
 }) => {
   const pal = COLORES[colorParaRol(pieza.rol)];
+  const { narrar, seccionActiva } = useNarrador('en', 'general');  
   const { grupos, sueltos } = agruparValoresPorCondicion(pieza);
   const tieneAgrupacion = grupos.length > 0;
 
@@ -308,14 +319,23 @@ export const PiezaCard: React.FC<{ pieza: PiezaGramatical; index: number; total:
           </>
         ) : (
           <div className="flex flex-wrap gap-1.5">
-            {pieza.valores.map((v, i) => (
-              <span
-                key={i}
-                className={`px-2.5 py-1 rounded-xl text-sm font-black border ${pal.border} bg-white ${pal.text}`}
-              >
-                {v.texto}
-              </span>
-            ))}
+            {pieza.valores.map((v, i) => {
+              const { principal, traduccion } = separarTraduccion(v.texto);
+              const idValor = `pieza-${pieza.rol}-${i}`;
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => narrar(idValor, principal, idiomaBCP47, RATE_NARRACION_LENTA)}
+                  className={`px-2.5 py-1 rounded-xl border ${pal.border} bg-white flex flex-col items-center transition-colors ${seccionActiva === idValor ? 'ring-2 ring-offset-1 ring-teal-400' : ''}`}
+                >
+                  <span className={`text-sm font-black ${pal.text}`}>{principal}</span>
+                  {traduccion && (
+                    <span className="text-[10px] font-medium text-slate-400">{traduccion}</span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         )}
 
