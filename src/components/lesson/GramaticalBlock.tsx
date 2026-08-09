@@ -787,6 +787,25 @@ function ordenarPorPosicion(piezas: PiezaGramatical[]): PiezaGramatical[] {
     .map(({ pieza }) => pieza);
 }
 
+// A diferencia de ordenarPorPosicion (que confía en un número separado que la
+// IA asigna, propenso a desincronizarse en oraciones de tipo combinado como
+// interrogativa+negativa), esta función deriva el orden directamente de DÓNDE
+// aparece cada pieza en la oración canónica real — la misma fuente que ya usa
+// EjemploCompletoInterlineado con éxito, sin importar tipoOracion. Si la
+// oración no permite ubicar todas las piezas, cae de vuelta a
+// ordenarPorPosicion como respaldo, para nunca perder una pieza del render.
+function piezasEnOrdenReal(
+  piezas: PiezaGramatical[],
+  conceptos: ConceptoClave[],
+  oracion: string
+): PiezaGramatical[] {
+  if (!oracion) return ordenarPorPosicion(piezas);
+  const segmentos = segmentarOracion(oracion, piezas, conceptos);
+  const enTexto = segmentos.filter((s): s is SegmentoOracion & { pieza: PiezaGramatical } => !!s.pieza);
+  if (enTexto.length < piezas.length) return ordenarPorPosicion(piezas);
+  return enTexto.map(s => s.pieza);
+}
+
 // ─── Validación silenciosa de orden (Bloque 4) ───────────────────────────────
 // Contrasta el orden dado por "posicion" contra el orden real en que las
 // piezas aparecen en la oración de ejemplo (localizándolas por su
@@ -841,6 +860,7 @@ const GramaticalBlock: React.FC<GramaticalBlockProps> = ({
 
   const { titulo, idioma, piezas, ejemplos, nota, tipoOracion } = apoyoGramatical;
   const piezasOrdenadas = ordenarPorPosicion(piezas);
+  const piezasEnOrdenTextoReal = piezasEnOrdenReal(piezas, conceptos, oracionCanonica);
   validarOrdenPiezas(piezasOrdenadas, conceptos, oracionCanonica);
 
   return (
@@ -861,10 +881,10 @@ const GramaticalBlock: React.FC<GramaticalBlockProps> = ({
 
       <div className="p-5 space-y-5">
         {/* Segunda Sección: Estructura */}
-        <FormulaIconos piezas={piezasOrdenadas} />
+        <FormulaIconos piezas={piezasEnOrdenTextoReal} />
 
         <VeamosUnEjemplo
-          piezas={piezasOrdenadas}
+          piezas={piezasEnOrdenTextoReal}
           conceptos={conceptos}
           oracion={oracionCanonica}
           pictogramaUrl={pictogramaUrl}
@@ -881,7 +901,7 @@ const GramaticalBlock: React.FC<GramaticalBlockProps> = ({
             narrar={narrar}
             idiomaBCP47={idiomaBCP47}
           />
-          <AsiSeForma piezas={piezasOrdenadas} />
+          <AsiSeForma piezas={piezasEnOrdenTextoReal} />
         </div>
 
         {/* Tercera Sección */}
