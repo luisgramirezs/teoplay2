@@ -92,7 +92,7 @@ function buildPrompt(perfil: PerfilNino, escenaGramatical?: { url: string; descr
         "justificacion": "Por qué estos materiales ayudan a comprender este tema"
       },
       "explicacion": {
-        "objetivo": "Nivel 1: versión esencial en ${idioma}.",
+        "objetivo": "Versión esencial en ${idioma}.",
         "intro": { "fraseEnganche": "", "cuerpo": "" },
         "conceptosClave": [
           {
@@ -162,7 +162,7 @@ function buildPrompt(perfil: PerfilNino, escenaGramatical?: { url: string; descr
           "esInterrogativa": true | false,
           "esNegativa": true | false,
           "piezas": [
-            { "rol": "", "valores": [{ "texto": "", "correspondeA": "" }], "etiqueta": "", "color": "orange | blue | green | purple | pink | teal", "posicion": 1 }
+            { "rol": "", "valores": [{ "texto": "", "correspondeA": "" }, { "texto": "", "correspondeA": "" }, { "texto": "", "correspondeA": "" }], "etiqueta": "", "color": "orange | blue | green | purple | pink | teal", "posicion": 1 }
           ],
           "reglas": [""],
           "ejemplos": [
@@ -181,105 +181,6 @@ function buildPrompt(perfil: PerfilNino, escenaGramatical?: { url: string; descr
           "items": [],
           "asignatura": ""
         },
-        "resumen": ""
-      },
-
-
-      "explicacionAlternativa1": {
-        "objetivo": "Nivel 2: versión desarrollada en ${idioma}.",
-        "intro": { "fraseEnganche": "", "cuerpo": "" },
-        "conceptosClave": [
-         {
-            "nombre": "",
-            "etiqueta": "",
-            "explicacionSimple": "",
-            "funcion": "",
-            "uso": "",
-            "necesidad": "",
-            "formula": "",
-            "elementos": "",
-            "componentes": "",
-            "miembros": "",
-            "ejemploPedagogico": "",
-            "practicaDirigida": "",
-            "fragmentoEnOracion": "",
-            "icono": "",
-            "colorRamp": "gray",
-            "tipoEntidad": "persona | lugar | evento | objeto | proceso",
-            "fraseVisual": ""
-          }
-        ],
-
-        "pasos": [],
-        "visualSugerido": {},
-        "chequeoCobertura": [],
-        "analogia": "",
-        "ejemplos": [],
-        "apoyoGramatical": {
-          "titulo": "",
-          "idioma": "",
-          "esInterrogativa": true | false,
-          "esNegativa": true | false,
-          "piezas": [
-            { "rol": "", "valores": [{ "texto": "", "correspondeA": "" }], "etiqueta": "", "color": "orange | blue | green | purple | pink | teal", "posicion": 1 }
-          ],
-          "reglas": [""],
-          "ejemplos": [
-            { "oracion": "", "traduccion": "" }
-          ],
-          "nota": ""
-        }
-
-        "apoyoVisual": {},
-        "resumen": ""
-      },
-      "explicacionAlternativa2": {
-        "objetivo": "Nivel 3: versión ampliada en ${idioma}.",
-        "intro": { "fraseEnganche": "", "cuerpo": "" },
-        "conceptosClave": [
-         {
-            "nombre": "",
-            "etiqueta": "",
-            "explicacionSimple": "",
-            "funcion": "",
-            "uso": "",
-            "necesidad": "",
-            "formula": "",
-            "elementos": "",
-            "componentes": "",
-            "miembros": "",
-            "ejemploPedagogico": "",
-            "practicaDirigida": "",
-            "fragmentoEnOracion": "",
-            "icono": "",
-            "colorRamp": "gray",
-            "tipoEntidad": "persona | lugar | evento | objeto | proceso",
-            "fraseVisual": ""
-          }
-        ],
-
-        "pasos": [],
-        "visualSugerido": {},
-        "chequeoCobertura": [],
-        "analogia": "",
-        "ejemplos": [],
-
-        "apoyoGramatical": {
-          "titulo": "",
-          "idioma": "",
-          "esInterrogativa": true | false,
-          "esNegativa": true | false,
-          "piezas": [
-            { "rol": "", "valores": [{ "texto": "", "correspondeA": "" }], "etiqueta": "", "color": "orange | blue | green | purple | pink | teal", "posicion": 1 }
-          ],
-          "reglas": [""],
-          "ejemplos": [
-            { "oracion": "", "traduccion": "" }
-          ],
-          "nota": ""
-        }
-
-        "apoyoVisual": {},
         "resumen": ""
       },
 
@@ -344,13 +245,11 @@ function buildPrompt(perfil: PerfilNino, escenaGramatical?: { url: string; descr
         `11. No simplifiques en exceso si el perfil permite mayor profundidad.`,
         `12. Genera lecciones estructuradas con andamiaje y adapta la carga cognitiva.`,
         `13. visualSugerido solo debe usarse si aporta comprensión real.`,
-        `14. apoyoVisual es OBLIGATORIO a nivel de explicacion, explicacionAlternativa1 y explicacionAlternativa2. Nunca dentro de conceptosClave.`,
-        `14b. "explicacionAlternativa1" debe tener los MISMOS conceptosClave que "explicacion" pero con explicacionSimple más detallada, más ejemploPedagogico. NUNCA vacío.`,
-        `14c. "explicacionAlternativa2" debe tener los MISMOS conceptosClave que "explicacion" pero con máximo detalle, casos de uso reales, conexiones con otros temas. NUNCA vacío.`,
-        `14d. Los tres niveles (explicacion, explicacionAlternativa1, explicacionAlternativa2) DEBEN tener conceptosClave completos. Está prohibido devolver conceptosClave vacío en cualquiera de los tres.`,
-        `14e. Para asignatura matemáticas o física o química: usa preferentemente tipos "fraccion", "recta_numerica", "geometria", "agrupacion", "fuerzas", "molecula" o "reaccion" según el tema.`,
-        `14f. Para asignatura artes o sociales: apoyoVisual puede omitirse (tipo "ninguna") porque se usan imágenes reales de Wikimedia.`,
-        `14g. Para asignatura ciencias: usa tipos de ciclo, flujo o nodos para procesos; y deja que Wikimedia aporte la imagen real complementaria.`,
+        `14. apoyoVisual es OBLIGATORIO a nivel de explicacion. Nunca dentro de conceptosClave.`,
+        `14b. "explicacion.conceptosClave" DEBE estar completo. Está prohibido devolver conceptosClave vacío.`,
+        `14c. Para asignatura matemáticas o física o química: usa preferentemente tipos "fraccion", "recta_numerica", "geometria", "agrupacion", "fuerzas", "molecula" o "reaccion" según el tema.`,
+        `14d. Para asignatura artes o sociales: apoyoVisual puede omitirse (tipo "ninguna") porque se usan imágenes reales de Wikimedia.`,
+        `14e. Para asignatura ciencias: usa tipos de ciclo, flujo o nodos para procesos; y deja que Wikimedia aporte la imagen real complementaria.`,
         `15. Genera EXACTAMENTE ${numJuegos} juegos.`,
         `16. Los juegos no pueden evaluar contenido que no haya sido enseñado.`,
         `17. "mapaPedagogico.contenidosEnsenados" debe reflejar exactamente lo enseñado en conceptosClave, pasos, ejemplos y apoyoVisual.`,
@@ -393,7 +292,7 @@ function buildPrompt(perfil: PerfilNino, escenaGramatical?: { url: string; descr
         `35. "ejemplosVisuales" es OBLIGATORIO y SIEMPRE debe tener entre 3 y 5 elementos para asignaturas: artes, sociales, historia, ciencias. NUNCA devolver array vacío para estas asignaturas.`,
         `35b. Cada elemento de "ejemplosVisuales" DEBE tener "titulo", "autor", "descripcion", "tipo" y "query" con valores reales — nunca strings vacíos.`,
         `35c. El "query" debe ser el nombre exacto buscable en Wikimedia Commons — específico, no genérico.`,
-        `36. "pertinencia" va al nivel RAÍZ del JSON, no dentro de explicacion ni explicacionAlternativa. Es un campo único para toda la sesión.`,
+        `36. "pertinencia" va al nivel RAÍZ del JSON, no dentro de explicacion. Es un campo único para toda la sesión.`,
         `37. "pertinencia.importancia": 2 frases simples sobre por qué este tema importa, para la edad del niño.`,
         `38. "pertinencia.utilidadVida": 2 frases concretas de cómo le sirve en su vida cotidiana.`,
         `39. "pertinencia.mundoReal": 1-2 ejemplos observables del tema en el mundo real.`,

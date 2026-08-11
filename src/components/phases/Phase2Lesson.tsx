@@ -419,7 +419,6 @@ const ConceptosClaveBlock: React.FC<{
         if (tienePiezaGramatical) return;
         if (apoyoGramatical) return; // idiomas: nunca busca imagen de apoyo, aunque el concepto no logre emparejar con una pieza gramatical
         if (!queryParaEfecto || !nombreConcepto) return;
-        if (!queryParaEfecto || !nombreConcepto) return;
         if (queryParaEfecto in imagenCacheRef.current) return;
         if (fetchingRef.current.has(queryParaEfecto)) return;
 
@@ -1459,12 +1458,7 @@ const Phase2Lesson: React.FC<Phase2LessonProps> = ({ perfil, sesion, onComplete,
     const fontSize = isDown ? '20px' : isDislexia ? '18px' : '16px';
     const asignaturaInfo = ASIGNATURAS[perfil.asignatura];
 
-    const explicaciones = [
-        normalizar(sesion.explicacion),
-        normalizar(sesion.explicacionAlternativa1),
-        normalizar(sesion.explicacionAlternativa2),
-    ];
-    const bloqueActual = explicaciones[explicacionIndex];
+    const bloqueActual = normalizar(sesion.explicacion);
 
 
 
@@ -1771,8 +1765,8 @@ const Phase2Lesson: React.FC<Phase2LessonProps> = ({ perfil, sesion, onComplete,
                             fontSize={fontSize}
                             tema={perfil.tema}
                             idioma={perfil.idioma}
-                            onSaberMas={explicacionIndex < 2 ? () => setExplicacionIndex(i => i + 1) : undefined}
-                            puedeSaberMas={explicacionIndex < 2}
+                            onSaberMas={undefined}
+                            puedeSaberMas={false}
                             onPracticar={handleEntendi}
                             obras={obrasArte}
                             selectedIndex={selectedIndex}
