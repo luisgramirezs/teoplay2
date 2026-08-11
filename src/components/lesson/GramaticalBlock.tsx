@@ -504,9 +504,11 @@ const EjemploCompletoInterlineado: React.FC<{
   seccionActiva: string | null;
   narrar: (id: string, texto: string, langOverride?: string) => void;
   idiomaBCP47: string;
-}> = ({ oracion, piezas, conceptos, seccionActiva, narrar, idiomaBCP47 }) => {
+  pictogramaUrl?: string | null; // undefined = cargando, null = sin imagen
+}> = ({ oracion, piezas, conceptos, seccionActiva, narrar, idiomaBCP47, pictogramaUrl }) => {
   if (!oracion) return null;
   const segmentos = segmentarOracion(oracion, piezas, conceptos);
+  const mostrarPictograma = pictogramaUrl !== null;
 
   return (
     <div className="flex-[3] min-w-0 rounded-2xl border border-slate-200 bg-white p-4">
@@ -521,23 +523,39 @@ const EjemploCompletoInterlineado: React.FC<{
           onNarrar={(id, texto) => narrar(id, texto, idiomaBCP47)}
         />
       </div>
-      <div className="flex flex-wrap items-start gap-y-3">
-        {segmentos.map((seg, i) =>
-          seg.pieza ? (
-            <div key={i} className="flex flex-col items-center px-0.5">
-              <span className={`text-sm font-black ${COLORES[colorParaRol(seg.pieza.rol)].text}`}>
+      <div className="flex flex-col md:flex-row gap-4 items-center">
+        {mostrarPictograma && (
+          <div className="w-full md:w-40 h-32 md:h-40 flex-shrink-0 rounded-2xl overflow-hidden border border-slate-200 bg-white flex items-center justify-center">
+            {pictogramaUrl ? (
+              <img src={pictogramaUrl} alt={oracion} className="w-full h-full object-contain" />
+            ) : (
+              <div className="w-8 h-8 rounded-full border-4 border-slate-200 border-t-teal-500 animate-spin" />
+            )}
+          </div>
+        )}
+        <div className="flex-1 flex flex-wrap items-start gap-y-2 gap-x-1.5 justify-center md:justify-start">
+          {segmentos.map((seg, i) =>
+            seg.pieza ? (
+              (() => {
+                const { icon: Icon } = infoParaRol(seg.pieza.rol);
+                const pal = COLORES[colorParaRol(seg.pieza.rol)];
+                return (
+                  <div key={i} className={`flex flex-col items-center gap-1 rounded-xl border-2 ${pal.border} ${pal.bg} px-2.5 py-2 min-w-[76px]`}>
+                    <Icon className={`w-4 h-4 ${pal.text}`} />
+                    <span className={`text-sm font-black ${pal.text}`}>{seg.texto}</span>
+                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wide whitespace-nowrap">
+                      {seg.pieza.rol}
+                    </span>
+                  </div>
+                );
+              })()
+            ) : (
+              <span key={i} className="text-sm font-medium text-slate-500 self-center whitespace-pre">
                 {seg.texto}
               </span>
-              <span className="text-[9px] font-bold text-slate-400 whitespace-nowrap">
-                {seg.pieza.rol}
-              </span>
-            </div>
-          ) : (
-            <span key={i} className="text-sm font-medium text-slate-500 self-center whitespace-pre">
-              {seg.texto}
-            </span>
-          )
-        )}
+            )
+          )}
+        </div>
       </div>
     </div>
   );
@@ -805,13 +823,8 @@ function ordenarPorPosicion(piezas: PiezaGramatical[]): PiezaGramatical[] {
     .map(({ pieza }) => pieza);
 }
 
-// A diferencia de ordenarPorPosicion (que confía en un número separado que la
-// IA asigna, propenso a desincronizarse en oraciones de tipo combinado como
-// interrogativa+negativa), esta función deriva el orden directamente de DÓNDE
-// aparece cada pieza en la oración canónica real — la misma fuente que ya usa
-// EjemploCompletoInterlineado con éxito, sin importar tipoOracion. Si la
-// oración no permite ubicar todas las piezas, cae de vuelta a
-// ordenarPorPosicion como respaldo, para nunca perder una pieza del render.
+
+
 function piezasEnOrdenReal(
   piezas: PiezaGramatical[],
   conceptos: ConceptoClave[],
@@ -822,6 +835,25 @@ function piezasEnOrdenReal(
   const enTexto = segmentos.filter((s): s is SegmentoOracion & { pieza: PiezaGramatical } => !!s.pieza);
   if (enTexto.length < piezas.length) return ordenarPorPosicion(piezas);
   return enTexto.map(s => s.pieza);
+}
+
+// Usado por AsiSeForma (el resumen "Unimos X + Y + Z..."): a diferencia de
+// piezasEnOrdenReal, NO cae de vuelta a "posicion" si una sola pieza no
+// matchea textualmente — cada pieza que sí se ubica en el texto conserva su
+// posición real, y solo la pieza suelta que no matcheó (caso raro) se agrega
+// al final, en vez de corromper el orden de todas las demás.
+function piezasSegunTexto(
+  piezas: PiezaGramatical[],
+  conceptos: ConceptoClave[],
+  oracion: string
+): PiezaGramatical[] {
+  if (!oracion) return piezas;
+  const segmentos = segmentarOracion(oracion, piezas, conceptos);
+  const enTexto = segmentos
+    .filter((s): s is SegmentoOracion & { pieza: PiezaGramatical } => !!s.pieza)
+    .map(s => s.pieza);
+  const restantes = piezas.filter(p => !enTexto.includes(p));
+  return [...enTexto, ...restantes];
 }
 
 // ─── Validación silenciosa de orden (Bloque 4) ───────────────────────────────
@@ -878,7 +910,6 @@ const GramaticalBlock: React.FC<GramaticalBlockProps> = ({
 
   const { titulo, idioma, piezas, ejemplos, nota, esInterrogativa, esNegativa } = apoyoGramatical;
   const piezasOrdenadas = ordenarPorPosicion(piezas);
-  const piezasEnOrdenTextoReal = piezasEnOrdenReal(piezas, conceptos, oracionCanonica);
   validarOrdenPiezas(piezasOrdenadas, conceptos, oracionCanonica);
 
   return (
@@ -898,17 +929,6 @@ const GramaticalBlock: React.FC<GramaticalBlockProps> = ({
       </div>
 
       <div className="p-5 space-y-5">
-        {/* Segunda Sección: Estructura */}
-        <FormulaIconos piezas={piezasEnOrdenTextoReal} esInterrogativa={esInterrogativa} />
-
-        <VeamosUnEjemplo
-          piezas={piezasEnOrdenTextoReal}
-          conceptos={conceptos}
-          oracion={oracionCanonica}
-          pictogramaUrl={pictogramaUrl}
-          esInterrogativa={esInterrogativa}
-        />
-
         <RecuerdaBlock piezas={piezasOrdenadas} />
 
         <div className="flex flex-col gap-3">
@@ -919,14 +939,15 @@ const GramaticalBlock: React.FC<GramaticalBlockProps> = ({
             seccionActiva={seccionActiva}
             narrar={narrar}
             idiomaBCP47={idiomaBCP47}
+            pictogramaUrl={pictogramaUrl}
           />
-          <AsiSeForma piezas={piezasEnOrdenTextoReal} />
+          <AsiSeForma piezas={piezasSegunTexto(piezas, conceptos, oracionCanonica)} />
         </div>
 
         {/* Tercera Sección */}
         <ConstructorOracion piezas={piezasOrdenadas} idioma={idioma} narrar={narrar} idiomaBCP47={idiomaBCP47} esInterrogativa={esInterrogativa} esNegativa={esNegativa} />
         <EjemplosArmados ejemplos={ejemplos} piezas={piezasOrdenadas} narrar={narrar} seccionActiva={seccionActiva} idiomaBCP47={idiomaBCP47} />
-
+        
         {/* Nota pedagógica */}
         {nota && (
           <div className="rounded-xl bg-slate-50 border border-slate-200 px-4 py-3">
