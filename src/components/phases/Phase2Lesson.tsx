@@ -417,6 +417,8 @@ const ConceptosClaveBlock: React.FC<{
     // paso/orden y no depende de que el array de conceptos permanezca estable.
     useEffect(() => {
         if (tienePiezaGramatical) return;
+        if (apoyoGramatical) return; // idiomas: nunca busca imagen de apoyo, aunque el concepto no logre emparejar con una pieza gramatical
+        if (!queryParaEfecto || !nombreConcepto) return;
         if (!queryParaEfecto || !nombreConcepto) return;
         if (queryParaEfecto in imagenCacheRef.current) return;
         if (fetchingRef.current.has(queryParaEfecto)) return;
@@ -565,11 +567,11 @@ const ConceptosClaveBlock: React.FC<{
 
                 {/* Columna derecha: apoyo gramatical (pictograma + pieza), imagen o ícono */}
                 <div className="w-full md:w-1/2 flex-shrink-0">
-                    {piezaGramaticalMatch ? (
-                        <div className="w-full h-56 md:h-full flex flex-col justify-center">
-                            <PiezaCard pieza={piezaGramaticalMatch} index={0} total={1} idiomaBCP47={idiomaBCP47} />
-                        </div>
-                    ) : imagenUrl ? (
+                        {piezaGramaticalMatch ? (
+                            <div className="w-full h-56 md:h-full flex flex-col justify-center">
+                                <PiezaCard pieza={piezaGramaticalMatch} index={0} total={1} idiomaBCP47={idiomaBCP47} />
+                            </div>
+                        ) : apoyoGramatical ? null : imagenUrl ? (
                         <button
                             type="button"
                             onClick={() =>
