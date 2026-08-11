@@ -529,7 +529,7 @@ const EjemploCompletoInterlineado: React.FC<{
                 {seg.texto}
               </span>
               <span className="text-[9px] font-bold text-slate-400 whitespace-nowrap">
-                {infoParaRol(seg.pieza.rol).pregunta}
+                {seg.pieza.rol}
               </span>
             </div>
           ) : (
