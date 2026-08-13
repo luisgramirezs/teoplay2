@@ -229,11 +229,17 @@ export function normalizar(raw: unknown): ExplicacionBloque {
                                 return { texto: String(v) };
                             })
                             : [];
+                        const posicionRaw = pp.posicion;
+                        const posicion = typeof posicionRaw === 'number' && Number.isFinite(posicionRaw)
+                            ? posicionRaw
+                            : undefined;
+
                         return {
                             rol: typeof pp.rol === 'string' ? pp.rol : '',
                             valores,
                             etiqueta: typeof pp.etiqueta === 'string' ? pp.etiqueta : '',
                             color: esPiezaColorValido(rawColor) ? rawColor : 'blue',
+                            posicion,
                         };
                     })
                     .filter((p): p is NonNullable<typeof p> => p !== null)
@@ -254,6 +260,8 @@ export function normalizar(raw: unknown): ExplicacionBloque {
             apoyoGramatical = {
                 titulo: typeof ag.titulo === 'string' ? ag.titulo : '',
                 idioma: typeof ag.idioma === 'string' ? ag.idioma : '',
+                esInterrogativa: typeof ag.esInterrogativa === 'boolean' ? ag.esInterrogativa : undefined,
+                esNegativa: typeof ag.esNegativa === 'boolean' ? ag.esNegativa : undefined,
                 piezas,
                 reglas: Array.isArray(ag.reglas) ? ag.reglas.map(String) : [],
                 ejemplos: ejemplosGramaticales,

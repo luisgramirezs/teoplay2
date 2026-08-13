@@ -26,7 +26,7 @@ import type { ConceptoClave } from '@/types';
 type Contexto = 'ciencias' | 'gramatica';
 
 const LIMITE_DIARIO = 40;
-const TIMEOUT_MS = 25000;
+const TIMEOUT_MS = 60000;
 
 type ConceptoParaPrompt = Pick<ConceptoClave, 'nombre' | 'explicacionSimple'>;
 
