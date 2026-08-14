@@ -17,7 +17,7 @@ import { buscarImagenWikimedia } from '@/lib/api';
 import GramaticalBlock, { PiezaCard, coincideRolConConcepto } from '../lesson/GramaticalBlock';
 import { buscarImagenConcepto } from '@/lib/api';
 import { buildConceptoWikimediaQuery, estaEnDiccionarioCiencias } from '@/utils/wikimediaQueryDictionary';
-import { obtenerOGenerarApoyoVisualCiencias, obtenerOGenerarPictogramaGramatical } from '@/lib/apoyoVisualIAService';
+import { obtenerOGenerarApoyoVisualCiencias, obtenerOGenerarApoyoVisualMatematicas, obtenerOGenerarPictogramaGramatical } from '@/lib/apoyoVisualIAService';
 import { mapIdiomaABCP47 } from '@/utils/idiomaBCP47';
 import { RATE_NARRACION_LENTA } from '@/hooks/use-narrador';
 import { buscarVideoYoutube } from '@/utils/youtubeSearch';
@@ -410,6 +410,10 @@ const ConceptosClaveBlock: React.FC<{
         && !estaEnDiccionarioCiencias(concepto.nombre)
         && concepto.tipoEntidad !== 'persona';
 
+    const usaGeneracionIAMatematicas = !!concepto && perfil.asignatura === 'matematicas';
+
+    const usaGeneracionIA = usaGeneracionIACiencias || usaGeneracionIAMatematicas;
+
     // Primitivos extraídos de concepto — normalizar() reconstruye conceptosClave en cada
     // render del padre (mismo patrón que motivó firmaConceptosRef), así que concepto NUNCA
     // se usa directamente dentro del efecto: solo estos valores por contenido, para que una
@@ -433,14 +437,13 @@ const ConceptosClaveBlock: React.FC<{
         fetchingRef.current.add(queryParaEfecto);
         let cancelado = false;
 
-        const promesaImagen = usaGeneracionIA
-            ? obtenerOGenerarApoyoVisualCiencias(
-                  perfil.asignatura,
-                  perfil.tema,
-                  { nombre: nombreConcepto, explicacionSimple: explicacionConcepto ?? '' },
-                  perfil.objetivo
-              )
-            : buscarImagenConcepto(queryParaEfecto);
+        const conceptoParaPrompt = { nombre: nombreConcepto, explicacionSimple: explicacionConcepto ?? '' };
+
+        const promesaImagen = usaGeneracionIAMatematicas
+            ? obtenerOGenerarApoyoVisualMatematicas(perfil.asignatura, perfil.tema, conceptoParaPrompt, perfil.objetivo)
+            : usaGeneracionIA
+                ? obtenerOGenerarApoyoVisualCiencias(perfil.asignatura, perfil.tema, conceptoParaPrompt, perfil.objetivo)
+                : buscarImagenConcepto(queryParaEfecto);
 
         promesaImagen.then(url => {
             fetchingRef.current.delete(queryParaEfecto);
@@ -450,7 +453,7 @@ const ConceptosClaveBlock: React.FC<{
         });
 
         return () => { cancelado = true; };
-    }, [queryParaEfecto, nombreConcepto, explicacionConcepto, tipoEntidadConcepto, usaGeneracionIA, perfil.asignatura, perfil.objetivo, perfil.tema, tienePiezaGramatical]);
+    }, [queryParaEfecto, nombreConcepto, explicacionConcepto, tipoEntidadConcepto, usaGeneracionIA, usaGeneracionIAMatematicas, perfil.asignatura, perfil.objetivo, perfil.tema, tienePiezaGramatical]);
 
 
     // El pictograma gramatical ya viene resuelto desde antes de generar la

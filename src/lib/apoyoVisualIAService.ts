@@ -23,7 +23,7 @@ import type { ConceptoClave } from '@/types';
 // en Phase2Lesson.tsx para las 3 condiciones que activan esa ruta.
 // ─────────────────────────────────────────────────────────────────────────────
 
-type Contexto = 'ciencias' | 'gramatica';
+type Contexto = 'ciencias' | 'gramatica' | 'matematicas';
 
 const LIMITE_DIARIO = 40;
 const TIMEOUT_MS = 60000;
@@ -136,6 +136,68 @@ function construirPromptCiencias(tema: string, objetivo: string, concepto: Conce
         'FORMATO: imagen cuadrada, fondo no transparente.',
     ].join('\n');
 }
+// Pictograma matemático: NUNCA foto real ni Wikimedia (decidido en sesión —
+// riesgo de imagen que no corresponde exactamente al concepto). La IA decide
+// qué tipo de representación es pedagógicamente coherente según tema+objetivo
+// (figura geométrica con el elemento en foco resaltado / magnitud numérica con
+// grupos de objetos o recta / modelo de área para fracciones / diagrama con
+// medidas rotuladas / conteo o barras para estadística) — sin diccionario de
+// palabras clave cableado, el universo temático de matemáticas es demasiado
+// amplio para eso (decidido en sesión).
+function construirPromptMatematicas(tema: string, objetivo: string, concepto: ConceptoParaPrompt): string {
+    return [
+        'Pictograma educativo infantil de matemáticas, estilo diagrama plano y simple,',
+        'para material didáctico de una plataforma de aprendizaje inclusivo para niños con',
+        'neurodiversidad (TEA, TDAH, síndrome de Down, dislexia, discalculia).',
+        '',
+        `TEMA DE LA LECCIÓN: "${tema}"`,
+        `OBJETIVO DE APRENDIZAJE: "${objetivo}"`,
+        `CONCEPTO A ILUSTRAR: "${concepto.nombre}"`,
+        `CONTEXTO DEL CONCEPTO (solo para que la imagen sea precisa, NO para copiar texto`,
+        `dentro de la imagen): "${concepto.explicacionSimple}"`,
+        '',
+        'DECIDE TÚ, según el tema y el objetivo, qué tipo de representación matemática es',
+        'la correcta para este concepto específico — por ejemplo (no es una lista cerrada,',
+        'usa tu criterio si el contenido no encaja exactamente en ninguna):',
+        '- Figura o cuerpo geométrico, con el elemento específico del objetivo (cara, arista,',
+        '  vértice, ángulo, lado) resaltado con un color distinto al resto de la figura.',
+        '- Operación numérica: representa la magnitud con grupos de objetos simples',
+        '  (puntos, círculos) o una recta numérica — NUNCA con dígitos ni símbolos',
+        '  matemáticos dentro de la imagen.',
+        '- Fracciones o decimales: modelo de área dividida (círculo o barra particionada)',
+        '  mostrando exactamente la proporción del concepto.',
+        '- Medición: la figura con las magnitudes representadas visualmente (longitud,',
+        '  ángulo), sin números ni unidades escritas dentro de la imagen.',
+        '- Estadística o datos: pictograma de conteo simple (iconos repetidos) o barras,',
+        '  sin ejes rotulados ni texto.',
+        '',
+        'ESTILO OBLIGATORIO:',
+        '- Diagrama educativo plano (flat design), como una ilustración de libro de texto',
+        '  escolar o infografía matemática, no como dibujo animado.',
+        '- Colores sólidos y suaves, paleta limitada (máximo 4-5 colores), buen contraste',
+        '  entre formas pero sin colores estridentes, neón ni saturación agresiva.',
+        '- Líneas limpias, formas simples y claras, sin texturas realistas ni sombreado',
+        '  complejo — la precisión geométrica importa más que el estilo artístico.',
+        '- Composición centrada en un solo elemento o escena principal; fondo liso.',
+        '- Amigable pero NO infantilizado: nada de personajes "kawaii", ojos gigantes,',
+        '  mascotas antropomorfizadas ni estética de bebé.',
+        '',
+        'PROHIBICIONES ESTRICTAS:',
+        '- NUNCA fotorrealista ni fotografía real: solo ilustración/diagrama vectorial',
+        '  (esto es una regla dura para matemáticas — nunca un objeto fotografiado real).',
+        '- NUNCA texto, letras, números, dígitos ni símbolos matemáticos dentro de la',
+        '  imagen, en ningún idioma — la explicación y las cifras van aparte, fuera de',
+        '  la imagen.',
+        '- NUNCA personas reales ni figuras reconocibles.',
+        '- NUNCA distorsión, glitch, proporciones geométricas incorrectas ni elementos',
+        '  surrealistas — la figura debe ser geométricamente correcta, no artística.',
+        '- NUNCA patrones repetitivos densos, parpadeo visual ni alto contraste',
+        '  estroboscópico (sensibilidad sensorial / fotosensibilidad).',
+        '',
+        'FORMATO: imagen cuadrada, fondo no transparente.',
+    ].join('\n');
+}
+
 
 // Pictograma gramatical: estilo señalética pública/AAC (plano, 2 colores, sin
 // fotorrealismo), con fidelidad literal a la oración exacta que se enseña —
@@ -274,6 +336,31 @@ export async function obtenerOGenerarApoyoVisualCiencias(
         { asignatura, tema, concepto: concepto.nombre }
     );
 }
+// ── Orquestador: matemáticas (nunca Wikimedia — decidido en sesión) ─────────
+// Sin banco de variantes aleatorias (a diferencia de idiomas): el pictograma
+// matemático es portador del contenido exacto del concepto (ej. "arista"
+// resaltada en un cubo), no una escena decorativa intercambiable — reusar
+// entre conceptos distintos rompería la coherencia. Clave de caché:
+// asignatura+tema+objetivo+concepto — el "+concepto" es necesario porque un
+// mismo objetivo puede cubrir varios conceptos (ej. "contar caras, aristas y
+// vértices" trae 3 conceptos bajo un solo objetivo) y cada uno necesita su
+// propio pictograma, no uno compartido.
+
+export async function obtenerOGenerarApoyoVisualMatematicas(
+    asignatura: string,
+    tema: string,
+    concepto: ConceptoParaPrompt,
+    objetivo: string
+): Promise<string | null> {
+    const prompt = construirPromptMatematicas(tema, objetivo, concepto);
+    return obtenerOGenerarApoyoVisual(
+        'matematicas',
+        [asignatura, tema, objetivo, concepto.nombre],
+        prompt,
+        { asignatura, tema, concepto: concepto.nombre }
+    );
+}
+
 
 // ── Banco de escenas por tema (solo idiomas) ────────────────────────────────
 // A diferencia de ciencias (donde una sola imagen por concepto es correcta:
