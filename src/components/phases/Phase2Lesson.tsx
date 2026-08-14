@@ -405,11 +405,15 @@ const ConceptosClaveBlock: React.FC<{
     // Piloto ciencias: si el concepto no está en el diccionario curado, no es una persona
     // (las personas siempre van por retrato real en Wikimedia, nunca por IA) y la asignatura
     // es "ciencias", se genera apoyo visual por IA en vez de buscar en Wikimedia.
-    const usaGeneracionIA = !!concepto
+    const usaGeneracionIACiencias = !!concepto
         && perfil.asignatura === 'ciencias'
         && !estaEnDiccionarioCiencias(concepto.nombre)
         && concepto.tipoEntidad !== 'persona';
 
+    // Matemáticas: SIEMPRE pictograma por IA, nunca Wikimedia — un objeto
+    // fotografiado no corresponde con precisión al concepto matemático exacto
+    // (ej. "arista" resaltada), y el riesgo de traer una imagen que no
+    // corresponde es justo lo que se busca evitar (decidido en sesión).
     const usaGeneracionIAMatematicas = !!concepto && perfil.asignatura === 'matematicas';
 
     const usaGeneracionIA = usaGeneracionIACiencias || usaGeneracionIAMatematicas;
