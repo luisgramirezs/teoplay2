@@ -185,6 +185,11 @@ service cloud.firestore {
           )
           ||
           (
+            request.resource.data.keys().hasAll(['url', 'prompt', 'modelo', 'contexto', 'asignatura', 'tema', 'concepto', 'createdAt'])
+            && request.resource.data.contexto == 'matematicas'
+          )
+          ||
+          (
             request.resource.data.keys().hasAll(['variantes', 'contexto', 'asignatura', 'tema', 'updatedAt'])
             && request.resource.data.contexto == 'gramatica'
             && request.resource.data.variantes is list
@@ -206,7 +211,7 @@ service cloud.firestore {
 
       allow create, update: if request.auth != null
         && request.resource.data.keys().hasAll(['count', 'fecha', 'contexto'])
-        && request.resource.data.contexto in ['ciencias', 'gramatica']
+        && request.resource.data.contexto in ['ciencias', 'gramatica', 'matematicas']
         && request.resource.data.count is int;
 
       allow delete: if false;

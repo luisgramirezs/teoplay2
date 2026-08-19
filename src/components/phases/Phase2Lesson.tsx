@@ -1222,17 +1222,29 @@ const tipoConfig = {
     hibrido: { icono: <Layers className="w-4 h-4" />, label: 'Práctica mixta', color: 'bg-purple-50 border-purple-200 text-purple-800' },
 };
 
+// PROVISIONAL: heurística simple mientras se conecta la dimensión real
+// "Autonomía cotidiana" del perfil de 6 dimensiones (pendiente, paso 4).
+// No usar esta función como fuente definitiva del nivel de acompañamiento.
+function calcularNivelAcompanamientoProvisional(perfil: PerfilNino): 1 | 2 | 3 {
+    if (perfil.condicion === 'tea' || perfil.condicion === 'down') return 1;
+    return 2;
+}
+
 const ReforzamientoBlock: React.FC<{
     reforzamiento: Reforzamiento;
     condicion: string;
     fontSize: string;
+    nivelAcompanamiento: 1 | 2 | 3;
     onComplete: () => void;
     onBack: () => void;
-}> = ({ reforzamiento, condicion, fontSize, onComplete, onBack }) => {
+}> = ({ reforzamiento, condicion, fontSize, nivelAcompanamiento, onComplete, onBack }) => {
     const [actividadIdx, setActividadIdx] = useState(0);
     const [seleccion, setSeleccion] = useState<number | null>(null);
     const [mostrarFeedback, setMostrarFeedback] = useState(false);
     const [completadas, setCompletadas] = useState(0);
+    // Nivel 1 (guiado): el ejemplo empieza expandido. Nivel 2/3: empieza
+    // colapsado pero SIEMPRE accesible — nunca se elimina el apoyo, como acordamos.
+    const [mostrarEjemplo, setMostrarEjemplo] = useState(nivelAcompanamiento === 1);
     const isTEA = condicion === 'tea';
 
     const actividades = reforzamiento.actividades || [];
@@ -1319,6 +1331,61 @@ const ReforzamientoBlock: React.FC<{
                     <p className="font-bold text-foreground leading-relaxed" style={{ fontSize }}>
                         {actual.instruccion}
                     </p>
+
+                    {actual.ejemploResuelto && (
+                        <div className="rounded-xl border-2 border-primary/20 overflow-hidden">
+                            <button
+                                type="button"
+                                onClick={() => setMostrarEjemplo(v => !v)}
+                                className="w-full flex items-center justify-between px-4 py-2.5 bg-primary/5 font-black text-sm text-foreground cursor-pointer"
+                            >
+                                <span>📘 Veamos un ejemplo resuelto</span>
+                                <span className="text-xs font-bold text-primary">{mostrarEjemplo ? 'Ocultar' : 'Ver'}</span>
+                            </button>
+
+                            {mostrarEjemplo && (
+                                <div className="p-4 space-y-3 bg-white">
+                                    <p className="font-bold text-foreground" style={{ fontSize }}>
+                                        {actual.ejemploResuelto.enunciado}
+                                    </p>
+                                    <div className="space-y-2.5">
+                                        {actual.ejemploResuelto.pasos.map((paso) => (
+                                            <div key={paso.numero} className="flex gap-3">
+                                                <span className="w-6 h-6 rounded-full bg-primary/10 text-primary flex-shrink-0 flex items-center justify-center text-xs font-black">
+                                                    {paso.numero}
+                                                </span>
+                                                <div className="space-y-1">
+                                                    <p className="text-sm font-semibold text-foreground">{paso.descripcion}</p>
+                                                    <p className="text-sm font-mono text-muted-foreground">{paso.estado}</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="pt-2 border-t border-border">
+                                        <p className="text-sm font-black text-teo-green">
+                                            Resultado: {actual.ejemploResuelto.resultado}
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {nivelAcompanamiento === 1 && actual.ejemploResuelto && (
+                        <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 space-y-2">
+                            <p className="text-xs font-black text-amber-800 uppercase tracking-wide">
+                                Ahora hazlo tú en tu cuaderno, paso a paso:
+                            </p>
+                            <ol className="space-y-1.5">
+                                {actual.ejemploResuelto.pasos.map((paso) => (
+                                    <li key={paso.numero} className="text-sm font-semibold text-amber-900 flex gap-2">
+                                        <span>{paso.numero}.</span>
+                                        <span>{paso.descripcion}</span>
+                                    </li>
+                                ))}
+                            </ol>
+                        </div>
+                    )}
 
                     {actual.contexto && (
                         <div className="flex items-start gap-2 p-3 bg-muted/30 rounded-xl">
@@ -1800,6 +1867,7 @@ const Phase2Lesson: React.FC<Phase2LessonProps> = ({ perfil, sesion, onComplete,
                         <div className="space-y-5 pb-4">
                             <ReforzamientoBlock
                                 reforzamiento={sesion.reforzamiento}
+                                nivelAcompanamiento={calcularNivelAcompanamientoProvisional(perfil)}
                                 condicion={perfil.condicion}
                                 fontSize={fontSize}
                                 onComplete={() => setReforzamientoCompleto(true)}

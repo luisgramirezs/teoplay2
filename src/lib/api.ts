@@ -173,9 +173,7 @@ function buildPrompt(perfil: PerfilNino, escenaGramatical?: { url: string; descr
         }
 
         "apoyoVisual": {
-          tipo: 'formula' | 'flujo' | 'nodos' | 'linea_tiempo' | 'ciclo' | 'reparto'
-            | 'fraccion' | 'recta_numerica' | 'geometria' | 'agrupacion'
-            | 'fuerzas' | 'molecula' | 'reaccion';
+          tipo: 'formula' | 'flujo' | 'nodos' | 'linea_tiempo' | 'ciclo' | 'reparto' | 'comparacion';
 
           "titulo": "",
           "elementos": [],
@@ -195,6 +193,31 @@ function buildPrompt(perfil: PerfilNino, escenaGramatical?: { url: string; descr
       "mapaPedagogico": {
         "contenidosEnsenados": [""],
         "contenidosEvaluables": [""]
+      },
+      "reforzamiento": {
+        "titulo": "",
+        "descripcion": "",
+        "actividades": [
+          {
+            "tipo": "digital | fisico | hibrido",
+            "instruccion": "",
+            "contexto": "",
+            "ejemploResuelto": {
+              "enunciado": "",
+              "pasos": [
+                { "numero": 1, "descripcion": "", "estado": "" }
+              ],
+              "resultado": ""
+            },
+            "verificacion": {
+              "pregunta": "",
+              "opciones": [
+                { "texto": "", "correcta": true, "explicacion": "" },
+                { "texto": "", "correcta": false, "explicacion": "" }
+              ]
+            }
+          }
+        ]
       },
       "juegos": [
         {
@@ -251,6 +274,10 @@ function buildPrompt(perfil: PerfilNino, escenaGramatical?: { url: string; descr
         `14d. Para asignatura artes o sociales: apoyoVisual puede omitirse (tipo "ninguna") porque se usan imágenes reales de Wikimedia.`,
         `14e. Para asignatura ciencias: usa tipos de ciclo, flujo o nodos para procesos; y deja que Wikimedia aporte la imagen real complementaria.`,
         `14f. Para asignatura matemáticas, física o química: omite apoyoVisual (tipo "ninguna") — el apoyo visual de estas asignaturas se resuelve por pictograma de IA generado aparte, no por este campo.`,       `15. Genera EXACTAMENTE ${numJuegos} juegos.`,
+        `14g. Para asignatura matemáticas, física o química: identifica si el objetivo de aprendizaje es ESTRUCTURAL (identificar/reconocer partes o atributos de algo dado, sin transformarlo — ej. caras/aristas/vértices, numerador/denominador) o PROCEDIMENTAL (ejecutar una secuencia de pasos que transforma una entrada en un resultado — ej. sumar, restar, despejar, simplificar, derivar). Si el objetivo mezcla ambos tipos, genera la lección igual, pero agrega en "recomendaciones" una sugerencia breve y amable al adulto para separar identificación de procedimiento en sesiones distintas la próxima vez — el niño aprende mejor un tipo de contenido a la vez.`,
+        `14h. Si el objetivo es ESTRUCTURAL: no generes "reforzamiento" (o devuélvelo con "actividades": []).`,
+        `14i. Si el objetivo es PROCEDIMENTAL: DEBES generar "reforzamiento" con al menos una actividad tipo "hibrido". Esa actividad DEBE incluir "ejemploResuelto" completo (enunciado, pasos numerados con descripcion+estado explicando cada transformación, resultado) y "verificacion" con una "pregunta" que plantee un ejercicio NUEVO del mismo procedimiento (mismo tipo de operación, valores numéricos distintos a los del ejemploResuelto) y al menos 3 "opciones": una correcta con el resultado real, y al menos 2 incorrectas que representen errores típicos y predecibles de ESE procedimiento específico (no errores aleatorios) — cada opción, correcta e incorrecta, DEBE traer su "explicacion" propia.`,
+        `14j. Todo el texto de "reforzamiento" cuando aplica 14i (descripcion de cada paso, "explicacion" de cada opción) debe sonar como un tutor personalizado explicando en voz calmada y paciente — nunca como enunciado de examen ni libro de texto. Explica el POR QUÉ de cada paso, no solo el QUÉ. Si el procedimiento usa un concepto que el niño pudo haber visto en una sesión anterior (ej. numerador/denominador dentro de una suma de fracciones), recuérdalo brevemente al usarlo, sin asumir que está fresco en memoria. El tono es cálido y claro, NUNCA infantilizado, independientemente de la edad del niño.`,       
         `16. Los juegos no pueden evaluar contenido que no haya sido enseñado.`,
         `17. "mapaPedagogico.contenidosEnsenados" debe reflejar exactamente lo enseñado en conceptosClave, pasos, ejemplos y apoyoVisual.`,
         `18. "ejemplosVisuales" DEBE contener entre 3 y 5 obras, artefactos o elementos visuales REALES Y ESPECÍFICOS del tema "${perfil.tema}" en la asignatura "${asignatura}".`,
