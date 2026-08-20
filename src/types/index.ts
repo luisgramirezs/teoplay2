@@ -292,21 +292,6 @@ export interface Pertinencia {
 export interface OpcionVerificacion {
   texto: string;
   correcta: boolean;
-  /** Explicación estilo tutor mostrada al elegir esta opción — para incorrectas,
-   * orienta sobre el error específico; para la correcta, puede reforzar el porqé. */
-  explicacion?: string;
-}
-
-export interface PasoEjemploResuelto {
-  numero: number;
-  descripcion: string; // qué se hace en este paso, explicado como un tutor (el porqué, no solo el qué)
-  estado: string;       // cómo se ve la operación después de aplicar este paso
-}
-
-export interface EjemploResuelto {
-  enunciado: string;
-  pasos: PasoEjemploResuelto[];
-  resultado: string;
 }
 
 export interface VerificacionDigital {
@@ -318,10 +303,6 @@ export interface ReforzamientoItem {
   tipo: 'digital' | 'fisico' | 'hibrido';
   instruccion: string;
   contexto?: string;
-  /** Ejemplo resuelto paso a paso — SIEMPRE presente cuando la actividad enseña
-   * un procedimiento (ver regla 14i en api.ts). Fijo, no varía por nivel de
-   * acompañamiento; el nivel solo cambia cómo se revela en el componente. */
-  ejemploResuelto?: EjemploResuelto;
   verificacion?: VerificacionDigital;
 }
 
