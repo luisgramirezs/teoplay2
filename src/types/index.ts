@@ -199,6 +199,11 @@ export interface ConceptoClave {
     ejemploPedagogico: string;
     apoyoVisual?: string;
     etiqueta?: string;
+    /** Solo aplica a matemáticas/física/química: true si el concepto puede
+     * representarse visualmente sin texto ni notación matemática dentro de
+     * la imagen; false si requiere símbolos (ej. fórmulas abstractas) — en
+     * ese caso se omite el pictograma y la explicación textual es el vehículo. */
+    requiereApoyoVisual?: boolean;
     funcion?: string;
     explicacionSimple: string;
     icono?: string;

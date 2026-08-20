@@ -155,6 +155,11 @@ function construirPromptMatematicas(tema: string, objetivo: string, concepto: Co
         `CONCEPTO A ILUSTRAR: "${concepto.nombre}"`,
         `CONTEXTO DEL CONCEPTO (solo para que la imagen sea precisa, NO para copiar texto`,
         `dentro de la imagen): "${concepto.explicacionSimple}"`,
+        `EJEMPLO NUMÉRICO EXACTO que la imagen DEBE representar (obligatorio, no uses otro):`,
+        `"${ejemploPedagogico}"`,
+        `Si el ejemplo es una fracción (ej. "3/5"), la figura debe dividirse en EXACTAMENTE`,
+        `el número de partes del denominador, y resaltar EXACTAMENTE el número de partes del`,
+        `numerador — nunca una proporción distinta ni genérica.`,
         '',
         'DECIDE TÚ, según el tema y el objetivo, qué tipo de representación matemática es',
         'la correcta para este concepto específico — por ejemplo (no es una lista cerrada,',
@@ -350,9 +355,10 @@ export async function obtenerOGenerarApoyoVisualMatematicas(
     asignatura: string,
     tema: string,
     concepto: ConceptoParaPrompt,
-    objetivo: string
+    objetivo: string,
+    ejemploPedagogico: string
 ): Promise<string | null> {
-    const prompt = construirPromptMatematicas(tema, objetivo, concepto);
+    const prompt = construirPromptMatematicas(tema, objetivo, concepto, ejemploPedagogico);
     return obtenerOGenerarApoyoVisual(
         'matematicas',
         [asignatura, tema, objetivo, concepto.nombre],

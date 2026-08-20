@@ -414,7 +414,9 @@ const ConceptosClaveBlock: React.FC<{
     // fotografiado no corresponde con precisión al concepto matemático exacto
     // (ej. "arista" resaltada), y el riesgo de traer una imagen que no
     // corresponde es justo lo que se busca evitar (decidido en sesión).
-    const usaGeneracionIAMatematicas = !!concepto && perfil.asignatura === 'matematicas';
+    const usaGeneracionIAMatematicas = !!concepto
+        && perfil.asignatura === 'matematicas'
+        && requiereApoyoVisualConcepto !== false;
 
     const usaGeneracionIA = usaGeneracionIACiencias || usaGeneracionIAMatematicas;
 
@@ -426,6 +428,8 @@ const ConceptosClaveBlock: React.FC<{
     const nombreConcepto = concepto?.nombre;
     const explicacionConcepto = concepto?.explicacionSimple;
     const tipoEntidadConcepto = concepto?.tipoEntidad;
+    const ejemploPedagogicoConcepto = concepto?.ejemploPedagogico;
+    const requiereApoyoVisualConcepto = concepto?.requiereApoyoVisual;
 
     // Carga automática de imagen por concepto — Wikimedia (o IA para ciencias sin cablear)
     // primero, resolveVisual() como respaldo.
@@ -444,10 +448,8 @@ const ConceptosClaveBlock: React.FC<{
         const conceptoParaPrompt = { nombre: nombreConcepto, explicacionSimple: explicacionConcepto ?? '' };
 
         const promesaImagen = usaGeneracionIAMatematicas
-            ? obtenerOGenerarApoyoVisualMatematicas(perfil.asignatura, perfil.tema, conceptoParaPrompt, perfil.objetivo)
+            ? obtenerOGenerarApoyoVisualMatematicas(perfil.asignatura, perfil.tema, conceptoParaPrompt, perfil.objetivo, ejemploPedagogicoConcepto ?? '')
             : usaGeneracionIA
-                ? obtenerOGenerarApoyoVisualCiencias(perfil.asignatura, perfil.tema, conceptoParaPrompt, perfil.objetivo)
-                : buscarImagenConcepto(queryParaEfecto);
 
         promesaImagen.then(url => {
             fetchingRef.current.delete(queryParaEfecto);
