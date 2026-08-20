@@ -144,7 +144,7 @@ function construirPromptCiencias(tema: string, objetivo: string, concepto: Conce
 // medidas rotuladas / conteo o barras para estadística) — sin diccionario de
 // palabras clave cableado, el universo temático de matemáticas es demasiado
 // amplio para eso (decidido en sesión).
-function construirPromptMatematicas(tema: string, objetivo: string, concepto: ConceptoParaPrompt): string {
+function construirPromptMatematicas(tema: string, objetivo: string, concepto: ConceptoParaPrompt, ejemploPedagogico: string): string {
     return [
         'Pictograma educativo infantil de matemáticas, estilo diagrama plano y simple,',
         'para material didáctico de una plataforma de aprendizaje inclusivo para niños con',
