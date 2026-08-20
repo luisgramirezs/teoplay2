@@ -410,26 +410,21 @@ const ConceptosClaveBlock: React.FC<{
         && !estaEnDiccionarioCiencias(concepto.nombre)
         && concepto.tipoEntidad !== 'persona';
 
-    // Matemáticas: SIEMPRE pictograma por IA, nunca Wikimedia — un objeto
-    // fotografiado no corresponde con precisión al concepto matemático exacto
-    // (ej. "arista" resaltada), y el riesgo de traer una imagen que no
-    // corresponde es justo lo que se busca evitar (decidido en sesión).
-    const usaGeneracionIAMatematicas = !!concepto
-        && perfil.asignatura === 'matematicas'
-        && requiereApoyoVisualConcepto !== false;
+
+
 
     const usaGeneracionIA = usaGeneracionIACiencias || usaGeneracionIAMatematicas;
 
-    // Primitivos extraídos de concepto — normalizar() reconstruye conceptosClave en cada
-    // render del padre (mismo patrón que motivó firmaConceptosRef), así que concepto NUNCA
-    // se usa directamente dentro del efecto: solo estos valores por contenido, para que una
-    // referencia nueva con el mismo contenido no dispare el efecto (evita cancelar y perder
-    // una generación de IA en curso si el usuario interactúa con otra parte de la pantalla).
+
     const nombreConcepto = concepto?.nombre;
     const explicacionConcepto = concepto?.explicacionSimple;
     const tipoEntidadConcepto = concepto?.tipoEntidad;
     const ejemploPedagogicoConcepto = concepto?.ejemploPedagogico;
     const requiereApoyoVisualConcepto = concepto?.requiereApoyoVisual;
+
+    const usaGeneracionIAMatematicas = !!concepto
+        && perfil.asignatura === 'matematicas'
+        && requiereApoyoVisualConcepto !== false;
 
     // Carga automática de imagen por concepto — Wikimedia (o IA para ciencias sin cablear)
     // primero, resolveVisual() como respaldo.
