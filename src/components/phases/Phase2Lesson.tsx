@@ -402,6 +402,13 @@ const ConceptosClaveBlock: React.FC<{
         ? buildConceptoWikimediaQuery(perfil.asignatura, perfil.tema, concepto.nombre, concepto.tipoEntidad, concepto.fraseVisual)
         : null;
 
+    
+    const nombreConcepto = concepto?.nombre;
+    const explicacionConcepto = concepto?.explicacionSimple;
+    const tipoEntidadConcepto = concepto?.tipoEntidad;
+    const ejemploPedagogicoConcepto = concepto?.ejemploPedagogico;
+    const requiereApoyoVisualConcepto = concepto?.requiereApoyoVisual;
+
     // Piloto ciencias: si el concepto no está en el diccionario curado, no es una persona
     // (las personas siempre van por retrato real en Wikimedia, nunca por IA) y la asignatura
     // es "ciencias", se genera apoyo visual por IA en vez de buscar en Wikimedia.
@@ -410,21 +417,12 @@ const ConceptosClaveBlock: React.FC<{
         && !estaEnDiccionarioCiencias(concepto.nombre)
         && concepto.tipoEntidad !== 'persona';
 
-
-
-
-    const usaGeneracionIA = usaGeneracionIACiencias || usaGeneracionIAMatematicas;
-
-
-    const nombreConcepto = concepto?.nombre;
-    const explicacionConcepto = concepto?.explicacionSimple;
-    const tipoEntidadConcepto = concepto?.tipoEntidad;
-    const ejemploPedagogicoConcepto = concepto?.ejemploPedagogico;
-    const requiereApoyoVisualConcepto = concepto?.requiereApoyoVisual;
-
     const usaGeneracionIAMatematicas = !!concepto
         && perfil.asignatura === 'matematicas'
         && requiereApoyoVisualConcepto !== false;
+
+    
+    const usaGeneracionIA = usaGeneracionIACiencias || usaGeneracionIAMatematicas;
 
     // Carga automática de imagen por concepto — Wikimedia (o IA para ciencias sin cablear)
     // primero, resolveVisual() como respaldo.
