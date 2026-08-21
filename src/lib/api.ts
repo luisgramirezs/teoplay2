@@ -95,6 +95,12 @@ function buildPrompt(perfil: PerfilNino, escenaGramatical?: { url: string; descr
       "explicacion": {
         "objetivo": "Versión esencial en ${idioma}.",
         "intro": { "fraseEnganche": "", "cuerpo": "" },
+        // LLAMADO A CPA
+        "cpa": {
+          "concreto": "Explicación del uso de objetos físicos o manipulación concreta para el tema",
+          "pictorico": "Explicación mediante dibujos, esquemas o representaciones gráficas",
+          "abstracto": "Explicación simbólica o fórmula matemática final"
+        },
         "conceptosClave": [
           {
             "nombre": "",
