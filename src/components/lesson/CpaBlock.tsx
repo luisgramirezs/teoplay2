@@ -1,5 +1,5 @@
 import React from 'react';
-import { MathText } from './MathText';
+import { MathText } from '../MathText'; 
 
 interface CpaBlockProps {
   cpa: {
