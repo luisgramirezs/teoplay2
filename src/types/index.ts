@@ -273,6 +273,10 @@ export interface ApoyoOperativo {
   ejemplosResueltos: EjemploResuelto[];
   ejercicio: {
     enunciado: string;
+    /** Pasos guía específicos para ESTE ejercicio (mismos números del
+     * enunciado, no los del ejemplo) — solo el qué+por qué, sin revelar
+     * el resultado parcial, para no entregar la respuesta. */
+    pasosGuia: { descripcion: string }[];
     opciones: OpcionVerificacion[];
   };
 }

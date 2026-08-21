@@ -14,10 +14,9 @@ const OperativoBlock: React.FC<OperativoBlockProps> = ({ apoyoOperativo, fontSiz
     if (!apoyoOperativo.ejemplosResueltos?.length) return null;
 
     const opcionSeleccionada = seleccion !== null ? apoyoOperativo.ejercicio.opciones[seleccion] : null;
-    // Reutilizamos los pasos del primer ejemplo resuelto como guía genérica
-    // del procedimiento — mismo tipo de operación, sin revelar el resultado
-    // parcial del ejercicio propio del niño.
-    const pasosGuia = apoyoOperativo.ejemplosResueltos[0]?.pasos ?? [];
+    // Pasos guía propios del ejercicio del niño (mismos números de su
+    // enunciado, no los del ejemplo), sin resultado parcial — el niño calcula.
+    const pasosGuia = apoyoOperativo.ejercicio.pasosGuia ?? [];
 
     const abrirAyuda = () => {
         setPasoAyuda(0);

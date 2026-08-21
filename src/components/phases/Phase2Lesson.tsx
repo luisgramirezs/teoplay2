@@ -302,6 +302,15 @@ export function normalizar(raw: unknown): ExplicacionBloque {
             const ej = typeof ao.ejercicio === 'object' && ao.ejercicio !== null
                 ? ao.ejercicio as Record<string, unknown>
                 : {};
+            const pasosGuia = Array.isArray(ej.pasosGuia)
+                ? ej.pasosGuia
+                    .map((p: unknown) => {
+                        if (typeof p !== 'object' || p === null) return null;
+                        const pp = p as Record<string, unknown>;
+                        return { descripcion: typeof pp.descripcion === 'string' ? pp.descripcion : '' };
+                    })
+                    .filter((p): p is NonNullable<typeof p> => p !== null)
+                : [];
             const opciones = Array.isArray(ej.opciones)
                 ? ej.opciones
                     .map((o: unknown) => {
@@ -321,6 +330,7 @@ export function normalizar(raw: unknown): ExplicacionBloque {
                 ejemplosResueltos,
                 ejercicio: {
                     enunciado: typeof ej.enunciado === 'string' ? ej.enunciado : '',
+                    pasosGuia,
                     opciones,
                 },
             };
