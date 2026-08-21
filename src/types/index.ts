@@ -152,6 +152,43 @@ export type Juego = JuegoA | JuegoB | JuegoC | JuegoD | JuegoE;
 
 // ── Nuevos tipos para explicación estructurada ────────────────────────────────
 
+// ── Metodología CPA (Concreto - Pictórico - Abstracto) ────────────────────────
+
+export type NivelCPA = 'concreto' | 'pictorico' | 'abstracto';
+
+export interface ApoyoVisualCPA {
+  tipo: 'material_fisico' | 'diagrama_pictorico' | 'simbolo_abstracto' | 'secuencia_pasos';
+  descripcion: string;
+  elementosClave: string[];
+  orientacionLectura?: string; // Ej: "De izquierda a derecha" o "Sigue el orden numérico"
+}
+
+export interface EjercicioProcedimentalCPA {
+  nivel: NivelCPA;
+  enunciado: string;
+  orientacionPasoAPaso: string[];
+  apoyoVisual: ApoyoVisualCPA;
+  resultadoEsperado: string;
+  pistasRefuerzo?: string[];
+}
+
+export interface MetodologiaCPA {
+  nivelRecomendado: NivelCPA;
+  justificacionNeuroeducativa: string;
+  pasoConcreto?: {
+    materialesRequeridos: string[];
+    instruccionesManipulativas: string[];
+  };
+  pasoPictorico?: {
+    representacionGrafica: string;
+    pictogramasSugeridos: string[];
+  };
+  pasoAbstracto?: {
+    notacionSimbolica: string;
+    algoritmoPasoAPaso: string[];
+  };
+}
+ //////////// FIN CPA ///////////////
 
 // Bloque nuevo de estructura para ejemplos con pasos
 export interface ExploracionConcreta {
@@ -199,10 +236,6 @@ export interface ConceptoClave {
     ejemploPedagogico: string;
     apoyoVisual?: string;
     etiqueta?: string;
-    /** Solo aplica a matemáticas/física/química: true si el concepto puede
-     * representarse visualmente sin texto ni notación matemática dentro de
-     * la imagen; false si requiere símbolos (ej. fórmulas abstractas) — en
-     * ese caso se omite el pictograma y la explicación textual es el vehículo. */
     requiereApoyoVisual?: boolean;
     funcion?: string;
     explicacionSimple: string;
@@ -212,6 +245,7 @@ export interface ConceptoClave {
     fraseVisual?: string;
     practicaDirigida?: string;
     fragmentoEnOracion?: string;
+    nivelCPA?: NivelCPA;
 }
 
 export interface VisualSugerido {
@@ -279,6 +313,7 @@ export interface ApoyoOperativo {
     pasosGuia: { descripcion: string }[];
     opciones: OpcionVerificacion[];
   };
+  ejerciciosCPA?: EjercicioProcedimentalCPA[];
 }
 
 export interface ExplicacionBloque {
@@ -295,7 +330,7 @@ export interface ExplicacionBloque {
     justificacionPedagogica?: string;
     apoyoGramatical?: ApoyoGramatical | null;
     apoyoOperativo?: ApoyoOperativo | null;
-
+    rutaCPA?: MetodologiaCPA;
 }
 
 export interface Pertinencia {
