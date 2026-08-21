@@ -331,6 +331,11 @@ export interface ExplicacionBloque {
     apoyoGramatical?: ApoyoGramatical | null;
     apoyoOperativo?: ApoyoOperativo | null;
     rutaCPA?: MetodologiaCPA;
+    cpa?: {
+      concreto?: string;
+      pictorico?: string;
+      abstracto?: string;
+    };
 }
 
 export interface Pertinencia {

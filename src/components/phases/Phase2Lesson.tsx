@@ -16,6 +16,7 @@ import ExamplesBlock from '../lesson/ExamplesBlock';
 import { buscarImagenWikimedia } from '@/lib/api';
 import GramaticalBlock, { PiezaCard, coincideRolConConcepto } from '../lesson/GramaticalBlock';
 import OperativoBlock from '@/components/lesson/OperativoBlock';
+import { CpaBlock } from '@/components/lesson/CpaBlock';
 import { buscarImagenConcepto } from '@/lib/api';
 import { buildConceptoWikimediaQuery, estaEnDiccionarioCiencias } from '@/utils/wikimediaQueryDictionary';
 import { obtenerOGenerarApoyoVisualCiencias, obtenerOGenerarApoyoVisualMatematicas, obtenerOGenerarPictogramaGramatical } from '@/lib/apoyoVisualIAService';
@@ -335,6 +336,23 @@ export function normalizar(raw: unknown): ExplicacionBloque {
                 },
             };
         }
+        // 7. Procesar Apoyo CPA (Concreto, Pictórico, Abstracto)
+        // Extraer objeto CPA si viene en el JSON
+        let cpa: {
+            concreto?: string;
+            pictorico?: string;
+            abstracto?: string;
+        } | undefined = undefined;
+
+        if (typeof r.cpa === 'object' && r.cpa !== null) {
+            const rawCpa = r.cpa as Record<string, unknown>;
+            cpa = {
+                concreto: typeof rawCpa.concreto === 'string' ? rawCpa.concreto : undefined,
+                pictorico: typeof rawCpa.pictorico === 'string' ? rawCpa.pictorico : undefined,
+                abstracto: typeof rawCpa.abstracto === 'string' ? rawCpa.abstracto : undefined,
+            };
+        }
+
 
         // Return final
 
@@ -351,6 +369,7 @@ export function normalizar(raw: unknown): ExplicacionBloque {
             chequeoCobertura: Array.isArray(r.chequeoCobertura) ? r.chequeoCobertura.map(String) : [],
             apoyoGramatical,
             apoyoOperativo,
+            cpa,
         };
     }
 
@@ -1097,7 +1116,16 @@ const ExplicacionRenderer: React.FC<{
                             />
                         </div>
                     )}
-
+                    {/* BLOQUE CPA AQUÍ */}
+                    {bloque.cpa && (
+                        <CpaBlock
+                            cpa={bloque.cpa}
+                            fontSize={fontSize}
+                            seccionActiva={seccionActiva}
+                            onNarrar={narrar}
+                        />
+                    )}
+                    
                     {bloque.apoyoGramatical && (
                         <GramaticalBlock
                             apoyoGramatical={bloque.apoyoGramatical}
@@ -1684,6 +1712,16 @@ const Phase2Lesson: React.FC<Phase2LessonProps> = ({ perfil, sesion, onComplete,
                                     apoyoGramatical={bloqueActual.apoyoGramatical}
                                     pictogramaGramaticalUrl={sesion.pictogramaGramaticalUrl ?? null}
                                 />  
+                                {/* --- BLOQUE CPA  --- */}
+                                {bloqueActual.cpa && (
+                                    <CpaBlock
+                                        cpa={bloqueActual.cpa}
+                                        fontSize={fontSize}
+                                        seccionActiva={seccionActiva}
+                                        onNarrar={narrar}
+                                    />
+                                )}
+                                
                                 {bloqueActual.apoyoGramatical && (
                                     <GramaticalBlock
                                         apoyoGramatical={bloqueActual.apoyoGramatical}
