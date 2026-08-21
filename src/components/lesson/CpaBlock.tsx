@@ -1,7 +1,5 @@
 import React from 'react';
-
-// Si BtnNarrar es un componente reutilizable, se importa desde su ubicación.
-// Si no existe BtnNarrar global, asegúrate de importar el botón de voz que uses en los otros bloques.
+import { MathText } from './MathText';
 
 interface CpaBlockProps {
   cpa: {
@@ -91,12 +89,13 @@ export const CpaBlock: React.FC<CpaBlockProps> = ({
                     </button>
                   )}
                 </div>
-                <p
-                  className="text-sm font-semibold text-slate-700 leading-relaxed"
-                  style={{ fontSize }}
-                >
-                  {etapa.contenido}
-                </p>
+                
+                {/* NUEVO COMPONENTE CON FORMATO MATEMÁTICO */}
+                <MathText
+                  text={etapa.contenido}
+                  fontSize={fontSize}
+                  className="text-sm font-semibold text-slate-700 leading-relaxed block"
+                />
               </div>
             </div>
           ) : null

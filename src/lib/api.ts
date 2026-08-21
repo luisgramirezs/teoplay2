@@ -366,6 +366,25 @@ function buildPrompt(perfil: PerfilNino, escenaGramatical?: { url: string; descr
         `48. El tipo "fraccion" solo muestra representaciones visuales de fracciones (círculos o rectángulos partidos). Nunca conceptos de división.`,
 
         '',
+   
+        `
+        REGLAS OBLIGATORIAS PARA EL BLOQUE CPA (Concreto - Pictórico - Abstracto):
+
+        1. TONO DIRIGIDO AL NIÑO (SEGUNDA PERSONA):
+        Escribe directamente para el estudiante con comandos simples y amigables. No des indicaciones para profesores.
+
+        2. NOMENCLATURA Y FORMATO MATEMÁTICO (OBLIGATORIO):
+        - NUNCA escribas fracciones en formato lineal plano como "2/4" o "1/3". Usa SIEMPRE LaTeX: "\\frac{2}{4}".
+        - NUNCA escribas potencias como "x^2" en texto plano. Usa LaTeX: "x^{2}".
+        - Toda expresión matemática debe ir estructurada en LaTeX con doble barra para JSON (ejemplo: "\\frac{numerador}{denominador}").
+
+        EJEMPLO DE ESTRUCTURA CPA CORRECTA PARA SUMA DE FRACCIONES:
+        "cpa": {
+        "concreto": "Toma una hoja de papel, dóblala en 4 partes iguales y colorea \\frac{2}{4}. Luego pinta \\frac{1}{4} más. ¡Cuenta cuántas partes pintaste!",
+        "pictorico": "Dibuja un círculo dividido en 4 partes. Colorea 2 partes de azul y 1 parte de rojo para ver el total.",
+        "abstracto": "Escribe en tu cuaderno: \\frac{2}{4} + \\frac{1}{4} = \\frac{3}{4}. Sumamos los números de arriba y dejamos el de abajo igual."
+        }
+        `
         'REGLAS ESPECÍFICAS PARA "conceptosClave":',
         `- Si el tema tiene partes visibles o nombrables, debes listarlas por separado.`,
         `- Si el tema tiene miembros de un conjunto, debes incluirlos completos cuando sean pedagógicamente necesarios.`,
