@@ -8,10 +8,21 @@ interface OperativoBlockProps {
 
 const OperativoBlock: React.FC<OperativoBlockProps> = ({ apoyoOperativo, fontSize = '16px' }) => {
     const [seleccion, setSeleccion] = useState<number | null>(null);
+    const [mostrarAyuda, setMostrarAyuda] = useState(false);
+    const [pasoAyuda, setPasoAyuda] = useState(0);
 
     if (!apoyoOperativo.ejemplosResueltos?.length) return null;
 
     const opcionSeleccionada = seleccion !== null ? apoyoOperativo.ejercicio.opciones[seleccion] : null;
+    // Reutilizamos los pasos del primer ejemplo resuelto como guía genérica
+    // del procedimiento — mismo tipo de operación, sin revelar el resultado
+    // parcial del ejercicio propio del niño.
+    const pasosGuia = apoyoOperativo.ejemplosResueltos[0]?.pasos ?? [];
+
+    const abrirAyuda = () => {
+        setPasoAyuda(0);
+        setMostrarAyuda(true);
+    };
 
     return (
         <div className="rounded-2xl border-2 border-primary/20 overflow-hidden">
@@ -52,9 +63,20 @@ const OperativoBlock: React.FC<OperativoBlockProps> = ({ apoyoOperativo, fontSiz
 
                 {apoyoOperativo.ejercicio?.enunciado && (
                     <div className="rounded-xl border-2 border-amber-200 p-4 space-y-3 bg-amber-50">
-                        <p className="text-xs font-black text-amber-800 uppercase tracking-wide">
-                            ✏️ Ahora hazlo tú
-                        </p>
+                        <div className="flex items-center justify-between gap-2">
+                            <p className="text-xs font-black text-amber-800 uppercase tracking-wide">
+                                ✏️ Ahora hazlo tú
+                            </p>
+                            {pasosGuia.length > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={abrirAyuda}
+                                    className="text-xs font-black text-primary bg-white border-2 border-primary/30 rounded-full px-3 py-1 hover:bg-primary/5 transition-colors flex-shrink-0"
+                                >
+                                    🆘 ¿Necesitas ayuda?
+                                </button>
+                            )}
+                        </div>
                         <p className="font-bold text-foreground" style={{ fontSize }}>
                             {apoyoOperativo.ejercicio.enunciado}
                         </p>
@@ -84,19 +106,87 @@ const OperativoBlock: React.FC<OperativoBlockProps> = ({ apoyoOperativo, fontSiz
 
                         {opcionSeleccionada && (
                             <div
-                                className={`p-3 rounded-lg text-sm font-semibold ${
+                                className={`p-3 rounded-lg text-sm font-semibold space-y-2 ${
                                     opcionSeleccionada.correcta
                                         ? 'bg-teo-green/10 text-teo-green'
                                         : 'bg-amber-100 text-amber-900'
                                 }`}
                             >
-                                {opcionSeleccionada.correcta ? '¡Muy bien! ' : 'Revisemos juntos: '}
-                                {opcionSeleccionada.explicacion}
+                                <p>
+                                    {opcionSeleccionada.correcta ? '¡Muy bien! ' : 'Revisemos juntos: '}
+                                    {opcionSeleccionada.explicacion}
+                                </p>
+                                {!opcionSeleccionada.correcta && pasosGuia.length > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={abrirAyuda}
+                                        className="text-xs font-black text-primary underline"
+                                    >
+                                        Repasemos los pasos otra vez
+                                    </button>
+                                )}
                             </div>
                         )}
                     </div>
                 )}
             </div>
+
+            {mostrarAyuda && pasosGuia.length > 0 && (
+                <div
+                    className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-0 sm:p-4"
+                    onClick={() => setMostrarAyuda(false)}
+                >
+                    <div
+                        className="bg-white rounded-t-3xl sm:rounded-3xl w-full sm:max-w-md p-6 space-y-4"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <p className="text-xs font-black text-primary uppercase tracking-wide">
+                            Paso {pasoAyuda + 1} de {pasosGuia.length}
+                        </p>
+                        <p className="font-bold text-foreground" style={{ fontSize }}>
+                            {pasosGuia[pasoAyuda].descripcion}
+                        </p>
+
+                        <div className="flex gap-1.5">
+                            {pasosGuia.map((_, i) => (
+                                <div
+                                    key={i}
+                                    className={`h-1.5 flex-1 rounded-full ${i <= pasoAyuda ? 'bg-primary' : 'bg-muted'}`}
+                                />
+                            ))}
+                        </div>
+
+                        <div className="flex gap-2 pt-2">
+                            {pasoAyuda > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={() => setPasoAyuda(p => p - 1)}
+                                    className="px-4 py-2 rounded-full border-2 border-border font-bold text-sm text-foreground"
+                                >
+                                    Atrás
+                                </button>
+                            )}
+                            {pasoAyuda < pasosGuia.length - 1 ? (
+                                <button
+                                    type="button"
+                                    onClick={() => setPasoAyuda(p => p + 1)}
+                                    className="flex-1 px-4 py-2 rounded-full bg-primary text-white font-bold text-sm"
+                                >
+                                    Siguiente paso
+                                </button>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={() => setMostrarAyuda(false)}
+                                    className="flex-1 px-4 py-2 rounded-full bg-teo-green text-white font-bold text-sm"
+                                >
+                                    Ya puedo intentarlo
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
