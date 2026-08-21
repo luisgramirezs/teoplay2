@@ -15,6 +15,7 @@ import ApoyoVisualBlock from '../lesson/ApoyoVisualBlock';
 import ExamplesBlock from '../lesson/ExamplesBlock';
 import { buscarImagenWikimedia } from '@/lib/api';
 import GramaticalBlock, { PiezaCard, coincideRolConConcepto } from '../lesson/GramaticalBlock';
+import OperativoBlock from '@/components/lesson/OperativoBlock';
 import { buscarImagenConcepto } from '@/lib/api';
 import { buildConceptoWikimediaQuery, estaEnDiccionarioCiencias } from '@/utils/wikimediaQueryDictionary';
 import { obtenerOGenerarApoyoVisualCiencias, obtenerOGenerarApoyoVisualMatematicas, obtenerOGenerarPictogramaGramatical } from '@/lib/apoyoVisualIAService';
@@ -269,7 +270,64 @@ export function normalizar(raw: unknown): ExplicacionBloque {
             };
         }
 
+        // 6. Procesar Apoyo Operativo (matemáticas/física/química procedimentales)
+        let apoyoOperativo: ApoyoOperativo | null = null;
+        if (typeof r.apoyoOperativo === 'object' && r.apoyoOperativo !== null) {
+            const ao = r.apoyoOperativo as Record<string, unknown>;
+            const ejemplosResueltos = Array.isArray(ao.ejemplosResueltos)
+                ? ao.ejemplosResueltos
+                    .map((e: unknown) => {
+                        if (typeof e !== 'object' || e === null) return null;
+                        const ee = e as Record<string, unknown>;
+                        const pasos = Array.isArray(ee.pasos)
+                            ? ee.pasos
+                                .map((p: unknown) => {
+                                    if (typeof p !== 'object' || p === null) return null;
+                                    const pp = p as Record<string, unknown>;
+                                    return {
+                                        descripcion: typeof pp.descripcion === 'string' ? pp.descripcion : '',
+                                        resultadoParcial: typeof pp.resultadoParcial === 'string' ? pp.resultadoParcial : '',
+                                    };
+                                })
+                                .filter((p): p is NonNullable<typeof p> => p !== null)
+                            : [];
+                        return {
+                            enunciado: typeof ee.enunciado === 'string' ? ee.enunciado : '',
+                            pasos,
+                            resultado: typeof ee.resultado === 'string' ? ee.resultado : '',
+                        };
+                    })
+                    .filter((e): e is NonNullable<typeof e> => e !== null)
+                : [];
+            const ej = typeof ao.ejercicio === 'object' && ao.ejercicio !== null
+                ? ao.ejercicio as Record<string, unknown>
+                : {};
+            const opciones = Array.isArray(ej.opciones)
+                ? ej.opciones
+                    .map((o: unknown) => {
+                        if (typeof o !== 'object' || o === null) return null;
+                        const oo = o as Record<string, unknown>;
+                        return {
+                            texto: typeof oo.texto === 'string' ? oo.texto : '',
+                            correcta: typeof oo.correcta === 'boolean' ? oo.correcta : false,
+                            explicacion: typeof oo.explicacion === 'string' ? oo.explicacion : undefined,
+                        };
+                    })
+                    .filter((o): o is NonNullable<typeof o> => o !== null)
+                : [];
+
+            apoyoOperativo = {
+                titulo: typeof ao.titulo === 'string' ? ao.titulo : '',
+                ejemplosResueltos,
+                ejercicio: {
+                    enunciado: typeof ej.enunciado === 'string' ? ej.enunciado : '',
+                    opciones,
+                },
+            };
+        }
+
         // Return final
+
         return {
             objetivo: typeof r.objetivo === 'string' ? r.objetivo : '',
             intro,
@@ -282,6 +340,7 @@ export function normalizar(raw: unknown): ExplicacionBloque {
             visualSugerido,
             chequeoCobertura: Array.isArray(r.chequeoCobertura) ? r.chequeoCobertura.map(String) : [],
             apoyoGramatical,
+            apoyoOperativo,
         };
     }
 
@@ -298,6 +357,7 @@ export function normalizar(raw: unknown): ExplicacionBloque {
         apoyoVisual: undefined,
         chequeoCobertura: [],
         apoyoGramatical: null,
+        apoyoOperativo: null,
     };
 }
 
@@ -1620,6 +1680,12 @@ const Phase2Lesson: React.FC<Phase2LessonProps> = ({ perfil, sesion, onComplete,
                                         condicion={perfil.condicion}
                                         conceptos={bloqueActual.conceptosClave}
                                         pictogramaUrl={sesion.pictogramaGramaticalUrl ?? null}
+                                    />
+                                )}
+                                {bloqueActual.apoyoOperativo && (
+                                    <OperativoBlock
+                                        apoyoOperativo={bloqueActual.apoyoOperativo}
+                                        fontSize={fontSize}
                                     />
                                 )}
                             </div>

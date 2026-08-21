@@ -268,6 +268,15 @@ export interface ApoyoVisualLeccion {
     justificacionCalidad: string; // Obligamos a la IA a explicar por qué esto NO es decorativo
 }
 
+export interface ApoyoOperativo {
+  titulo: string;
+  ejemplosResueltos: EjemploResuelto[];
+  ejercicio: {
+    enunciado: string;
+    opciones: OpcionVerificacion[];
+  };
+}
+
 export interface ExplicacionBloque {
     objetivo?: string;
     intro: string | IntroBloque; // union para compatibilidad con sesiones anteriores
@@ -281,6 +290,7 @@ export interface ExplicacionBloque {
     chequeoCobertura?: string[];
     justificacionPedagogica?: string;
     apoyoGramatical?: ApoyoGramatical | null;
+    apoyoOperativo?: ApoyoOperativo | null;
 
 }
 

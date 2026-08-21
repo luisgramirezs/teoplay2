@@ -170,6 +170,23 @@ function buildPrompt(perfil: PerfilNino, escenaGramatical?: { url: string; descr
             { "oracion": "", "traduccion": "" }
           ],
           "nota": ""
+        },
+        "apoyoOperativo": {
+          "titulo": "",
+          "ejemplosResueltos": [
+            {
+              "enunciado": "",
+              "pasos": [{ "descripcion": "", "resultadoParcial": "" }],
+              "resultado": ""
+            }
+          ],
+          "ejercicio": {
+            "enunciado": "",
+            "opciones": [
+              { "texto": "", "correcta": true, "explicacion": "" },
+              { "texto": "", "correcta": false, "explicacion": "" }
+            ]
+          }
         }
 
         "apoyoVisual": {
@@ -320,6 +337,7 @@ function buildPrompt(perfil: PerfilNino, escenaGramatical?: { url: string; descr
         `33e. Cuando "esInterrogativa" sea true (con o sin "esNegativa"): el auxiliar (o el verbo invertido, según el idioma) debe tener "posicion": 1, antes del sujeto. Si la oración incluye palabra interrogativa (qué, dónde, cuándo, etc.), esa pieza debe tener "posicion": 1 y el resto se desplaza en consecuencia. Esta regla APLICA sin importar el valor de "esNegativa" — ambas condiciones son compatibles y deben respetarse simultáneamente si ambas son true (ver regla 33d para el orden exacto del caso combinado).`,
         `33f. Autoconsistencia obligatoria: el orden de las palabras en "apoyoGramatical.ejemplos[0].oracion" DEBE coincidir exactamente con el orden ascendente de "piezas[].posicion" de las piezas que instancian esa oración — nunca generes una "posicion" que contradiga el orden real de las palabras en el ejemplo. Esto aplica sin importar la combinación de esInterrogativa/esNegativa.`, 
         `34. Si la asignatura NO es de idioma: devuelve "apoyoGramatical": null.`,
+        `34b. Para asignatura matemáticas, física o química: si el objetivo de aprendizaje es PROCEDIMENTAL (ejecutar pasos que transforman una entrada en un resultado — ej. sumar, calcular un porcentaje, despejar), DEBES generar "apoyoOperativo" con 1-2 "ejemplosResueltos" (enunciado, pasos numerados en orden con "descripcion" del qué y por qué y "resultadoParcial" tras cada paso, "resultado" final) y un "ejercicio" con "enunciado" nuevo (mismo procedimiento, valores distintos) y al menos 3 "opciones" (una correcta, 2+ incorrectas con errores típicos), cada una con su "explicacion". Si el objetivo es ESTRUCTURAL: devuelve "apoyoOperativo": null. El tono es de tutor calmado y paciente, nunca examen, nunca infantilizado.`,
         `35. "ejemplosVisuales" SOLO para asignaturas: artes, sociales, historia, ciencias. Para el resto: "ejemplosVisuales": [].`,
         `35. "ejemplosVisuales" es OBLIGATORIO y SIEMPRE debe tener entre 3 y 5 elementos para asignaturas: artes, sociales, historia, ciencias. NUNCA devolver array vacío para estas asignaturas.`,
         `35b. Cada elemento de "ejemplosVisuales" DEBE tener "titulo", "autor", "descripcion", "tipo" y "query" con valores reales — nunca strings vacíos.`,
