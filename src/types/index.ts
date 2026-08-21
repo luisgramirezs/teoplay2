@@ -304,10 +304,22 @@ export interface VerificacionDigital {
   opciones: OpcionVerificacion[];
 }
 
+export interface PasoEjemploResuelto {
+  descripcion: string;
+  resultadoParcial: string;
+}
+
+export interface EjemploResuelto {
+  enunciado: string;
+  pasos: PasoEjemploResuelto[];
+  resultado: string;
+}
+
 export interface ReforzamientoItem {
   tipo: 'digital' | 'fisico' | 'hibrido';
   instruccion: string;
   contexto?: string;
+  ejemplosResueltos?: EjemploResuelto[];
   verificacion?: VerificacionDigital;
 }
 

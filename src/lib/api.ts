@@ -196,12 +196,40 @@ function buildPrompt(perfil: PerfilNino, escenaGramatical?: { url: string; descr
         "contenidosEnsenados": [""],
         "contenidosEvaluables": [""]
       },
+
+      "reforzamiento": {
+        "titulo": "",
+        "descripcion": "",
+        "actividades": [
+          {
+            "tipo": "hibrido",
+            "instruccion": "",
+            "contexto": "",
+            "ejemplosResueltos": [
+              {
+                "enunciado": "",
+                "pasos": [{ "descripcion": "", "resultadoParcial": "" }],
+                "resultado": ""
+              }
+            ],
+            "verificacion": {
+              "pregunta": "",
+              "opciones": [
+                { "texto": "", "correcta": true, "explicacion": "" },
+                { "texto": "", "correcta": false, "explicacion": "" }
+              ]
+            }
+          }
+        ]
+      },
+      
       "juegos": [
         {
           "tipo": "A | B | C | D | E",
           "instruccion": "Texto del juego"
         }
       ],
+
       "mensajesMotivacionales": [""],
       "mensajeCierre": "",
       "recomendaciones": [""]
@@ -250,8 +278,11 @@ function buildPrompt(perfil: PerfilNino, escenaGramatical?: { url: string; descr
         `14b. "explicacion.conceptosClave" DEBE estar completo. Está prohibido devolver conceptosClave vacío.`,
         `14d. Para asignatura artes o sociales: apoyoVisual puede omitirse (tipo "ninguna") porque se usan imágenes reales de Wikimedia.`,
         `14e. Para asignatura ciencias: usa tipos de ciclo, flujo o nodos para procesos; y deja que Wikimedia aporte la imagen real complementaria.`,
-        `14f. Para asignatura matemáticas, física o química: omite apoyoVisual (tipo "ninguna") — el apoyo visual de estas asignaturas se resuelve por pictograma de IA generado aparte, no por este campo.`,       `15. Genera EXACTAMENTE ${numJuegos} juegos.`,
+        `14f. Para asignatura matemáticas, física o química: omite apoyoVisual (tipo "ninguna") — el apoyo visual de estas asignaturas se resuelve por pictograma de IA generado aparte, no por este campo.`,       
         `14g. Para asignatura matemáticas, física o química: en cada "conceptosClave[i]", agrega "requiereApoyoVisual": true SOLO si el concepto puede representarse visualmente sin usar texto, números ni notación matemática dentro de la imagen (ej. una fracción como partes de una figura, un cuerpo geométrico). Usa "requiereApoyoVisual": false si la única forma de representarlo requiere símbolos, fórmulas o notación abstracta (ej. una transformada, una derivada) — en ese caso la explicación textual es el vehículo pedagógico, no el pictograma. Cuando "requiereApoyoVisual" sea true, "ejemploPedagogico" DEBE contener los valores numéricos EXACTOS que el pictograma debe representar (ej. "3/5" y no un ejemplo genérico) — el pictograma se genera fiel a esos números, nunca a una fracción distinta.`,
+        `14l. Para asignatura matemáticas, física o química: si el objetivo de aprendizaje es PROCEDIMENTAL (ejecutar una secuencia de pasos que transforma una entrada en un resultado — ej. sumar, calcular un porcentaje, despejar), DEBES generar "reforzamiento" con al menos una actividad tipo "hibrido". Esa actividad DEBE incluir "ejemplosResueltos" (1 o 2 ejemplos, cada uno con "enunciado", "pasos" numerados en orden con "descripcion" del qué y por qué de cada paso y "resultadoParcial" tras aplicarlo, y "resultado" final) y "verificacion" con una "pregunta" que plantee un ejercicio NUEVO del mismo procedimiento (valores distintos a los ejemplos) y al menos 3 "opciones" (una correcta, al menos 2 incorrectas representando errores típicos y predecibles de ESE procedimiento), cada opción con su "explicacion" propia. Si el objetivo es ESTRUCTURAL (identificar/reconocer sin transformar), NO generes "reforzamiento".`,
+        `14m. Todo el texto de "reforzamiento" debe sonar como un tutor personalizado explicando en voz calmada y paciente — nunca como enunciado de examen. Explica el POR QUÉ de cada paso, no solo el QUÉ. Tono cálido y claro, NUNCA infantilizado.`,
+        `15. Genera EXACTAMENTE ${numJuegos} juegos.`,
         `16. Los juegos no pueden evaluar contenido que no haya sido enseñado.`,
         `17. "mapaPedagogico.contenidosEnsenados" debe reflejar exactamente lo enseñado en conceptosClave, pasos, ejemplos y apoyoVisual.`,
         `18. "ejemplosVisuales" DEBE contener entre 3 y 5 obras, artefactos o elementos visuales REALES Y ESPECÍFICOS del tema "${perfil.tema}" en la asignatura "${asignatura}".`,

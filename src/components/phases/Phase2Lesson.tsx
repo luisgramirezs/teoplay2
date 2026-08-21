@@ -597,7 +597,7 @@ const ConceptosClaveBlock: React.FC<{
                             <img
                                 src={imagenUrl}
                                 alt={concepto.nombre}
-                                className="w-full h-full object-cover"
+                                className="w-full h-full object-contain"
                             />
                         </button>
                     ) : (
@@ -1315,7 +1315,35 @@ const ReforzamientoBlock: React.FC<{
                         {actual.instruccion}
                     </p>
 
+                    {actual.ejemplosResueltos?.map((ejemplo, ei) => (
+                        <div key={ei} className="rounded-xl border-2 border-primary/20 p-4 space-y-3 bg-primary/5">
+                            <p className="text-xs font-black text-primary uppercase tracking-wide">
+                                📘 Ejemplo {actual.ejemplosResueltos!.length > 1 ? ei + 1 : ''}
+                            </p>
+                            <p className="font-bold text-foreground" style={{ fontSize }}>
+                                {ejemplo.enunciado}
+                            </p>
+                            <div className="space-y-2.5">
+                                {ejemplo.pasos.map((paso, pi) => (
+                                    <div key={pi} className="flex gap-3">
+                                        <span className="w-6 h-6 rounded-full bg-primary/10 text-primary flex-shrink-0 flex items-center justify-center text-xs font-black">
+                                            {pi + 1}
+                                        </span>
+                                        <div className="space-y-1">
+                                            <p className="text-sm font-semibold text-foreground">{paso.descripcion}</p>
+                                            <p className="text-sm font-mono text-muted-foreground">{paso.resultadoParcial}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="pt-2 border-t border-border/50">
+                                <p className="text-sm font-black text-teo-green">Resultado: {ejemplo.resultado}</p>
+                            </div>
+                        </div>
+                    ))}
+
                     {actual.contexto && (
+
                         <div className="flex items-start gap-2 p-3 bg-muted/30 rounded-xl">
                             <span className="text-base flex-shrink-0">📦</span>
                             <p className="text-sm font-medium text-muted-foreground">{actual.contexto}</p>
