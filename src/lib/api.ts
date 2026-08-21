@@ -338,44 +338,7 @@ function buildPrompt(perfil: PerfilNino, escenaGramatical?: { url: string; descr
         `33e. Cuando "esInterrogativa" sea true (con o sin "esNegativa"): el auxiliar (o el verbo invertido, según el idioma) debe tener "posicion": 1, antes del sujeto. Si la oración incluye palabra interrogativa (qué, dónde, cuándo, etc.), esa pieza debe tener "posicion": 1 y el resto se desplaza en consecuencia. Esta regla APLICA sin importar el valor de "esNegativa" — ambas condiciones son compatibles y deben respetarse simultáneamente si ambas son true (ver regla 33d para el orden exacto del caso combinado).`,
         `33f. Autoconsistencia obligatoria: el orden de las palabras en "apoyoGramatical.ejemplos[0].oracion" DEBE coincidir exactamente con el orden ascendente de "piezas[].posicion" de las piezas que instancian esa oración — nunca generes una "posicion" que contradiga el orden real de las palabras en el ejemplo. Esto aplica sin importar la combinación de esInterrogativa/esNegativa.`, 
         `34. Si la asignatura NO es de idioma: devuelve "apoyoGramatical": null.`,
-        `34b. Para asignatura matemáticas, física o química: si el objetivo de aprendizaje es PROCEDIMENTAL, DEBES generar "apoyoOperativo" con 1-2 "ejemplosResueltos" y un "ejercicio".
-        "ejercicio.pasosGuia" es OBLIGATORIO y debe contener TODOS los pasos necesarios para enseñar al niño a resolver EL EJERCICIO PROPUESTO. Cada paso DEBE ser una explicación COMPLETA que incluya apoyo gráfico y explícito, como un tutor humano sentado al lado del niño explicándole con calma. El contenido de cada paso se debe mostrar tal como sucede en el bloque anterior de ejemplo, en este caso un paso a la vez explicado de forma detallada. Los pasosGuia NO son pistas ni instrucciones breves. Son una tutoría paso a paso.
-        Cada elemento de "pasosGuia" representa UNA MICRO-EXPLICACIÓN que el niño verá individualmente al pulsar "Siguiente paso". Cada paso debe explicar de manera explícita y concreta:`,
-
-        `   -1. Qué elemento del ejercicio está observando el niño.`,
-        `   -2. Qué significa ese elemento cuando sea necesario.`,
-        `   -3. Qué valor concreto tiene ese elemento EN EL EJERCICIO ACTUAL.`,
-        `   -4. Qué debe hacer con ese valor.`,
-        `   -5. Cómo realizar la operación correspondiente.`,
-        `   -6. Qué resultado obtiene en ese paso.`,
-        `   -7. Por qué ese resultado permite continuar con el siguiente paso.`,
-
-        `   -NUNCA generes pasos vagos o incompletos como:`,
-        `   -"Identifica el denominador."`,
-        `   -"Suma los numeradores."`,
-        `   -"Multiplica."`,
-        `   -"Calcula el porcentaje."`,
-        `   -"Simplifica la fracción."`,
-
-        `   -Estas frases NO son suficientes por sí solas.`,
-        `   -En su lugar, debes explicar el concepto y aplicarlo directamente al ejercicio actual.`,
-
-        `   -Ejemplo incorrecto:`,
-        `   -"Identifica el denominador."`,
-
-        `   -Ejemplo correcto:`,
-        `   -"Observa las fracciones 3/5 + 1/5. El denominador es el número que está abajo en cada fracción. En 3/5 el denominador es 5 y en 1/5 también es 5. Como los dos denominadores son iguales, podemos continuar sumando los numeradores."`,
-
-        `   -Ejemplo incorrecto:`,
-        `   -"Suma los numeradores."`,
-
-        `   -Ejemplo correcto:`,
-        `   -"Ahora vamos a sumar los números de arriba, que se llaman numeradores. En nuestro ejercicio tenemos 3 y 1. Los sumamos: 3 + 1 = 4. Por eso, el numerador de nuestra respuesta será 4."`,
-        `   -Los pasos deben utilizar SIEMPRE los valores reales del ejercicio generado en "ejercicio.enunciado". Nunca expliques un procedimiento de forma genérica cuando puedes aplicarlo directamente a los números concretos del ejercicio.`,
-        `   -El último paso debe conducir explícitamente al resultado final del procedimiento y explicar cómo se obtiene.`,
-        `   -La cantidad de pasos debe corresponder a la complejidad real del procedimiento. No agrupes varios pasos conceptualmente diferentes en una sola explicación si hacerlo aumenta la carga cognitiva.`,
-        `   -Cada paso debe ser suficientemente completo para que el niño pueda comprenderlo sin tener que inferir qué significa la instrucción.`,
-        `   -El objetivo de "pasosGuia" es ENSEÑAR EL PROCEDIMIENTO DE FORMA ASISTIDA, no simplemente ayudar al niño a acertar la respuesta.`,
+        `34b. Para asignatura matemáticas, física o química: si el objetivo de aprendizaje es PROCEDIMENTAL, DEBES generar "apoyoOperativo" con 1-2 "ejemplosResueltos" y un "ejercicio". "ejercicio.pasosGuia" es OBLIGATORIO, nunca vacío, y cada paso DEBE ser una explicación COMPLETA que incluya apoyo gráfico y explícito, como un tutor humano sentado al lado del niño explicándole con calma. El contenido de cada paso se debe mostrar tal como sucede en el bloque anterior de ejemplo, en este caso un paso a la vez explicado de forma detallada.`,
 
         `35. "ejemplosVisuales" es OBLIGATORIO y SIEMPRE debe tener entre 3 y 5 elementos para asignaturas: artes, sociales, historia, ciencias. NUNCA devolver array vacío para estas asignaturas.`,
         `35b. Cada elemento de "ejemplosVisuales" DEBE tener "titulo", "autor", "descripcion", "tipo" y "query" con valores reales — nunca strings vacíos.`,
